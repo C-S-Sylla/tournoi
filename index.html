@@ -255,7 +255,7 @@
     <div class="match-card">
         <div class="video-box" id="player1"></div>
         <h3 id="title1">Anime A</h3>
-        <button id="star-0" class="star-btn" onclick="toggleStar(0)">☆ Favori ?</button>
+        <button id="star-0" class="star-btn" onclick="toggleStar(0)">☆ Marquer ?</button>
         <button onclick="vote(0)">CHOISIR</button>
     </div>
 
@@ -264,7 +264,7 @@
     <div class="match-card">
         <div class="video-box" id="player2"></div>
         <h3 id="title2">Anime B</h3>
-        <button id="star-1" class="star-btn" onclick="toggleStar(1)">☆ Favori ?</button>
+        <button id="star-1" class="star-btn" onclick="toggleStar(1)">☆ Marquer ?</button>
         <button onclick="vote(1)">CHOISIR</button>
     </div>
 </div>
@@ -449,10 +449,10 @@
         const btn = document.getElementById(`star-${indexOffset}`);
         if (isStarred) {
             btn.classList.add('starred');
-            btn.innerText = "⭐ Favori !";
+            btn.innerText = "⭐ Marqué !";
         } else {
             btn.classList.remove('starred');
-            btn.innerText = "☆ Favori ?";
+            btn.innerText = "☆ Marquer ?";
         }
     }
 
@@ -542,7 +542,7 @@
         if (starredEntries.length > 0) {
             starredHtml = `
                 <div class="recap-section">
-                    <h3>⭐ VOS MORCEAUX FAVORIS (Étoilés)</h3>
+                    <h3>⭐ VOS MORCEAUX MARQUÉS (Étoilés)</h3>
                     <div style="display: flex; flex-wrap: wrap; gap: 10px;">
                         ${starredEntries.map(e => `
                             <div class="fav-badge">⭐ ${e.title} <span style="font-size: 0.8rem; opacity: 0.75; margin-left:5px;">(${e.result})</span></div>
