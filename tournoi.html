@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Tournoi Anime OP/ED - 64 Participants</title>
+    <style>
+        :root { 
+            --primary: #6366f1; 
+            --bg: #0f172a; 
+            --card-bg: #1e293b; 
+            --text: #f8fafc; 
+        }
+        body { 
+            font-family: sans-serif; 
+            background: var(--bg); 
+            color: var(--text); 
+            margin: 0; 
+            text-align: center; 
+        }
+        .header { 
+            padding: 20px; 
+            background: #1e293b; 
+            margin-bottom: 20px; 
+        }
+        .container { 
+            display: flex; 
+            justify-content: center; 
+            gap: 20px; 
+            padding: 20px; 
+            flex-wrap: wrap; 
+        }
+        .match-card { 
+            background: var(--card-bg); 
+            border-radius: 15px; 
+            padding: 15px; 
+            width: 450px; 
+            border: 3px solid transparent; 
+            transition: 0.3s; 
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .match-card:hover { 
+            border-color: var(--primary); 
+        }
+        .video-box { 
+            width: 100%; 
+            aspect-ratio: 16/9; 
+            background: #000; 
+            border-radius: 10px; 
+            overflow: hidden; 
+            margin-bottom: 10px; 
+        }
+        iframe { 
+            width: 100%; 
+            height: 100%; 
+            border: none; 
+        }
+        button { 
+            background: var(--primary); 
+            color: white; 
+            border: none; 
+            padding: 15px 30px; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            font-size: 1.2rem; 
+            font-weight: bold; 
+            width: 100%; 
+            transition: 0.2s;
+        }
+        button:hover {
+            opacity: 0.9;
+        }
+        .vs { 
+            font-size: 3rem; 
+            align-self: center; 
+            color: #ef4444; 
+            font-weight: bold; 
+        }
+        #winner-screen { 
+            display: none; 
+            padding: 50px 20px; 
+        }
+        .hidden { 
+            display: none !important; 
+        }
+
+        /* Nouveaux styles */
+        .star-btn { 
+            background: #475569; 
+            color: #e2e8f0; 
+            border: none; 
+            padding: 8px 15px; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            font-size: 1rem; 
+            font-weight: bold; 
+            margin-bottom: 12px; 
+            width: 100%; 
+            transition: 0.2s;
+        }
+        .star-btn:hover { background: #64748b; }
+        .star-btn.starred { background: #eab308; color: #0f172a; }
+        
+        .yt-link {
+            display: inline-block;
+            color: #38bdf8;
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: bold;
+            background: rgba(56, 189, 248, 0.15);
+            padding: 6px 12px;
+            border-radius: 6px;
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            transition: 0.2s;
+        }
+        .yt-link:hover {
+            background: rgba(56, 189, 248, 0.25);
+            border-color: #38bdf8;
+        }
+
+        .switch-btn {
+            background: #1e293b;
+            border: 1px solid #475569;
+            color: #94a3b8;
+            padding: 5px 10px;
+            font-size: 0.8rem;
+            border-radius: 5px;
+            cursor: pointer;
+            width: auto;
+            transition: 0.2s;
+        }
+        .switch-btn:hover {
+            background: #334155;
+            color: #f8fafc;
+            border-color: #64748b;
+        }
+
+        .recap-section {
+            margin: 40px auto;
+            text-align: left;
+            max-width: 900px;
+            width: 100%;
+        }
+        .recap-section h3 {
+            color: #38bdf8;
+            border-bottom: 2px solid #334155;
+            padding-bottom: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .fav-badge {
+            background: rgba(234, 179, 8, 0.15);
+            border: 1px solid rgba(234, 179, 8, 0.3);
+            color: #fef08a;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .recap-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--card-bg);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            margin-bottom: 30px;
+        }
+        .recap-table th, .recap-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #334155;
+        }
+        .recap-table th {
+            background-color: var(--primary);
+            color: white;
+            font-weight: bold;
+        }
+        .recap-table tr:hover { background-color: #334155; }
+        
+        .status-winner { color: #4ade80; font-weight: bold; }
+        .status-finalist { color: #f43f5e; font-weight: bold; }
+
+        .rounds-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 35px;
+        }
+        .round-box {
+            background: var(--card-bg);
+            border-radius: 10px;
+            padding: 15px;
+            border: 1px solid #334155;
+        }
+        .round-box h4 {
+            margin: 0;
+            color: #f8fafc;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+            padding: 5px;
+            border-radius: 4px;
+        }
+        .round-box h4:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .round-matches-list {
+            margin-top: 15px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 10px;
+        }
+        .match-recap-row {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .match-recap-num {
+            font-size: 0.75rem;
+            color: #64748b;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .match-recap-player {
+            font-size: 0.9rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 110px;
+        }
+        .match-recap-player.winner { color: #4ade80; font-weight: bold; }
+        .match-recap-player.loser { color: #64748b; text-decoration: line-through; }
+        .match-recap-vs { color: #ef4444; font-weight: bold; font-size: 0.8rem; margin: 0 5px; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1 id="round-name">Chargement...</h1>
+    <p id="match-info">Match 1 / 32</p>
+</div>
+
+<div class="container" id="tournament-area">
+    <div class="match-card">
+        <div class="video-box" id="player1"></div>
+        <h3 id="title1">Anime A</h3>
+        <button id="star-0" class="star-btn" onclick="toggleStar(0)">☆ Favori ?</button>
+        <button onclick="vote(0)">CHOISIR</button>
+    </div>
+
+    <div class="vs">VS</div>
+
+    <div class="match-card">
+        <div class="video-box" id="player2"></div>
+        <h3 id="title2">Anime B</h3>
+        <button id="star-1" class="star-btn" onclick="toggleStar(1)">☆ Favori ?</button>
+        <button onclick="vote(1)">CHOISIR</button>
+    </div>
+</div>
+
+<div id="winner-screen">
+    <h1>🏆 VAINQUEUR FINAL 🏆</h1>
+    <div class="match-card" style="margin: 0 auto; width: 600px; max-width: 100%;">
+        <div class="video-box" id="player-winner"></div>
+        <h2 id="title-winner">Titre</h2>
+    </div>
+    
+    <!-- Conteneur pour le schéma et le classement récapitulatif -->
+    <div id="tournament-recap-container"></div>
+    
+    <br>
+    <button onclick="location.reload()" style="width: auto; padding: 15px 40px; margin-top: 20px;">Recommencer le tournoi</button>
+</div>
+
+<script>
+    // --- LISTE DES ENTRÉES ---
+    const allEntries = [
+        { title: "the world is dancing (OP)", yt: "6f78rxIxzV0" },
+        { title: "The Banished Former Heroic Knight (OP)", yt: "_j3Bm3tr7dA" },
+        { title: "The Banished Former Heroic Knight (ED)", yt: "2KcoQLp7Kx8" },
+        { title: "I Want to Fall in Love Until You Die (OP)", yt: "01Vgu7BIxmI" },
+        { title: "I Want to Fall in Love Until You Die (ED)", yt: "bszg61aM_7E" },
+        { title: "ClevatessⅡ (OP)", yt: "SiTi3WCmzfc" },
+        { title: "ClevatessⅡ (ED)", yt: "Tbyi0Tx1QLA" }, 
+        { title: "Saga of Tanya the Evil II (OP)", yt: "IVyvkwvsqW0" },
+        { title: "Saga of Tanya the Evil II (ED)", yt: "x2k_iYCGKvE" },
+        { title: "Kaori-san wa Tensei Shitemo Kenka ga Shitai (OP)", yt: "dv1TGoV_aS8" },
+        { title: "Kaori-san wa Tensei Shitemo Kenka ga Shitai (ED)", yt: "mGmKY-PB82o" },
+        { title: "the world is dancing (ED)", yt: "kBP_Urtwx7Q" },
+        { title: "You and I Are Complete Opposites (ED)", yt: "FlqDBh8QjZk" }, 
+        { title: "You and I Are Complete Opposites (OP)", yt: "kUe7LOCbjzQ" }, 
+        { title: "Yanineko (ED)", yt: "TwumA6YhQp4" }, 
+        { title: "Yanineko (OP)", yt: "46Z-WQv_vFc" }, 
+        { title: "Tenmaku no Jaaduugaru (OP)", yt: "_GlLp6hyM2E" }, 
+        { title: "Tenmaku no Jaaduugaru (ED)", yt: "bLQV43WeRvk" }, 
+        { title: "Tensei Shitara Slime Datta Ken (OP)", yt: "zvIS6EIkXx8" }, 
+        { title: "Tensei Shitara Slime Datta Ken (ED)", yt: "jYbklPS7mDk" }, 
+        { title: "THE GHOST IN THE SHELL (OP)", yt: "PDZb57n_b90" }, 
+        { title: "THE GHOST IN THE SHELL (ED)", yt: "YSg5H6kjKCo" }, 
+        { title: "LIAR GAME (ED)", yt: "bztYaH6hbxg" }, 
+        { title: "LIAR GAME (OP)", yt: "slKNbfZgImw" }, 
+        { title: "BLACK TORCH (OP)", yt: "2FjRzlo5zHI" }, 
+        { title: "BLACK TORCH (ED)", yt: "m_TbBLQgIIg" }, 
+        { title: "yomi no tsugai (OP)", yt: "nQGfyebJ_oc" }, 
+        { title: "yomi no tsugai (ED)", yt: "-oJdHssdJAk" }, 
+        { title: "20th Century Electricity Catalog (ED)", yt: "lJ6dDUwWOis" }, 
+        { title: "20th Century Electricity Catalog (OP)", yt: "-UMzc7BI6y4" }, 
+        { title: "Thunderbolt 3 (OP)", yt: "gnsGSDo0fTU" }, 
+        { title: "Thunderbolt 3 (ED)", yt: "2SXzmgP26bk" }, 
+        { title: "Let This Be My Last Battlefield: Ten Years Later, I Became a Legend (OP)", yt: "lMq8obidFDI" }, 
+        { title: "Let This Be My Last Battlefield: Ten Years Later, I Became a Legend (ED)", yt: "UDD-U-c-m9Y" }, 
+        { title: "Otome Kaijuu Caramelise (OP)", yt: "hFldDZZcrQo" }, 
+        { title: "Otome Kaijuu Caramelise (ED)", yt: "waOUdRPozDY" }, 
+        { title: "For You in Full Blossom (OP)", yt: "SccI7wPhm5s" }, 
+        { title: "For You in Full Blossom (ED)", yt: "-nGHy6oi9dA" },
+        { title: "Grow Up Show ~Himawari no Circus-dan~ (OP)", yt: "QxJWmZ74GfM" },
+        { title: "Grow Up Show ~Himawari no Circus-dan~ (ED)", yt: "Z3LKxdlyNSU" },
+        { title: "BanG Dream! Yume∞Mita (OP)", yt: "Ech7Tj8ga0Y" },
+        { title: "BanG Dream! Yume∞Mita (ED)", yt: "wuY6Suvf4OQ" },
+        { title: "Mushoku Tensei III (OP)", yt: "tbeO_a12M6U" },
+        { title: "Mushoku Tensei III (ED)", yt: "8XrGzAAJpbc" },
+        { title: "Hell Mode: Yarikomi-zuki no Gamer wa Haisettei no Isekai de Musou Suru 2nd Season (OP)", yt: "ByIgOD0qOKY" },
+        { title: "Hell Mode: Yarikomi-zuki no Gamer wa Haisettei no Isekai de Musou Suru 2nd Season (ED)", yt: "SYpHpUiGcQU" },
+        { title: "Super no Ura de Yani Suu Futari (ED)", yt: "rn0QtVBIo2o" },
+        { title: "Super no Ura de Yani Suu Futari (OP)", yt: "0HGEaVFajSU" },
+        { title: "Tomb Raider King (OP)", yt: "PVN8Pj_Ykyo" },
+        { title: "Tomb Raider King (ED)", yt: "_4TDl0RPfnE" },
+        { title: "Kabushiki Gaisha Magi Lumiere 2nd Season (OP)", yt: "8ijeHE7catA" },
+        { title: "Kabushiki Gaisha Magi Lumiere 2nd Season (ED)", yt: "CCjQ0FuVx7s" },
+        { title: "Iwamoto-senpai no Suisen (OP)", yt: "LPzner7Mr4M" },
+        { title: "Iwamoto-senpai no Suisen (ED)", yt: "WM9BicFEhKs" },
+        { title: "Let's Go Kaikigumi (OP)", yt: "GEZWCWyX-is" },
+        { title: "Let's Go Kaikigumi (ED)", yt: "MnDO2Vv4ZkA" },
+        { title: "Saikyou Degarashi Ouji no Anyaku Teii Arasoi (OP)", yt: "lWYRZq7TuHQ" },
+        { title: "Saikyou Degarashi Ouji no Anyaku Teii Arasoi (ED)", yt: "r7Izfz0iyRw" },
+        { title: "Yoroi Shinden Samurai Troopers Part 2 (OP)", yt: "XOyydxN5QFs" },
+        { title: "Yoroi Shinden Samurai Troopers Part 2 (ED)", yt: "g8YYbQeC5G4" },
+        { title: "Katainaka no Ossan, Kensei ni Naru II (OP)", yt: "3a1w0lo3OxM" },
+        { title: "Grand Blue Season 3 (OP)", yt: "ktPTy5hgKbU" },
+        { title: "LV999 no Murabito (OP)", yt: "4iRiuYov9pY" },
+        { title: "LV999 no Murabito (ED)", yt: "MgIol7kDcTE" }
+    ];
+
+    while(allEntries.length < 64) {
+        allEntries.push({ title: "Anime Test " + (allEntries.length+1), yt: "dQw4w9WgXcQ" });
+    }
+
+    allEntries.forEach(entry => {
+        entry.starred = false;
+        entry.result = "Top 64 (32èmes)";
+    });
+
+    let currentRound = [...allEntries].sort(() => Math.random() - 0.5);
+    let nextRound = [];
+    let currentIndex = 0;
+    const matchHistory = []; 
+
+    function updateDisplay() {
+        if (currentRound.length === 1) {
+            showWinner(currentRound[0]);
+            return;
+        }
+
+        document.getElementById('round-name').innerText = getRoundTitle(currentRound.length);
+        document.getElementById('match-info').innerText = `Match ${(currentIndex/2)+1} / ${currentRound.length/2}`;
+
+        const choice1 = currentRound[currentIndex];
+        const choice2 = currentRound[currentIndex + 1];
+
+        document.getElementById('title1').innerText = choice1.title;
+        document.getElementById('title2').innerText = choice2.title;
+
+        updateStarButtonState(0, choice1.starred);
+        updateStarButtonState(1, choice2.starred);
+
+        // Intégration de l'iframe YouTube et de l'alternative de contournement
+        document.getElementById('player1').innerHTML = `
+            <iframe src="https://www.youtube-nocookie.com/embed/${choice1.yt}?rel=0" allowfullscreen></iframe>
+            <div style="margin-top: 8px; display: flex; flex-direction: column; gap: 5px; align-items: center;">
+                <a class="yt-link" href="https://www.youtube.com/watch?v=${choice1.yt}" target="_blank">
+                    Ouvrir sur YouTube ↗ (si vidéo bloquée)
+                </a>
+                <button class="switch-btn" onclick="switchPlayer(0, '${choice1.yt}')">
+                    <span id="switch-text-0">Lecteur alternatif si bloqué 🔁</span>
+                </button>
+            </div>
+        `;
+        document.getElementById('player2').innerHTML = `
+            <iframe src="https://www.youtube-nocookie.com/embed/${choice2.yt}?rel=0" allowfullscreen></iframe>
+            <div style="margin-top: 8px; display: flex; flex-direction: column; gap: 5px; align-items: center;">
+                <a class="yt-link" href="https://www.youtube.com/watch?v=${choice2.yt}" target="_blank">
+                    Ouvrir sur YouTube ↗ (si vidéo bloquée)
+                </a>
+                <button class="switch-btn" onclick="switchPlayer(1, '${choice2.yt}')">
+                    <span id="switch-text-1">Lecteur alternatif si bloqué 🔁</span>
+                </button>
+            </div>
+        `;
+    }
+
+    // Fonction de contournement par proxy alternatif (Invidious)
+    function switchPlayer(index, ytId) {
+        const iframe = document.querySelector(`#player${index + 1} iframe`);
+        const textSpan = document.getElementById(`switch-text-${index}`);
+        if (!iframe || !textSpan) return;
+
+        if (iframe.src.includes('youtube')) {
+            // Charge la vidéo depuis un proxy public stable (Invidious) qui ne bloque pas l'intégration
+            iframe.src = `https://yewtu.be/embed/${ytId}`;
+            textSpan.innerText = "Retourner au lecteur YouTube 🔁";
+        } else {
+            iframe.src = `https://www.youtube-nocookie.com/embed/${ytId}?rel=0`;
+            textSpan.innerText = "Lecteur alternatif si bloqué 🔁";
+        }
+    }
+
+    function switchWinnerPlayer(ytId) {
+        const iframe = document.querySelector(`#player-winner iframe`);
+        const textSpan = document.getElementById(`switch-text-winner`);
+        if (!iframe || !textSpan) return;
+
+        if (iframe.src.includes('youtube')) {
+            iframe.src = `https://yewtu.be/embed/${ytId}`;
+            textSpan.innerText = "Retourner au lecteur YouTube 🔁";
+        } else {
+            iframe.src = `https://www.youtube-nocookie.com/embed/${ytId}?autoplay=1`;
+            textSpan.innerText = "Lecteur alternatif si bloqué 🔁";
+        }
+    }
+
+    function toggleStar(indexOffset) {
+        const entry = currentRound[currentIndex + indexOffset];
+        entry.starred = !entry.starred;
+        updateStarButtonState(indexOffset, entry.starred);
+    }
+
+    function updateStarButtonState(indexOffset, isStarred) {
+        const btn = document.getElementById(`star-${indexOffset}`);
+        if (isStarred) {
+            btn.classList.add('starred');
+            btn.innerText = "⭐ Favori !";
+        } else {
+            btn.classList.remove('starred');
+            btn.innerText = "☆ Favori ?";
+        }
+    }
+
+    function vote(indexOffset) {
+        const p1 = currentRound[currentIndex];
+        const p2 = currentRound[currentIndex + 1];
+
+        const winner = indexOffset === 0 ? p1 : p2;
+        const loser = indexOffset === 0 ? p2 : p1;
+
+        matchHistory.push({
+            roundSize: currentRound.length,
+            p1: { ...p1 },
+            p2: { ...p2 },
+            winnerTitle: winner.title
+        });
+
+        loser.result = getEliminationStageName(currentRound.length);
+
+        nextRound.push(winner);
+        currentIndex += 2;
+
+        if (currentIndex >= currentRound.length) {
+            currentRound = [...nextRound];
+            nextRound = [];
+            currentIndex = 0;
+        }
+        updateDisplay();
+    }
+
+    function getRoundTitle(n) {
+        if (n === 64) return "32èmes de Finale";
+        if (n === 32) return "16èmes de Finale";
+        if (n === 16) return "8èmes de Finale";
+        if (n === 8) return "Quarts de Finale";
+        if (n === 4) return "Demi-Finales";
+        if (n === 2) return "GRANDE FINALE";
+        return "Tournoi";
+    }
+
+    function getEliminationStageName(n) {
+        if (n === 64) return "Top 64 (32èmes)";
+        if (n === 32) return "Top 32 (16èmes)";
+        if (n === 16) return "Top 16 (8èmes)";
+        if (n === 8) return "Top 8 (Quarts)";
+        if (n === 4) return "Top 4 (Demi-Finales)";
+        if (n === 2) return "Finaliste (2ème)";
+        return "Éliminé";
+    }
+
+    function showWinner(winner) {
+        winner.result = "🏆 CHAMPION 🏆";
+
+        document.getElementById('tournament-area').classList.add('hidden');
+        document.getElementById('match-info').classList.add('hidden');
+        document.getElementById('round-name').classList.add('hidden');
+        document.getElementById('winner-screen').style.display = 'block';
+        document.getElementById('title-winner').innerText = winner.title;
+        
+        document.getElementById('player-winner').innerHTML = `
+            <iframe src="https://www.youtube-nocookie.com/embed/${winner.yt}?autoplay=1" allowfullscreen></iframe>
+            <div style="margin-top: 8px; display: flex; flex-direction: column; gap: 5px; align-items: center;">
+                <a class="yt-link" href="https://www.youtube.com/watch?v=${winner.yt}" target="_blank">
+                    Ouvrir sur YouTube ↗
+                </a>
+                <button class="switch-btn" id="switch-btn-winner" onclick="switchWinnerPlayer('${winner.yt}')">
+                    <span id="switch-text-winner">Lecteur alternatif si bloqué 🔁</span>
+                </button>
+            </div>
+        `;
+
+        generateRecap();
+    }
+
+    function toggleCollapse(id) {
+        const el = document.getElementById(id);
+        if (el.style.display === "none") {
+            el.style.display = "grid";
+        } else {
+            el.style.display = "none";
+        }
+    }
+
+    function generateRecap() {
+        const starredEntries = allEntries.filter(e => e.starred);
+        let starredHtml = "";
+        if (starredEntries.length > 0) {
+            starredHtml = `
+                <div class="recap-section">
+                    <h3>⭐ VOS MORCEAUX FAVORIS (Étoilés)</h3>
+                    <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+                        ${starredEntries.map(e => `
+                            <div class="fav-badge">⭐ ${e.title} <span style="font-size: 0.8rem; opacity: 0.75; margin-left:5px;">(${e.result})</span></div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        const roundsToRender = [2, 4, 8, 16, 32, 64];
+        let bracketHtml = `
+            <div class="recap-section">
+                <h3>🌿 SCHÉMA DU TOURNOI (Détail des Matchs)</h3>
+                <div class="rounds-container">
+        `;
+
+        roundsToRender.forEach(rSize => {
+            const roundMatches = matchHistory.filter(m => m.roundSize === rSize);
+            if (roundMatches.length === 0) return;
+
+            const rTitle = getRoundTitle(rSize);
+            const isCollapsedByDefault = rSize === 64 || rSize === 32;
+            const displayStyle = isCollapsedByDefault ? "none" : "grid";
+
+            bracketHtml += `
+                <div class="round-box">
+                    <h4 onclick="toggleCollapse('round-${rSize}')">
+                        <span>${rTitle} (${roundMatches.length} Match${roundMatches.length > 1 ? 's' : ''})</span>
+                        <span style="font-size: 0.8rem; opacity: 0.6; font-weight: normal;">[Cliquer pour afficher/masquer]</span>
+                    </h4>
+                    <div id="round-${rSize}" class="round-matches-list" style="display: ${displayStyle};">
+                        ${roundMatches.map((m, i) => {
+                            const isP1Winner = m.p1.title === m.winnerTitle;
+                            return `
+                                <div class="match-recap-row">
+                                    <span class="match-recap-num">Match ${i + 1}</span>
+                                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 5px;">
+                                        <span class="match-recap-player ${isP1Winner ? 'winner' : 'loser'}" title="${m.p1.title}">
+                                            ${m.p1.starred ? '⭐ ' : ''}${m.p1.title}
+                                        </span>
+                                        <span class="match-recap-vs">VS</span>
+                                        <span class="match-recap-player ${!isP1Winner ? 'winner' : 'loser'}" title="${m.p2.title}">
+                                            ${m.p2.starred ? '⭐ ' : ''}${m.p2.title}
+                                        </span>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+            `;
+        });
+
+        bracketHtml += `</div></div>`;
+
+        const rankWeight = {
+            "🏆 CHAMPION 🏆": 1,
+            "Finaliste (2ème)": 2,
+            "Top 4 (Demi-Finales)": 3,
+            "Top 8 (Quarts)": 4,
+            "Top 16 (8èmes)": 5,
+            "Top 32 (16èmes)": 6,
+            "Top 64 (32èmes)": 7
+        };
+
+        const sortedEntries = [...allEntries].sort((a, b) => {
+            return (rankWeight[a.result] || 9) - (rankWeight[b.result] || 9);
+        });
+
+        let tableHtml = `
+            <div class="recap-section">
+                <h3>📊 CLASSEMENT GÉNÉRAL DES PARTICIPANTS</h3>
+                <table class="recap-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 80px; text-align: center;">Favori</th>
+                            <th>Titre de l'Anime / Musique</th>
+                            <th>Résultat / Parcours</th>
+                            <th style="width: 140px; text-align: center;">Lien direct</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${sortedEntries.map(e => {
+                            let statusClass = "";
+                            if (e.result === "🏆 CHAMPION 🏆") statusClass = "status-winner";
+                            else if (e.result === "Finaliste (2ème)") statusClass = "status-finalist";
+                            
+                            return `
+                                <tr>
+                                    <td style="text-align: center; font-size: 1.1rem;">${e.starred ? '⭐' : '☆'}</td>
+                                    <td style="font-weight: ${e.result === '🏆 CHAMPION 🏆' ? 'bold' : 'normal'}">${e.title}</td>
+                                    <td class="${statusClass}">${e.result}</td>
+                                    <td style="text-align: center;">
+                                        <a class="yt-link" href="https://www.youtube.com/watch?v=${e.yt}" target="_blank" style="padding: 4px 8px; font-size: 0.8rem; margin: 0;">
+                                            Regarder ↗
+                                        </a>
+                                    </td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+
+        document.getElementById('tournament-recap-container').innerHTML = starredHtml + bracketHtml + tableHtml;
+    }
+
+    updateDisplay();
+</script>
+</body>
+</html>
