@@ -306,7 +306,7 @@
             height: 80px !important;
         }
 
-        /* Bouton Télécharger */
+        /* Boutons d'actions du graphe */
         .download-btn {
             background: #10b981;
             color: white;
@@ -317,9 +317,48 @@
             font-size: 1rem;
             font-weight: bold;
             transition: 0.2s;
+            width: auto;
         }
         .download-btn:hover {
             background: #059669;
+        }
+
+        .fullscreen-btn {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: bold;
+            transition: 0.2s;
+            width: auto;
+        }
+        .fullscreen-btn:hover {
+            background: #2563eb;
+        }
+
+        /* Style spécifique lorsque le conteneur passe en plein écran */
+        #bracket-section-container:fullscreen {
+            background: #090d16;
+            padding: 30px;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+            justify-content: center;
+        }
+        #bracket-section-container:fullscreen h3 {
+            margin-top: 0;
+            color: #38bdf8;
+        }
+        #bracket-section-container:fullscreen .bracket-scroll {
+            max-height: calc(100vh - 120px);
+            height: 100%;
+            border: 1px solid #1e293b;
         }
 
         .recap-section {
@@ -999,6 +1038,36 @@
         }
     }
 
+    // Active / Désactive le mode Plein Écran sur le bloc du schéma
+    function toggleFullscreen() {
+        const el = document.getElementById('bracket-section-container');
+        if (!el) return;
+
+        if (!document.fullscreenElement) {
+            el.requestFullscreen().catch(err => {
+                alert(`Erreur lors de l'activation du plein écran : ${err.message}`);
+            });
+        } else {
+            document.exitFullscreen();
+        }
+    }
+
+    // Écouteur d'événement pour ajuster le tracé des lignes de liaison SVG et le bouton de plein écran
+    document.addEventListener('fullscreenchange', () => {
+        const btn = document.querySelector('.fullscreen-btn');
+        if (btn) {
+            if (document.fullscreenElement) {
+                btn.innerText = "❌ Quitter";
+                btn.style.background = "#ef4444";
+            } else {
+                btn.innerText = "🖥️ Plein écran";
+                btn.style.background = "#3b82f6";
+            }
+        }
+        // Force le recalcul asynchrone des coordonnées des lignes de liaison SVG
+        setTimeout(drawBracketLines, 100);
+    });
+
     // Génère l'Arbre Graphique Universel et Dynamique pour n'importe quelle taille N (Puissance de 2)
     function generateBracketVisual() {
         const tree = [];
@@ -1218,11 +1287,15 @@
             `;
         }
 
+        // Section de l'arbre enveloppé dans son conteneur compatible plein écran
         const bracketVisualHtml = `
-            <div class="recap-section">
+            <div class="recap-section" id="bracket-section-container">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap:10px;">
                     <h3>🌿 GRAPH SCHÉMATIQUE DU TOURNOI</h3>
-                    <button class="download-btn" onclick="downloadBracket()">📸 Télécharger le Schéma (PNG)</button>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="fullscreen-btn" onclick="toggleFullscreen()">🖥️ Plein écran</button>
+                        <button class="download-btn" onclick="downloadBracket()">📸 Télécharger le Schéma (PNG)</button>
+                    </div>
                 </div>
                 ${generateBracketVisual()}
             </div>
