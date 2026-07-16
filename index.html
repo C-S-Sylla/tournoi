@@ -448,7 +448,8 @@
     <div class="menu-group">
         <label for="season-select">1. Sélectionner la Saison :</label>
         <select id="season-select" class="menu-select" onchange="onSeasonChange()">
-            <option value="summer_2026">Été 2026 (Intégré par défaut)</option>
+            <option value="summer_2026">Été 2026</option>
+            <option value="automne_2019">Automne 2019</option>
             <option value="custom">Uploader votre fichier JSON de saison (.json)</option>
         </select>
     </div>
@@ -590,8 +591,9 @@
         { title: "Yoroi Shinden Samurai Troopers Part 2 (ED)", yt: "g8YYbQeC5G4" },
         { title: "Katainaka no Ossan, Kensei ni Naru II (OP)", yt: "3a1w0lo3OxM" },
         { title: "Grand Blue Season 3 (OP)", yt: "ktPTy5hgKbU" },
-        { title: "LV999 no Murabito (OP)", yt: "4iRiuYov9pY" },
-        { title: "LV999 no Murabito (ED)", yt: "MgIol7kDcTE" }
+        { title: "LV999 no Murabito (ED)", yt: "MgIol7kDcTE" },
+        { title: "Saishuukai (ED)", yt: "jW-nRpVHw8c" }
+
     ];
 
     // Variables globales du jeu
@@ -603,60 +605,122 @@
     const historyStateStack = [];
 
     // Gestion de la saison active
-    let selectedSeasonData = { seasonName: "Été 2026 (Intégré)", entries: defaultEntries };
+    let selectedSeasonData = null;
+
+    const embeddedSeasonPresets = {
+        summer_2026: { seasonName: "Été 2026 (Intégré)", entries: defaultEntries },
+        automne_2019: {
+            seasonName: "Automne 2019",
+            entries: [
+
+            ]
+        }
+    };
+
+    function normalizeEntry(entry, index) {
+        const title = entry.title || entry.name || entry.song || entry.label || `Entrée ${index + 1}`;
+        const yt = entry.yt || entry.youtube || entry.youtubeId || entry.videoId || entry.id || entry.url || "";
+        const rawType = entry.type || entry.category || entry.kind || "";
+        const titleText = `${title} ${rawType}`.toUpperCase();
+
+        let type = "OP";
+        if (rawType === "ED" || rawType === "ending" || rawType === "Ending" || titleText.includes("(ED)") || titleText.includes("ENDING")) {
+            type = "ED";
+        } else if (rawType === "MIX" || rawType === "mix") {
+            type = "MIX";
+        }
+
+        return {
+            title,
+            yt,
+            type,
+            starred: false,
+            result: ""
+        };
+    }
+
+    function normalizeSeasonData(raw, fallbackName) {
+        if (Array.isArray(raw)) {
+            return { seasonName: fallbackName || "Saison importée", entries: raw };
+        }
+
+        if (raw && typeof raw === "object") {
+            const possibleArrays = [raw.entries, raw.items, raw.data, raw.tracks, raw.songs, raw.musics]
+                .filter(Array.isArray);
+            const source = possibleArrays[0] || [];
+            return {
+                seasonName: raw.seasonName || raw.name || raw.title || fallbackName || "Saison importée",
+                entries: source
+            };
+        }
+
+        return { seasonName: fallbackName || "Saison importée", entries: [] };
+    }
 
     // Parse et segmente les entrées en OP ou ED si l'attribut "type" n'est pas présent
     function parseEntries(entries) {
-        return entries.map(entry => {
-            let type = entry.type;
-            if (!type) {
-                if (entry.title.toUpperCase().includes("(OP)")) {
-                    type = "OP";
-                } else if (entry.title.toUpperCase().includes("(ED)")) {
-                    type = "ED";
-                } else {
-                    type = "OP"; // Fallback par défaut
-                }
-            }
-            return {
-                title: entry.title,
-                yt: entry.yt,
-                type: type,
-                starred: false,
-                result: ""
-            };
-        });
+        if (!Array.isArray(entries)) return [];
+        return entries.map((entry, index) => normalizeEntry(entry, index));
+    }
+
+    function getSelectedEntries() {
+        const rawEntries = selectedSeasonData && Array.isArray(selectedSeasonData.entries)
+            ? selectedSeasonData.entries
+            : defaultEntries;
+        return parseEntries(rawEntries);
     }
 
     // Met à jour les statistiques de sélection sur l'écran d'accueil
     function updateCountLabel() {
-        const rawEntries = selectedSeasonData ? selectedSeasonData.entries : defaultEntries;
-        const parsed = parseEntries(rawEntries);
-        
+        const parsed = getSelectedEntries();
         const total = parsed.length;
         const ops = parsed.filter(e => e.type === "OP").length;
         const eds = parsed.filter(e => e.type === "ED").length;
-
         const name = selectedSeasonData ? selectedSeasonData.seasonName : "Été 2026 (Intégré)";
 
-        document.getElementById('available-count').innerText = 
+        document.getElementById('available-count').innerText =
             `Saison chargée : ${name}\n` +
             `Contenu total : ${total} morceaux  |  Openings : ${ops}  |  Endings : ${eds}`;
     }
 
+    async function loadPresetSeason(value) {
+        if (value === "summer_2026") {
+            selectedSeasonData = embeddedSeasonPresets.summer_2026;
+            updateCountLabel();
+            return;
+        }
+
+        if (value === "automne_2019") {
+            try {
+                const response = await fetch("data/automne_2019.json");
+                if (!response.ok) throw new Error("HTTP " + response.status);
+                const data = await response.json();
+                selectedSeasonData = normalizeSeasonData(data, "Automne 2019");
+                updateCountLabel();
+            } catch (error) {
+                console.warn("Chargement Automne 2019 impossible, fallback sur la version intégrée :", error);
+                selectedSeasonData = embeddedSeasonPresets.automne_2019;
+                updateCountLabel();
+            }
+            return;
+        }
+
+        selectedSeasonData = null;
+        document.getElementById('available-count').innerText = "Veuillez uploader un fichier JSON.";
+    }
+
     // Gestion du changement de saison
-    function onSeasonChange() {
+    async function onSeasonChange() {
         const select = document.getElementById('season-select');
         const uploadGroup = document.getElementById('json-upload-group');
         
         if (select.value === "custom") {
             uploadGroup.style.display = "block";
-            selectedSeasonData = null; // En attente du fichier uploade
+            selectedSeasonData = null;
             document.getElementById('available-count').innerText = "Veuillez uploader un fichier JSON.";
         } else {
             uploadGroup.style.display = "none";
-            selectedSeasonData = { seasonName: "Été 2026 (Intégré)", entries: defaultEntries };
-            updateCountLabel();
+            await loadPresetSeason(select.value);
         }
     }
 
@@ -669,30 +733,26 @@
         reader.onload = function(e) {
             try {
                 const data = JSON.parse(e.target.result);
-                if (!data.entries || !Array.isArray(data.entries)) {
-                    throw new Error("Le format JSON doit contenir une clé 'entries' de type tableau.");
-                }
-                selectedSeasonData = data;
-                alert(`Saison "${data.seasonName || 'Importée'}" chargée avec succès ! (${data.entries.length} morceaux détectés)`);
+                selectedSeasonData = normalizeSeasonData(data, file.name.replace(/\.json$/i, ""));
+                alert(`Saison "${selectedSeasonData.seasonName}" chargée avec succès ! (${selectedSeasonData.entries.length} morceaux détectés)`);
                 updateCountLabel();
             } catch (err) {
                 alert("Erreur lors de la lecture du fichier JSON : " + err.message);
-                event.target.value = ""; // Reset
+                event.target.value = "";
             }
         };
         reader.readAsText(file);
     }
 
     // Démarre et initialise le tournoi
-    function initTournament() {
+    async function initTournament() {
         if (!selectedSeasonData) {
             alert("Veuillez d'abord charger un fichier JSON valide pour cette saison.");
             return;
         }
 
         const category = document.querySelector('input[name="category"]:checked').value;
-        const rawEntries = selectedSeasonData.entries;
-        let parsed = parseEntries(rawEntries);
+        let parsed = getSelectedEntries();
 
         // Filtrer les morceaux
         if (category === "OP") {
@@ -1283,7 +1343,7 @@
     });
 
     // Chargement initial des compteurs du menu de configuration
-    updateCountLabel();
+    onSeasonChange();
 </script>
 </body>
 </html>
