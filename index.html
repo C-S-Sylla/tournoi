@@ -448,9 +448,7 @@
     <div class="menu-group">
         <label for="season-select">1. Sélectionner la Saison :</label>
         <select id="season-select" class="menu-select" onchange="onSeasonChange()">
-            <option value="summer_2026">Été 2026</option>
-            <option value="automne_2019">Automne 2019</option>
-            <option value="custom">Uploader votre fichier JSON de saison (.json)</option>
+            <!-- Les options sont peuplées dynamiquement par JS -->
         </select>
     </div>
 
@@ -482,7 +480,7 @@
         </select>
     </div>
 
-    <div id="available-count" style="margin-top: 20px; font-size: 0.9rem; color: #94a3b8; line-height: 1.5; background: #0f172a; padding: 15px; border-radius: 8px; border: 1px solid #334155;">
+    <div id="available-count" style="margin-top: 20px; font-size: 0.9rem; color: #94a3b8; line-height: 1.5; background: #0f172a; padding: 15px; border-radius: 8px; border: 1px solid #334155; white-space: pre-line;">
         Chargement des informations de saison...
     </div>
 
@@ -527,98 +525,48 @@
 </div>
 
 <script>
-    // --- BASE DE DONNÉES PAR DÉFAUT (ÉTÉ 2026) ---
-    const defaultEntries = [
-        { title: "the world is dancing (OP)", yt: "6f78rxIxzV0" },
-        { title: "The Banished Former Heroic Knight (OP)", yt: "_j3Bm3tr7dA" },
-        { title: "The Banished Former Heroic Knight (ED)", yt: "2KcoQLp7Kx8" },
-        { title: "I Want to Fall in Love Until You Die (OP)", yt: "01Vgu7BIxmI" },
-        { title: "I Want to Fall in Love Until You Die (ED)", yt: "bszg61aM_7E" },
-        { title: "ClevatessⅡ (OP)", yt: "SiTi3WCmzfc" },
-        { title: "ClevatessⅡ (ED)", yt: "Tbyi0Tx1QLA" }, 
-        { title: "Saga of Tanya the Evil II (OP)", yt: "IVyvkwvsqW0" },
-        { title: "Saga of Tanya the Evil II (ED)", yt: "x2k_iYCGKvE" },
-        { title: "Kaori-san wa Tensei Shitemo Kenka ga Shitai (OP)", yt: "dv1TGoV_aS8" },
-        { title: "Kaori-san wa Tensei Shitemo Kenka ga Shitai (ED)", yt: "mGmKY-PB82o" },
-        { title: "the world is dancing (ED)", yt: "kBP_Urtwx7Q" },
-        { title: "You and I Are Complete Opposites (ED)", yt: "FlqDBh8QjZk" }, 
-        { title: "You and I Are Complete Opposites (OP)", yt: "kUe7LOCbjzQ" }, 
-        { title: "Yanineko (ED)", yt: "TwumA6YhQp4" }, 
-        { title: "Yanineko (OP)", yt: "46Z-WQv_vFc" }, 
-        { title: "Tenmaku no Jaaduugaru (OP)", yt: "_GlLp6hyM2E" }, 
-        { title: "Tenmaku no Jaaduugaru (ED)", yt: "bLQV43WeRvk" }, 
-        { title: "Tensei Shitara Slime Datta Ken (OP)", yt: "zvIS6EIkXx8" }, 
-        { title: "Tensei Shitara Slime Datta Ken (ED)", yt: "jYbklPS7mDk" }, 
-        { title: "THE GHOST IN THE SHELL (OP)", yt: "PDZb57n_b90" }, 
-        { title: "THE GHOST IN THE SHELL (ED)", yt: "YSg5H6kjKCo" }, 
-        { title: "LIAR GAME (ED)", yt: "bztYaH6hbxg" }, 
-        { title: "LIAR GAME (OP)", yt: "slKNbfZgImw" }, 
-        { title: "BLACK TORCH (OP)", yt: "2FjRzlo5zHI" }, 
-        { title: "BLACK TORCH (ED)", yt: "m_TbBLQgIIg" }, 
-        { title: "yomi no tsugai (OP)", yt: "nQGfyebJ_oc" }, 
-        { title: "yomi no tsugai (ED)", yt: "-oJdHssdJAk" }, 
-        { title: "20th Century Electricity Catalog (ED)", yt: "lJ6dDUwWOis" }, 
-        { title: "20th Century Electricity Catalog (OP)", yt: "-UMzc7BI6y4" }, 
-        { title: "Thunderbolt 3 (OP)", yt: "gnsGSDo0fTU" }, 
-        { title: "Thunderbolt 3 (ED)", yt: "2SXzmgP26bk" }, 
-        { title: "Let This Be My Last Battlefield: Ten Years Later, I Became a Legend (OP)", yt: "lMq8obidFDI" }, 
-        { title: "Let This Be My Last Battlefield: Ten Years Later, I Became a Legend (ED)", yt: "UDD-U-c-m9Y" }, 
-        { title: "Otome Kaijuu Caramelise (OP)", yt: "hFldDZZcrQo" }, 
-        { title: "Otome Kaijuu Caramelise (ED)", yt: "waOUdRPozDY" }, 
-        { title: "For You in Full Blossom (OP)", yt: "SccI7wPhm5s" }, 
-        { title: "For You in Full Blossom (ED)", yt: "-nGHy6oi9dA" },
-        { title: "Grow Up Show ~Himawari no Circus-dan~ (OP)", yt: "QxJWmZ74GfM" },
-        { title: "Grow Up Show ~Himawari no Circus-dan~ (ED)", yt: "Z3LKxdlyNSU" },
-        { title: "BanG Dream! Yume∞Mita (OP)", yt: "Ech7Tj8ga0Y" },
-        { title: "BanG Dream! Yume∞Mita (ED)", yt: "wuY6Suvf4OQ" },
-        { title: "Mushoku Tensei III (OP)", yt: "3F8-KF40VhI" },
-        { title: "Mushoku Tensei III (ED)", yt: "UKcJqQqiXq0" },
-        { title: "Hell Mode: Yarikomi-zuki no Gamer wa Haisettei no Isekai de Musou Suru 2nd Season (OP)", yt: "ByIgOD0qOKY" },
-        { title: "Hell Mode: Yarikomi-zuki no Gamer wa Haisettei no Isekai de Musou Suru 2nd Season (ED)", yt: "SYpHpUiGcQU" },
-        { title: "Super no Ura de Yani Suu Futari (ED)", yt: "rn0QtVBIo2o" },
-        { title: "Super no Ura de Yani Suu Futari (OP)", yt: "0HGEaVFajSU" },
-        { title: "Tomb Raider King (OP)", yt: "PVN8Pj_Ykyo" },
-        { title: "Tomb Raider King (ED)", yt: "_4TDl0RPfnE" },
-        { title: "Kabushiki Gaisha Magi Lumiere 2nd Season (OP)", yt: "8ijeHE7catA" },
-        { title: "Kabushiki Gaisha Magi Lumiere 2nd Season (ED)", yt: "CCjQ0FuVx7s" },
-        { title: "Iwamoto-senpai no Suisen (OP)", yt: "LPzner7Mr4M" },
-        { title: "Iwamoto-senpai no Suisen (ED)", yt: "WM9BicFEhKs" },
-        { title: "Let's Go Kaikigumi (OP)", yt: "GEZWCWyX-is" },
-        { title: "Let's Go Kaikigumi (ED)", yt: "MnDO2Vv4ZkA" },
-        { title: "Saikyou Degarashi Ouji no Anyaku Teii Arasoi (OP)", yt: "lWYRZq7TuHQ" },
-        { title: "Saikyou Degarashi Ouji no Anyaku Teii Arasoi (ED)", yt: "r7Izfz0iyRw" },
-        { title: "Yoroi Shinden Samurai Troopers Part 2 (OP)", yt: "XOyydxN5QFs" },
-        { title: "Yoroi Shinden Samurai Troopers Part 2 (ED)", yt: "g8YYbQeC5G4" },
-        { title: "Katainaka no Ossan, Kensei ni Naru II (OP)", yt: "3a1w0lo3OxM" },
-        { title: "Grand Blue Season 3 (OP)", yt: "ktPTy5hgKbU" },
-        { title: "LV999 no Murabito (ED)", yt: "MgIol7kDcTE" },
-        { title: "Saishuukai (ED)", yt: "jW-nRpVHw8c" }
-
+    // --- LISTE DES CHEMINS ET PRÉSETS DES SAISONS DISPONIBLES DANS VOTRE ARCHITECTURE ---
+    const presetSeasons = [
+        { id: "summer_2026_mix", name: "Été 2026", path: "data/summer-2026-mix.json" },
+        { id: "automne_2019", name: "Automne 2019", path: "data/automne_2019.json" },
+        { id: "winter_2020", name: "Hiver 2020", path: "data/winter_2020.json" },
+        { id: "underrated", name: "Underrated v1", path: "data/underrated.json" }
     ];
 
     // Variables globales du jeu
     let currentRound = [];
-    const initialShuffled = []; // Sauvegarde exacte de la distribution de départ
+    const initialShuffled = []; // Sauvegarde exacte de la distribution de départ (références réelles des objets)
     let nextRound = [];
     let currentIndex = 0;
     const matchHistory = []; 
     const historyStateStack = [];
 
-    // Gestion de la saison active
+    // Contenu brut de la saison sélectionnée
     let selectedSeasonData = null;
 
-    const embeddedSeasonPresets = {
-        summer_2026: { seasonName: "Été 2026 (Intégré)", entries: defaultEntries },
-        automne_2019: {
-            seasonName: "Automne 2019",
-            entries: [
+    // Peuple le sélecteur du menu de démarrage avec les saisons existantes
+    function initMenu() {
+        const select = document.getElementById('season-select');
+        select.innerHTML = '';
 
-            ]
-        }
-    };
+        presetSeasons.forEach(season => {
+            const opt = document.createElement('option');
+            opt.value = season.id;
+            opt.innerText = season.name;
+            select.appendChild(opt);
+        });
+
+        // Option d'importation
+        const customOpt = document.createElement('option');
+        customOpt.value = "custom";
+        customOpt.innerText = "Uploader votre fichier JSON de saison (.json)";
+        select.appendChild(customOpt);
+
+        onSeasonChange();
+    }
 
     function normalizeEntry(entry, index) {
-        const title = entry.title || entry.name || entry.song || entry.label || `Entrée ${index + 1}`;
+        let title = entry.title || entry.name || entry.song || entry.label || `Entrée ${index + 1}`;
         const yt = entry.yt || entry.youtube || entry.youtubeId || entry.videoId || entry.id || entry.url || "";
         const rawType = entry.type || entry.category || entry.kind || "";
         const titleText = `${title} ${rawType}`.toUpperCase();
@@ -628,6 +576,13 @@
             type = "ED";
         } else if (rawType === "MIX" || rawType === "mix") {
             type = "MIX";
+        }
+
+        // Complète l'écriture lisible du titre si (OP) ou (ED) n'est pas déjà indiqué
+        if (type === "OP" && !title.toUpperCase().includes("(OP)")) {
+            title = `${title} (OP)`;
+        } else if (type === "ED" && !title.toUpperCase().includes("(ED)")) {
+            title = `${title} (ED)`;
         }
 
         return {
@@ -657,17 +612,17 @@
         return { seasonName: fallbackName || "Saison importée", entries: [] };
     }
 
-    // Parse et segmente les entrées en OP ou ED si l'attribut "type" n'est pas présent
+    // Parse et segmente les entrées
     function parseEntries(entries) {
         if (!Array.isArray(entries)) return [];
         return entries.map((entry, index) => normalizeEntry(entry, index));
     }
 
     function getSelectedEntries() {
-        const rawEntries = selectedSeasonData && Array.isArray(selectedSeasonData.entries)
-            ? selectedSeasonData.entries
-            : defaultEntries;
-        return parseEntries(rawEntries);
+        if (selectedSeasonData && Array.isArray(selectedSeasonData.entries)) {
+            return parseEntries(selectedSeasonData.entries);
+        }
+        return [];
     }
 
     // Met à jour les statistiques de sélection sur l'écran d'accueil
@@ -676,37 +631,31 @@
         const total = parsed.length;
         const ops = parsed.filter(e => e.type === "OP").length;
         const eds = parsed.filter(e => e.type === "ED").length;
-        const name = selectedSeasonData ? selectedSeasonData.seasonName : "Été 2026 (Intégré)";
+        const name = selectedSeasonData ? selectedSeasonData.seasonName : "Aucune saison";
 
         document.getElementById('available-count').innerText =
             `Saison chargée : ${name}\n` +
             `Contenu total : ${total} morceaux  |  Openings : ${ops}  |  Endings : ${eds}`;
     }
 
-    async function loadPresetSeason(value) {
-        if (value === "summer_2026") {
-            selectedSeasonData = embeddedSeasonPresets.summer_2026;
+    // Téléchargement asynchrone des saisons locales
+    async function loadPresetSeason(id) {
+        const season = presetSeasons.find(s => s.id === id);
+        if (!season) return;
+
+        try {
+            const response = await fetch(season.path);
+            if (!response.ok) throw new Error("HTTP " + response.status);
+            const data = await response.json();
+            selectedSeasonData = normalizeSeasonData(data, season.name);
             updateCountLabel();
-            return;
+        } catch (error) {
+            console.error(`Impossible de charger la saison via fetch (${season.path}) :`, error);
+            selectedSeasonData = null;
+            document.getElementById('available-count').innerText = 
+                `⚠️ Impossible de charger "${season.name}" automatiquement (Restriction de sécurité locale / CORS).\n` +
+                `👉 Veuillez choisir l'option "Uploader votre fichier" et sélectionner le fichier depuis votre dossier "data/"`;
         }
-
-        if (value === "automne_2019") {
-            try {
-                const response = await fetch("data/automne_2019.json");
-                if (!response.ok) throw new Error("HTTP " + response.status);
-                const data = await response.json();
-                selectedSeasonData = normalizeSeasonData(data, "Automne 2019");
-                updateCountLabel();
-            } catch (error) {
-                console.warn("Chargement Automne 2019 impossible, fallback sur la version intégrée :", error);
-                selectedSeasonData = embeddedSeasonPresets.automne_2019;
-                updateCountLabel();
-            }
-            return;
-        }
-
-        selectedSeasonData = null;
-        document.getElementById('available-count').innerText = "Veuillez uploader un fichier JSON.";
     }
 
     // Gestion du changement de saison
@@ -746,8 +695,8 @@
 
     // Démarre et initialise le tournoi
     async function initTournament() {
-        if (!selectedSeasonData) {
-            alert("Veuillez d'abord charger un fichier JSON valide pour cette saison.");
+        if (!selectedSeasonData || !Array.isArray(selectedSeasonData.entries) || selectedSeasonData.entries.length === 0) {
+            alert("Veuillez d'abord charger un fichier de saison valide.");
             return;
         }
 
@@ -884,6 +833,13 @@
     function toggleStar(indexOffset) {
         const entry = currentRound[currentIndex + indexOffset];
         entry.starred = !entry.starred;
+        
+        // Synchronise l'état marqué directement avec l'élément original de initialShuffled
+        const initialEntry = initialShuffled.find(e => e.yt === entry.yt);
+        if (initialEntry) {
+            initialEntry.starred = entry.starred;
+        }
+
         updateStarButtonState(indexOffset, entry.starred);
     }
 
@@ -909,7 +865,9 @@
                 p2: { ...m.p2 },
                 winnerTitle: m.winnerTitle
             })),
-            selectedSeasonData: JSON.parse(JSON.stringify(selectedSeasonData))
+            selectedSeasonData: JSON.parse(JSON.stringify(selectedSeasonData)),
+            // Sauvegarde de l'état précis (etoiles et classement) de initialShuffled pour éviter les ruptures de référence
+            initialShuffledState: initialShuffled.map(e => ({ yt: e.yt, starred: e.starred, result: e.result }))
         });
     }
 
@@ -926,6 +884,17 @@
         matchHistory.push(...prevState.matchHistory);
 
         selectedSeasonData = prevState.selectedSeasonData;
+
+        // Restauration asynchrone des états de initialShuffled
+        if (prevState.initialShuffledState) {
+            prevState.initialShuffledState.forEach(state => {
+                const target = initialShuffled.find(e => e.yt === state.yt);
+                if (target) {
+                    target.starred = state.starred;
+                    target.result = state.result;
+                }
+            });
+        }
 
         updateDisplay();
     }
@@ -946,7 +915,14 @@
             winnerTitle: winner.title
         });
 
-        loser.result = getEliminationStageName(currentRound.length);
+        // Met à jour la valeur locale et celle synchronisée dans initialShuffled
+        const stageName = getEliminationStageName(currentRound.length);
+        loser.result = stageName;
+        
+        const initialLoser = initialShuffled.find(e => e.yt === loser.yt);
+        if (initialLoser) {
+            initialLoser.result = stageName;
+        }
 
         nextRound.push(winner);
         currentIndex += 2;
@@ -982,6 +958,15 @@
     function showWinner(winner) {
         winner.result = "🏆 CHAMPION 🏆";
 
+        const initialWinner = initialShuffled.find(e => e.yt === winner.yt);
+        if (initialWinner) {
+            initialWinner.result = "🏆 CHAMPION 🏆";
+        }
+
+        // COUPE L'AUDIO DES LECTEURS ACTIFS immédiatement
+        document.getElementById('player1').innerHTML = "";
+        document.getElementById('player2').innerHTML = "";
+
         document.getElementById('tournament-screen').classList.add('hidden');
         document.getElementById('match-info').classList.add('hidden');
         document.getElementById('round-name').classList.add('hidden');
@@ -1002,6 +987,16 @@
         `;
 
         generateRecap();
+    }
+
+    // Gère le pliage/dépliage des historiques de rounds
+    function toggleCollapse(id) {
+        const el = document.getElementById(id);
+        if (el.style.display === "none") {
+            el.style.display = "grid";
+        } else {
+            el.style.display = "none";
+        }
     }
 
     // Génère l'Arbre Graphique Universel et Dynamique pour n'importe quelle taille N (Puissance de 2)
@@ -1065,7 +1060,13 @@
                     <svg id="bracket-lines" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; stroke: #475569; stroke-width: 2; fill: none;"></svg>
         `;
 
-        Object.keys(columns).forEach(colKey => {
+        // Ordre de rendu strict pour respecter la symétrie
+        const colOrder = [];
+        for (let j = 0; j < k; j++) colOrder.push(`L-${j}`);
+        colOrder.push(`C-${k}`);
+        for (let j = k - 1; j >= 0; j--) colOrder.push(`R-${j}`);
+
+        colOrder.forEach(colKey => {
             const list = columns[colKey];
             const [side, lvlStr] = colKey.split('-');
             const lvl = parseInt(lvlStr);
@@ -1343,7 +1344,7 @@
     });
 
     // Chargement initial des compteurs du menu de configuration
-    onSeasonChange();
+    initMenu();
 </script>
 </body>
 </html>
