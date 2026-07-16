@@ -227,6 +227,20 @@
             box-shadow: 0 0 10px rgba(234, 179, 8, 0.5);
         }
 
+        /* Rend le titre jaune gold pour les morceaux marqués d'une étoile */
+        .node-starred .node-title {
+            color: #eab308 !important; 
+            font-weight: bold;         
+        }
+        /* Hauteur x2 pour les cases des tours après les 32èmes (Level > 0) */
+.bracket-node-tall {
+    height: 105px !important; /* On passe de 65px à 105px */
+}
+/* Hauteur x2 pour les images de ces cases */
+.bracket-node-tall img {
+    height: 80px !important; /* On passe de 40px à 80px */
+}
+
         /* Bouton Télécharger */
         .download-btn {
             background: #10b981;
@@ -768,8 +782,11 @@
                 const thumbUrl = isPlaceholder ? "" : `https://img.youtube.com/vi/${node.yt}/mqdefault.jpg`;
                 const isStarred = node.starred;
                 
+                // Détecte si on est au-delà du 1er tour (lvl 0 / 32èmes)
+                const isTall = lvl !== 0;
+                
                 bracketHtml += `
-                    <div class="bracket-node ${isStarred ? 'node-starred' : ''}" id="${nodeId}">
+                    <div class="bracket-node ${isStarred ? 'node-starred' : ''} ${isTall ? 'bracket-node-tall' : ''}" id="${nodeId}">
                         ${isPlaceholder ? `
                             <div style="background: #0f172a; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #475569;">
                                 <span>-</span>
