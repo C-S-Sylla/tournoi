@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <title>Tournoi Anime OP/ED - 64 Participants</title>
+    <!-- Inclusion de html2canvas pour l'export d'image du schéma -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         :root { 
             --primary: #6366f1; 
@@ -134,6 +136,111 @@
             background: #334155;
             color: #f8fafc;
             border-color: #64748b;
+        }
+
+        /* Bouton Retour en arrière */
+        .undo-btn {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: bold;
+            margin: 10px auto;
+            transition: 0.2s;
+            display: none;
+        }
+        .undo-btn:hover {
+            background: #dc2626;
+        }
+
+        /* Arbre graphique du tournoi */
+        .bracket-scroll {
+            width: 100%;
+            max-height: 850px;
+            overflow: auto;
+            border: 1px solid #334155;
+            background: #090d16;
+            padding: 30px 15px;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-sizing: border-box;
+        }
+        .bracket-wrapper {
+            display: flex;
+            gap: 25px;
+            align-items: center;
+            justify-content: center;
+            width: max-content;
+            min-width: 100%;
+            height: 2400px; /* Alignement par flexbox assuré */
+            position: relative;
+            box-sizing: border-box;
+        }
+        .bracket-column {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+            height: 100%;
+            width: 140px;
+            position: relative;
+            box-sizing: border-box;
+            z-index: 2;
+        }
+        .bracket-node {
+            width: 100%;
+            height: 65px;
+            background: #1e293b;
+            border: 2px solid #475569;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+            font-size: 0.7rem;
+            position: relative;
+            box-sizing: border-box;
+            overflow: hidden;
+            transition: 0.2s;
+        }
+        .bracket-node img {
+            width: 100%;
+            height: 40px;
+            object-fit: cover;
+            border-bottom: 1px solid #334155;
+        }
+        .bracket-node .node-title {
+            width: 100%;
+            padding: 2px 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            text-align: center;
+            box-sizing: border-box;
+            background: rgba(15, 23, 42, 0.95);
+            color: #f8fafc;
+        }
+        .node-starred {
+            border-color: #eab308 !important;
+            box-shadow: 0 0 10px rgba(234, 179, 8, 0.5);
+        }
+
+        /* Bouton Télécharger */
+        .download-btn {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+        .download-btn:hover {
+            background: #059669;
         }
 
         .recap-section {
@@ -268,6 +375,7 @@
         <button onclick="vote(1)">CHOISIR</button>
     </div>
 </div>
+        <button id="undo-btn" class="undo-btn" onclick="undo()">↩ Revenir en arrière</button>
 
 <div id="winner-screen">
     <h1>🏆 VAINQUEUR FINAL 🏆</h1>
@@ -362,14 +470,26 @@
     });
 
     let currentRound = [...allEntries].sort(() => Math.random() - 0.5);
+    const initialShuffled = [...currentRound]; // Sauvegarde permanente pour le graphe final
     let nextRound = [];
     let currentIndex = 0;
     const matchHistory = []; 
+
+    // Pile pour stocker l'historique de retour en arrière
+    const historyStateStack = [];
 
     function updateDisplay() {
         if (currentRound.length === 1) {
             showWinner(currentRound[0]);
             return;
+        }
+
+        // Afficher/masquer le bouton de retour en arrière
+        const undoBtn = document.getElementById('undo-btn');
+        if (historyStateStack.length > 0) {
+            undoBtn.style.display = 'inline-block';
+        } else {
+            undoBtn.style.display = 'none';
         }
 
         document.getElementById('round-name').innerText = getRoundTitle(currentRound.length);
@@ -416,7 +536,6 @@
         if (!iframe || !textSpan) return;
 
         if (iframe.src.includes('youtube')) {
-            // Charge la vidéo depuis un proxy public stable (Invidious) qui ne bloque pas l'intégration
             iframe.src = `https://yewtu.be/embed/${ytId}`;
             textSpan.innerText = "Retourner au lecteur YouTube 🔁";
         } else {
@@ -456,7 +575,49 @@
         }
     }
 
+    // Capture de l'état actuel avant le vote pour permettre le retour en arrière
+    function saveState() {
+        historyStateStack.push({
+            currentRound: currentRound.map(e => ({ ...e })),
+            nextRound: nextRound.map(e => ({ ...e })),
+            currentIndex: currentIndex,
+            matchHistory: matchHistory.map(m => ({
+                roundSize: m.roundSize,
+                p1: { ...m.p1 },
+                p2: { ...m.p2 },
+                winnerTitle: m.winnerTitle
+            })),
+            allEntries: allEntries.map(e => ({ ...e }))
+        });
+    }
+
+    // Fonction de retour en arrière
+    function undo() {
+        if (historyStateStack.length === 0) return;
+
+        const prevState = historyStateStack.pop();
+
+        currentRound = prevState.currentRound;
+        nextRound = prevState.nextRound;
+        currentIndex = prevState.currentIndex;
+
+        matchHistory.length = 0;
+        matchHistory.push(...prevState.matchHistory);
+
+        prevState.allEntries.forEach(pe => {
+            const original = allEntries.find(e => e.yt === pe.yt);
+            if (original) {
+                original.result = pe.result;
+                original.starred = pe.starred;
+            }
+        });
+
+        updateDisplay();
+    }
+
     function vote(indexOffset) {
+        saveState(); // Enregistrement de l'état avant d'appliquer les changements
+
         const p1 = currentRound[currentIndex];
         const p2 = currentRound[currentIndex + 1];
 
@@ -509,6 +670,7 @@
         document.getElementById('tournament-area').classList.add('hidden');
         document.getElementById('match-info').classList.add('hidden');
         document.getElementById('round-name').classList.add('hidden');
+        document.getElementById('undo-btn').classList.add('hidden');
         document.getElementById('winner-screen').style.display = 'block';
         document.getElementById('title-winner').innerText = winner.title;
         
@@ -536,6 +698,197 @@
         }
     }
 
+    // Génère la structure de l'arbre final symétrique (de gauche à droite vers le centre)
+    function generateBracketVisual() {
+        const tree = [];
+        // Niveau 0 : Les 64 participants triés comme au départ
+        tree[0] = initialShuffled.map(e => ({ ...e }));
+
+        // Génère la suite logique des niveaux en récupérant le gagnant de chaque match dans matchHistory
+        for (let lvl = 1; lvl <= 6; lvl++) {
+            tree[lvl] = [];
+            const prevLvl = tree[lvl - 1];
+            for (let i = 0; i < prevLvl.length; i += 2) {
+                const p1 = prevLvl[i];
+                const p2 = prevLvl[i + 1];
+                if (!p2) {
+                    tree[lvl].push({ ...p1 });
+                    continue;
+                }
+                
+                const match = matchHistory.find(m => 
+                    (m.p1.title === p1.title && m.p2.title === p2.title) ||
+                    (m.p1.title === p2.title && m.p2.title === p1.title)
+                );
+                
+                if (match) {
+                    const winnerObj = allEntries.find(e => e.title === match.winnerTitle);
+                    tree[lvl].push({ ...winnerObj });
+                } else {
+                    tree[lvl].push({ title: "En attente", yt: "", placeholder: true });
+                }
+            }
+        }
+        
+        // Distribution symétrique des colonnes :
+        // Partie Gauche (0 à 31) -> Milieu (Champion) <- Partie Droite (32 à 63)
+        const columns = {
+            'L-0': tree[0].slice(0, 32),
+            'L-1': tree[1].slice(0, 16),
+            'L-2': tree[2].slice(0, 8),
+            'L-3': tree[3].slice(0, 4),
+            'L-4': tree[4].slice(0, 2),
+            'L-5': tree[5].slice(0, 1),
+            'C-6': tree[6], // Le Champion au centre
+            'R-5': tree[5].slice(1, 2),
+            'R-4': tree[4].slice(2, 4),
+            'R-3': tree[3].slice(4, 8),
+            'R-2': tree[2].slice(8, 16),
+            'R-1': tree[1].slice(16, 32),
+            'R-0': tree[0].slice(32, 64)
+        };
+
+        let bracketHtml = `
+            <div class="bracket-scroll">
+                <div class="bracket-wrapper">
+                    <!-- Balise SVG pour dessiner les lignes de connexion -->
+                    <svg id="bracket-lines" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; stroke: #475569; stroke-width: 2; fill: none;"></svg>
+        `;
+
+        Object.keys(columns).forEach(colKey => {
+            const list = columns[colKey];
+            const [side, lvlStr] = colKey.split('-');
+            const lvl = parseInt(lvlStr);
+            
+            bracketHtml += `<div class="bracket-column">`;
+            
+            list.forEach((node, idx) => {
+                const nodeId = `${side}-${lvl}-${idx}`;
+                const isPlaceholder = node.placeholder || !node.yt;
+                const thumbUrl = isPlaceholder ? "" : `https://img.youtube.com/vi/${node.yt}/mqdefault.jpg`;
+                const isStarred = node.starred;
+                
+                bracketHtml += `
+                    <div class="bracket-node ${isStarred ? 'node-starred' : ''}" id="${nodeId}">
+                        ${isPlaceholder ? `
+                            <div style="background: #0f172a; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #475569;">
+                                <span>-</span>
+                            </div>
+                        ` : `
+                            <!-- crossorigin="anonymous" est indispensable pour permettre l'export html2canvas -->
+                            <img src="${thumbUrl}" crossorigin="anonymous" alt="" />
+                            <div class="node-title" title="${node.title}">
+                                ${isStarred ? '⭐ ' : ''}${node.title}
+                            </div>
+                        `}
+                    </div>
+                `;
+            });
+            
+            bracketHtml += `</div>`;
+        });
+
+        bracketHtml += `
+                </div>
+            </div>
+        `;
+        return bracketHtml;
+    }
+
+    // Dessine de manière chirurgicale les branches reliant les nœuds
+    function drawBracketLines() {
+        const svg = document.getElementById('bracket-lines');
+        if (!svg) return;
+        svg.innerHTML = ''; 
+        const wrapperRect = document.querySelector('.bracket-wrapper').getBoundingClientRect();
+
+        // Trace les connexions gauches
+        for (let lvl = 0; lvl < 5; lvl++) {
+            const count = 32 / Math.pow(2, lvl);
+            for (let i = 0; i < count; i++) {
+                connectNodes(`L-${lvl}-${i}`, `L-${lvl+1}-${Math.floor(i/2)}`, svg, wrapperRect);
+            }
+        }
+        connectNodes('L-5-0', 'C-6-0', svg, wrapperRect);
+
+        // Trace les connexions droites
+        for (let lvl = 0; lvl < 5; lvl++) {
+            const count = 32 / Math.pow(2, lvl);
+            for (let i = 0; i < count; i++) {
+                connectNodes(`R-${lvl}-${i}`, `R-${lvl+1}-${Math.floor(i/2)}`, svg, wrapperRect);
+            }
+        }
+        connectNodes('R-5-0', 'C-6-0', svg, wrapperRect);
+    }
+
+    function connectNodes(childId, parentId, svg, wrapperRect) {
+        const childEl = document.getElementById(childId);
+        const parentEl = document.getElementById(parentId);
+        if (!childEl || !parentEl) return;
+
+        const childRect = childEl.getBoundingClientRect();
+        const parentRect = parentEl.getBoundingClientRect();
+
+        const childX = childRect.left - wrapperRect.left;
+        const childY = childRect.top - wrapperRect.top;
+        const parentX = parentRect.left - wrapperRect.left;
+        const parentY = parentRect.top - wrapperRect.top;
+
+        const isLeftTree = childId.startsWith('L');
+        let startX, startY, endX, endY;
+
+        if (isLeftTree) {
+            startX = childX + childRect.width;
+            startY = childY + childRect.height / 2;
+            endX = parentX;
+            endY = parentY + parentRect.height / 2;
+        } else {
+            startX = childX;
+            startY = childY + childRect.height / 2;
+            endX = parentX + parentRect.width;
+            endY = parentY + parentRect.height / 2;
+        }
+
+        // Tracé orthogonal en échelle (horizontal -> vertical -> horizontal)
+        const midX = (startX + endX) / 2;
+        const pathData = `M ${startX} ${startY} L ${midX} ${startY} L ${midX} ${endY} L ${endX} ${endY}`;
+        
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', pathData);
+        path.setAttribute('stroke', '#475569');
+        path.setAttribute('stroke-width', '2');
+        path.setAttribute('fill', 'none');
+        svg.appendChild(path);
+    }
+
+    // Exporte l'arbre entier au format PNG avec html2canvas
+    function downloadBracket() {
+        const container = document.querySelector('.bracket-wrapper');
+        if (!container) return;
+
+        const btn = document.querySelector('.download-btn');
+        btn.innerText = "Génération de l'image... ⏳";
+        btn.disabled = true;
+
+        html2canvas(container, {
+            backgroundColor: "#090d16",
+            useCORS: true, 
+            scale: 1.5 
+        }).then(canvas => {
+            const link = document.createElement('a');
+            link.download = 'recap-tournoi.png';
+            link.href = canvas.toDataURL();
+            link.click();
+            
+            btn.innerText = "📸 Télécharger le Schéma (PNG)";
+            btn.disabled = false;
+        }).catch(err => {
+            console.error("Erreur d'exportation", err);
+            btn.innerText = "Erreur de téléchargement ❌";
+            btn.disabled = false;
+        });
+    }
+
     function generateRecap() {
         const starredEntries = allEntries.filter(e => e.starred);
         let starredHtml = "";
@@ -552,10 +905,21 @@
             `;
         }
 
+        // Section de l'arbre graphique de tournoi
+        const bracketVisualHtml = `
+            <div class="recap-section">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap:10px;">
+                    <h3>🌿 GRAPH SCHÉMATIQUE DU TOURNOI</h3>
+                    <button class="download-btn" onclick="downloadBracket()">📸 Télécharger le Schéma (PNG)</button>
+                </div>
+                ${generateBracketVisual()}
+            </div>
+        `;
+
         const roundsToRender = [2, 4, 8, 16, 32, 64];
         let bracketHtml = `
             <div class="recap-section">
-                <h3>🌿 SCHÉMA DU TOURNOI (Détail des Matchs)</h3>
+                <h3>📜 HISTORIQUE DU COMPTE RENDU DES MATCHS</h3>
                 <div class="rounds-container">
         `;
 
@@ -648,8 +1012,18 @@
             </div>
         `;
 
-        document.getElementById('tournament-recap-container').innerHTML = starredHtml + bracketHtml + tableHtml;
+        document.getElementById('tournament-recap-container').innerHTML = starredHtml + bracketVisualHtml + bracketHtml + tableHtml;
+
+        // Tracé asynchrone des lignes après insertion du DOM
+        setTimeout(() => {
+            drawBracketLines();
+        }, 150);
     }
+
+    // Réajuste le tracé des lignes de l'arbre si l'utilisateur redimensionne son écran
+    window.addEventListener('resize', () => {
+        drawBracketLines();
+    });
 
     updateDisplay();
 </script>
