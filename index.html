@@ -224,27 +224,39 @@
             background: #dc2626;
         }
 
-        /* Arbre de tournoi universel */
+        /* Arbre de tournoi universel et interactif */
         .bracket-scroll {
             width: 100%;
             max-height: 850px;
-            overflow: auto;
+            overflow: hidden !important; /* Pas de barre de défilement apparente */
             border: 1px solid #334155;
             background: #090d16;
             padding: 30px 15px;
             border-radius: 12px;
             margin: 20px 0;
             box-sizing: border-box;
+            position: relative;
+            cursor: grab;
+            user-select: none;
+            /* Désactivation des scrollbars pour différents navigateurs */
+            -ms-overflow-style: none;  /* IE et Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+        .bracket-scroll::-webkit-scrollbar {
+            display: none; /* Chrome, Safari, Opera */
+        }
+        .bracket-scroll:active {
+            cursor: grabbing;
         }
         .bracket-wrapper {
             display: flex;
             gap: 25px;
             align-items: center;
-            justify-content: center;
+            justify-content: flex-start; /* Aligné à gauche pour un calcul d'offset précis */
             width: max-content;
-            min-width: 100%;
             position: relative;
             box-sizing: border-box;
+            transform-origin: 0 0; /* Origine en haut à gauche pour un centrage chirurgical */
         }
         .bracket-column {
             display: flex;
@@ -356,9 +368,10 @@
             color: #38bdf8;
         }
         #bracket-section-container:fullscreen .bracket-scroll {
-            max-height: calc(100vh - 120px);
-            height: 100%;
-            border: 1px solid #1e293b;
+            max-height: none !important;
+            height: 100% !important;
+            border: none;
+            background: transparent;
         }
 
         .recap-section {
@@ -572,13 +585,21 @@
         { id: "underrated", name: "Underrated v1", path: "data/underrated.json" }
     ];
 
-    // Variables globales du jeu
+    // Variables globales du jeu et du système de zoom/déplacement
     let currentRound = [];
     const initialShuffled = []; // Sauvegarde exacte de la distribution de départ (références réelles des objets)
     let nextRound = [];
     let currentIndex = 0;
     const matchHistory = []; 
     const historyStateStack = [];
+
+    // Variables d'état du zoom et déplacement de l'arbre
+    let zoomScale = 1.0;
+    let panX = 0;
+    let panY = 0;
+    let isPanning = false;
+    let startX = 0;
+    let startY = 0;
 
     // Contenu brut de la saison sélectionnée
     let selectedSeasonData = null;
@@ -1052,7 +1073,7 @@
         }
     }
 
-    // Écouteur d'événement pour ajuster le tracé des lignes de liaison SVG et le bouton de plein écran
+    // Écouteur d'événement pour ajuster le plein écran, l'ajustement auto et le tracé des lignes
     document.addEventListener('fullscreenchange', () => {
         const btn = document.querySelector('.fullscreen-btn');
         if (btn) {
@@ -1064,9 +1085,129 @@
                 btn.style.background = "#3b82f6";
             }
         }
-        // Force le recalcul asynchrone des coordonnées des lignes de liaison SVG
-        setTimeout(drawBracketLines, 100);
+        // Force l'ajustement et le tracé asynchrones du schéma
+        setTimeout(() => {
+            autoFitBracket();
+            drawBracketLines();
+        }, 150);
     });
+
+    // Empêche l'arbre d'être glissé en dehors de la zone visible (clamping)
+    // Limite le déplacement pour éviter de perdre le graphique hors de l'écran
+    function constrainBounds() {
+        const scrollEl = document.querySelector('.bracket-scroll');
+        const wrapperEl = document.querySelector('.bracket-wrapper');
+        if (!scrollEl || !wrapperEl) return;
+
+        const W_view = scrollEl.clientWidth;
+        const H_view = scrollEl.clientHeight;
+        
+        const W_child = wrapperEl.offsetWidth;
+        const H_child = wrapperEl.offsetHeight;
+
+        // Marges de sécurité (l'arbre ne peut pas sortir à plus de 50% de la zone de vision)
+        const marginX = W_view * 0.5;
+        const marginY = H_view * 0.5;
+
+        const panX_min = marginX - (W_child * zoomScale);
+        const panX_max = W_view - marginX;
+
+        const panY_min = marginY - (H_child * zoomScale);
+        const panY_max = H_view - marginY;
+
+        panX = Math.max(panX_min, Math.min(panX, panX_max));
+        panY = Math.max(panY_min, Math.min(panY, panY_max));
+    }
+
+    // Applique les transformations de zoom et déplacement (pan) locales au wrapper de l'arbre
+    function applyZoomPan() {
+        const wrapper = document.querySelector('.bracket-wrapper');
+        if (!wrapper) return;
+        constrainBounds(); // Empêche de sortir du cadre
+        wrapper.style.transform = `translate(${panX}px, ${panY}px) scale(${zoomScale})`;
+    }
+
+    // Calcule l'échelle optimale de lisibilité et centre parfaitement l'arbre au milieu du cadre
+    function autoFitBracket() {
+        const scrollEl = document.querySelector('.bracket-scroll');
+        const wrapperEl = document.querySelector('.bracket-wrapper');
+        if (!scrollEl || !wrapperEl) return;
+
+        const W_view = scrollEl.clientWidth;
+        const H_view = scrollEl.clientHeight;
+
+        const W_child = wrapperEl.offsetWidth;
+        const H_child = wrapperEl.offsetHeight;
+
+        // Échelles nécessaires sur l'axe X et Y
+        const scaleX = W_view / W_child;
+        const scaleY = H_view / H_child;
+
+        // Calcul d'une échelle confortable pour éviter que ce soit illisible d'entrée
+        zoomScale = Math.min(scaleX, scaleY) * 0.95;
+        zoomScale = Math.max(zoomScale, 0.65); // Évite que ce soit trop petit au départ (minimum 0.65)
+
+        // Centrage géométrique par rapport à l'origine (0,0)
+        panX = (W_view - W_child * zoomScale) / 2;
+        panY = (H_view - H_child * zoomScale) / 2;
+
+        applyZoomPan();
+    }
+
+    // Initialise les événements souris et trackpad (Glisser-Déposer pour Panner, Pinch pour Zoomer)
+    function initZoomPan() {
+        const scrollEl = document.querySelector('.bracket-scroll');
+        if (!scrollEl) return;
+
+        // Reset des valeurs par défaut
+        zoomScale = 1.0;
+        panX = 0;
+        panY = 0;
+        applyZoomPan();
+
+        // 1. Déplacement avec clic souris (Drag and Pan)
+        scrollEl.addEventListener('mousedown', (e) => {
+            if (e.button !== 0) return; // Uniquement clic gauche
+            isPanning = true;
+            startX = e.clientX - panX;
+            startY = e.clientY - panY;
+            scrollEl.style.cursor = 'grabbing';
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!isPanning) return;
+            panX = e.clientX - startX;
+            panY = e.clientY - startY;
+            applyZoomPan();
+        });
+
+        window.addEventListener('mouseup', () => {
+            if (isPanning) {
+                isPanning = false;
+                scrollEl.style.cursor = 'grab';
+            }
+        });
+
+        // 2. Zoom Trackpad (Pincement) / Molette Souris (Panner ou Zoomer avec CTRL)
+        scrollEl.addEventListener('wheel', (e) => {
+            e.preventDefault(); // Bloque le zoom natif de la page entière
+
+            if (e.ctrlKey) {
+                // Geste de pincement (Trackpad) ou Molette avec touche CTRL
+                const zoomFactor = 1.08;
+                if (e.deltaY < 0) {
+                    zoomScale = Math.min(zoomScale * zoomFactor, 3.0); // max 3x
+                } else {
+                    zoomScale = Math.max(zoomScale / zoomFactor, 0.15); // min 0.15x
+                }
+            } else {
+                // Défilement classique à deux doigts (Trackpad) : se déplace naturellement (panning)
+                panX -= e.deltaX;
+                panY -= e.deltaY;
+            }
+            applyZoomPan();
+        }, { passive: false });
+    }
 
     // Génère l'Arbre Graphique Universel et Dynamique pour n'importe quelle taille N (Puissance de 2)
     function generateBracketVisual() {
@@ -1177,11 +1318,11 @@
         return bracketHtml;
     }
 
+    // Recalcule le tracé des lignes de raccordement SVG via les offsets locaux
     function drawBracketLines() {
         const svg = document.getElementById('bracket-lines');
         if (!svg) return;
         svg.innerHTML = ''; 
-        const wrapperRect = document.querySelector('.bracket-wrapper').getBoundingClientRect();
 
         const N = initialShuffled.length;
         const k = Math.log2(N);
@@ -1190,47 +1331,54 @@
         for (let lvl = 0; lvl < k - 1; lvl++) {
             const count = Math.pow(2, k - 1 - lvl);
             for (let i = 0; i < count; i++) {
-                connectNodes(`L-${lvl}-${i}`, `L-${lvl+1}-${Math.floor(i/2)}`, svg, wrapperRect);
+                connectNodes(`L-${lvl}-${i}`, `L-${lvl+1}-${Math.floor(i/2)}`, svg);
             }
         }
-        connectNodes(`L-${k-1}-0`, `C-${k}-0`, svg, wrapperRect);
+        connectNodes(`L-${k-1}-0`, `C-${k}-0`, svg);
 
         // Connexions droites
         for (let lvl = 0; lvl < k - 1; lvl++) {
             const count = Math.pow(2, k - 1 - lvl);
             for (let i = 0; i < count; i++) {
-                connectNodes(`R-${lvl}-${i}`, `R-${lvl+1}-${Math.floor(i/2)}`, svg, wrapperRect);
+                connectNodes(`R-${lvl}-${i}`, `R-${lvl+1}-${Math.floor(i/2)}`, svg);
             }
         }
-        connectNodes(`R-${k-1}-0`, `C-${k}-0`, svg, wrapperRect);
+        connectNodes(`R-${k-1}-0`, `C-${k}-0`, svg);
     }
 
-    function connectNodes(childId, parentId, svg, wrapperRect) {
+    // Calcule les lignes orthogonales d'un élément enfant à son parent via les offsets locaux
+    function connectNodes(childId, parentId, svg) {
         const childEl = document.getElementById(childId);
         const parentEl = document.getElementById(parentId);
         if (!childEl || !parentEl) return;
 
-        const childRect = childEl.getBoundingClientRect();
-        const parentRect = parentEl.getBoundingClientRect();
+        const childCol = childEl.parentElement;
+        const parentCol = parentEl.parentElement;
 
-        const childX = childRect.left - wrapperRect.left;
-        const childY = childRect.top - wrapperRect.top;
-        const parentX = parentRect.left - wrapperRect.left;
-        const parentY = parentRect.top - wrapperRect.top;
+        // Position locale non altérée par le zoom
+        const childX = childCol.offsetLeft;
+        const childY = childCol.offsetTop + childEl.offsetTop;
+        const parentX = parentCol.offsetLeft;
+        const parentY = parentCol.offsetTop + parentEl.offsetTop;
+
+        const childW = childEl.offsetWidth;
+        const childH = childEl.offsetHeight;
+        const parentW = parentEl.offsetWidth;
+        const parentH = parentEl.offsetHeight;
 
         const isLeftTree = childId.startsWith('L');
         let startX, startY, endX, endY;
 
         if (isLeftTree) {
-            startX = childX + childRect.width;
-            startY = childY + childRect.height / 2;
+            startX = childX + childW;
+            startY = childY + childH / 2;
             endX = parentX;
-            endY = parentY + parentRect.height / 2;
+            endY = parentY + parentH / 2;
         } else {
             startX = childX;
-            startY = childY + childRect.height / 2;
-            endX = parentX + parentRect.width;
-            endY = parentY + parentRect.height / 2;
+            startY = childY + childH / 2;
+            endX = parentX + parentW;
+            endY = parentY + parentH / 2;
         }
 
         const midX = (startX + endX) / 2;
@@ -1252,11 +1400,18 @@
         btn.innerText = "Génération de l'image... ⏳";
         btn.disabled = true;
 
+        // On reset provisoirement le zoom/pan pour que l'export html2canvas se fasse à l'échelle 1:1
+        const originalTransform = container.style.transform;
+        container.style.transform = 'none';
+
         html2canvas(container, {
             backgroundColor: "#090d16",
             useCORS: true, 
             scale: 1.5 
         }).then(canvas => {
+            // Restauration de l'affichage utilisateur
+            container.style.transform = originalTransform;
+
             const link = document.createElement('a');
             link.download = 'recap-tournoi.png';
             link.href = canvas.toDataURL();
@@ -1265,6 +1420,7 @@
             btn.innerText = "📸 Télécharger le Schéma (PNG)";
             btn.disabled = false;
         }).catch(err => {
+            container.style.transform = originalTransform;
             console.error("Erreur de téléchargement du canevas", err);
             btn.innerText = "Erreur ❌";
             btn.disabled = false;
@@ -1408,11 +1564,14 @@
         document.getElementById('tournament-recap-container').innerHTML = starredHtml + bracketVisualHtml + bracketHtml + tableHtml;
 
         setTimeout(() => {
-            drawBracketLines();
+            initZoomPan();     // Initialise les événements souris et pinch trackpad
+            autoFitBracket();  // Zoom adaptatif automatique de l'arbre
+            drawBracketLines(); // Repositionne les lignes
         }, 150);
     }
 
     window.addEventListener('resize', () => {
+        autoFitBracket();
         drawBracketLines();
     });
 
