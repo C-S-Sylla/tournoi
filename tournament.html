@@ -157,7 +157,6 @@
 <div class="header">
     <h1 id="round-name">Chargement...</h1>
     <p id="match-info">Match 1 / 32</p>
-    <button id="undo-btn" class="undo-btn" onclick="undo()">↩ Revenir en arrière</button>
 </div>
 
 <!-- L'ARÈNE DE COMBAT -->
@@ -178,6 +177,8 @@
             <button id="star-1" class="star-btn" onclick="toggleStar(1)">☆ Marquer ?</button>
             <button onclick="vote(1)">CHOISIR</button>
         </div>
+            <button id="undo-btn" class="undo-btn" onclick="undo()">↩ Revenir en arrière</button>
+
     </div>
 </div>
 
@@ -270,45 +271,62 @@
     }
 
     // Interroge l'API AnimeThemes pour trouver le fichier .webm brut
-    async function resolveAnimeThemesVideo(atUrl) {
+    // Convertit l'URL de la page en lien vidéo direct via l'API d'AnimeThemes (avec tri de résolution ascendante)
+    async function resolveAnimeThemesVideo(animethemesUrl) {
         try {
-            const urlParts = atUrl.replace(/\/$/, "").split('/');
-            const animeSlug = urlParts[urlParts.length - 2];
-            const rawThemeSlug = urlParts[urlParts.length - 1];
+            const urlObj = new URL(animethemesUrl);
+            const pathParts = urlObj.pathname.split('/').filter(p => p);
+            const animeSlug = pathParts[1]; // ex: "boruto"
             
-            const themeMatch = rawThemeSlug.match(/^(OP|ED)\d+/i);
-            const themeSlug = themeMatch ? themeMatch[0] : rawThemeSlug;
-
-            const apiUrl = `https://api.animethemes.moe/anime?filter[slug]=${animeSlug}&include=animethemes.animethemeentries.videos`;
-            const response = await fetch(apiUrl);
+            // Extraction du code du thème (ex: "ED19-NCBD1080" -> "ED19")
+            const targetThemeSlug = pathParts[2].split('-')[0].toUpperCase();
+            
+            const response = await fetch(`https://api.animethemes.moe/anime/${animeSlug}?include=animethemes.animethemeentries.videos`);
             if (!response.ok) throw new Error("HTTP " + response.status);
+            const json = await response.json();
             
-            const data = await response.json();
-            const animeData = data.anime && data.anime[0];
-            if (!animeData || !animeData.animethemes) return null;
+            const themes = (json.anime && json.anime.animethemes) || [];
+            
+            // 1. Recherche du thème exact (ex: "ED19")
+            const matchedTheme = themes.find(theme => theme.slug.toUpperCase() === targetThemeSlug);
+            
+            if (matchedTheme && matchedTheme.animethemeentries) {
+                const allVideos = [];
+                // Regroupe toutes les vidéos alternatives disponibles pour ce morceau
+                for (const entry of matchedTheme.animethemeentries) {
+                    if (entry.videos) {
+                        allVideos.push(...entry.videos);
+                    }
+                }
 
-            const theme = animeData.animethemes.find(t => 
-                t.slug.toUpperCase() === themeSlug.toUpperCase() || 
-                (t.type + (t.sequence || "")).toUpperCase() === themeSlug.toUpperCase()
-            );
-
-            if (!theme || !theme.animethemeentries || theme.animethemeentries.length === 0) return null;
-
-            // CORRECTIF : L'algorithme teste maintenant toutes les entrées et toutes les résolutions vidéos disponibles
-            for (const entry of theme.animethemeentries) {
-                if (entry.videos && entry.videos.length > 0) {
-                    for (const video of entry.videos) {
-                        if (video.link && video.link.startsWith("http")) {
-                            return video.link; // Retourne la première vidéo directe et valide trouvée !
+                if (allVideos.length > 0) {
+                    // TRI PHYSIQUE : Trie les vidéos par résolution croissante pour charger la plus légère d'abord (fast loading)
+                    allVideos.sort((a, b) => {
+                        const resA = a.resolution || 1080;
+                        const resB = b.resolution || 1080;
+                        return resA - resB;
+                    });
+                    return allVideos[0].link; // Renvoie l'URL du fichier .webm direct
+                }
+            }
+            
+            // 2. Recherche de secours en cas d'absence du thème structuré
+            for (const theme of themes) {
+                for (const entry of theme.animethemeentries || []) {
+                    for (const video of entry.videos || []) {
+                        const videoLink = video.link || "";
+                        const videoBasename = video.basename || "";
+                        if (videoLink.toLowerCase().includes(pathParts[2].toLowerCase()) || 
+                            videoBasename.toLowerCase().includes(pathParts[2].toLowerCase())) {
+                            return videoLink;
                         }
                     }
                 }
             }
-            return null;
-        } catch (error) {
-            console.error("Erreur résolution AnimeThemes :", error);
-            return null;
+        } catch (e) {
+            console.error("Erreur de récupération AnimeThemes API :", e);
         }
+        return null;
     }
 
     // Gère le chargement asynchrone du lecteur natif
