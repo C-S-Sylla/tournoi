@@ -2,9 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Tournoi Anime OP/ED - Multi-Saisons</title>
-    <!-- Inclusion de html2canvas pour l'export d'image du schéma -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <title>Tournoi Anime OP/ED - Menu de Configuration</title>
     <style>
         :root { 
             --primary: #6366f1; 
@@ -18,75 +16,9 @@
             color: var(--text); 
             margin: 0; 
             text-align: center; 
+            padding: 20px;
         }
-        .header { 
-            padding: 20px; 
-            background: #1e293b; 
-            margin-bottom: 20px; 
-        }
-        .container { 
-            display: flex; 
-            justify-content: center; 
-            gap: 20px; 
-            padding: 20px; 
-            flex-wrap: wrap; 
-        }
-        .match-card { 
-            background: var(--card-bg); 
-            border-radius: 15px; 
-            padding: 15px; 
-            width: 450px; 
-            border: 3px solid transparent; 
-            transition: 0.3s; 
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-        }
-        .match-card:hover { 
-            border-color: var(--primary); 
-        }
-        .video-box { 
-            width: 100%; 
-            aspect-ratio: 16/9; 
-            background: #000; 
-            border-radius: 10px; 
-            overflow: hidden; 
-            margin-bottom: 10px; 
-        }
-        iframe { 
-            width: 100%; 
-            height: 100%; 
-            border: none; 
-        }
-        button { 
-            background: var(--primary); 
-            color: white; 
-            border: none; 
-            padding: 15px 30px; 
-            border-radius: 8px; 
-            cursor: pointer; 
-            font-size: 1.2rem; 
-            font-weight: bold; 
-            width: 100%; 
-            transition: 0.2s;
-        }
-        button:hover {
-            opacity: 0.9;
-        }
-        .vs { 
-            font-size: 3rem; 
-            align-self: center; 
-            color: #ef4444; 
-            font-weight: bold; 
-        }
-        #winner-screen { 
-            display: none; 
-            padding: 50px 20px; 
-        }
-        .hidden { 
-            display: none !important; 
-        }
-
+        
         /* Styles du Menu de configuration */
         #menu-screen {
             max-width: 600px;
@@ -154,346 +86,41 @@
             border-color: var(--primary);
             color: white;
         }
-
-        /* Styles du Lecteur et Boutons interactifs */
-        .star-btn { 
-            background: #475569; 
-            color: #e2e8f0; 
+        
+        button { 
+            background: var(--primary); 
+            color: white; 
             border: none; 
-            padding: 8px 15px; 
-            border-radius: 6px; 
+            padding: 15px 30px; 
+            border-radius: 8px; 
             cursor: pointer; 
-            font-size: 1rem; 
+            font-size: 1.2rem; 
             font-weight: bold; 
-            margin-bottom: 12px; 
             width: 100%; 
             transition: 0.2s;
         }
-        .star-btn:hover { background: #64748b; }
-        .star-btn.starred { background: #eab308; color: #0f172a; }
-        
-        .yt-link {
-            display: inline-block;
-            color: #38bdf8;
-            text-decoration: none;
-            font-size: 0.85rem;
-            font-weight: bold;
-            background: rgba(56, 189, 248, 0.15);
-            padding: 6px 12px;
-            border-radius: 6px;
-            border: 1px solid rgba(56, 189, 248, 0.3);
-            transition: 0.2s;
-        }
-        .yt-link:hover {
-            background: rgba(56, 189, 248, 0.25);
-            border-color: #38bdf8;
+        button:hover {
+            opacity: 0.9;
         }
 
-        .switch-btn {
-            background: #1e293b;
-            border: 1px solid #475569;
-            color: #94a3b8;
-            padding: 5px 10px;
-            font-size: 0.8rem;
-            border-radius: 5px;
-            cursor: pointer;
-            width: auto;
-            transition: 0.2s;
+        #available-count {
+            margin-top: 20px; 
+            font-size: 0.9rem; 
+            color: #94a3b8; 
+            line-height: 1.5; 
+            background: #0f172a; 
+            padding: 15px; 
+            border-radius: 8px; 
+            border: 1px solid #334155; 
+            white-space: pre-line;
         }
-        .switch-btn:hover {
-            background: #334155;
-            color: #f8fafc;
-            border-color: #64748b;
-        }
-
-        /* Bouton Retour en arrière */
-        .undo-btn {
-            background: #ef4444;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 1rem;
-            font-weight: bold;
-            margin: 10px auto;
-            transition: 0.2s;
-            display: none;
-        }
-        .undo-btn:hover {
-            background: #dc2626;
-        }
-
-        /* Arbre de tournoi universel et interactif */
-        .bracket-scroll {
-            width: 100%;
-            max-height: 850px;
-            overflow: hidden !important; /* Pas de barre de défilement apparente */
-            border: 1px solid #334155;
-            background: #090d16;
-            padding: 30px 15px;
-            border-radius: 12px;
-            margin: 20px 0;
-            box-sizing: border-box;
-            position: relative;
-            cursor: grab;
-            user-select: none;
-            /* Désactivation des scrollbars pour différents navigateurs */
-            -ms-overflow-style: none;  /* IE et Edge */
-            scrollbar-width: none;  /* Firefox */
-        }
-        .bracket-scroll::-webkit-scrollbar {
-            display: none; /* Chrome, Safari, Opera */
-        }
-        .bracket-scroll:active {
-            cursor: grabbing;
-        }
-        .bracket-wrapper {
-            display: flex;
-            gap: 25px;
-            align-items: center;
-            justify-content: flex-start; /* Aligné à gauche pour un calcul d'offset précis */
-            width: max-content;
-            position: relative;
-            box-sizing: border-box;
-            transform-origin: 0 0; /* Origine en haut à gauche pour un centrage chirurgical */
-        }
-        .bracket-column {
-            display: flex;
-            flex-direction: column;
-            justify-content: space-around;
-            height: 100%;
-            width: 140px;
-            position: relative;
-            box-sizing: border-box;
-            z-index: 2;
-        }
-        .bracket-node {
-            width: 100%;
-            height: 65px;
-            background: #1e293b;
-            border: 2px solid #475569;
-            border-radius: 8px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: flex-end;
-            font-size: 0.7rem;
-            position: relative;
-            box-sizing: border-box;
-            overflow: hidden;
-            transition: 0.2s;
-        }
-        .bracket-node img {
-            width: 100%;
-            height: 40px;
-            object-fit: cover;
-            border-bottom: 1px solid #334155;
-        }
-        .bracket-node .node-title {
-            width: 100%;
-            padding: 2px 4px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            text-align: center;
-            box-sizing: border-box;
-            background: rgba(15, 23, 42, 0.95);
-            color: #f8fafc;
-        }
-        .node-starred {
-            border-color: #eab308 !important;
-            box-shadow: 0 0 10px rgba(234, 179, 8, 0.5);
-        }
-        .node-starred .node-title {
-            color: #eab308 !important;
-            font-weight: bold;
-        }
-
-        /* Node tall (hauteur x2 pour les tours post-32èmes) */
-        .bracket-node-tall {
-            height: 105px !important;
-        }
-        .bracket-node-tall img {
-            height: 80px !important;
-        }
-
-        /* Boutons d'actions du graphe */
-        .download-btn {
-            background: #10b981;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 1rem;
-            font-weight: bold;
-            transition: 0.2s;
-            width: auto;
-        }
-        .download-btn:hover {
-            background: #059669;
-        }
-
-        .fullscreen-btn {
-            background: #3b82f6;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 1rem;
-            font-weight: bold;
-            transition: 0.2s;
-            width: auto;
-        }
-        .fullscreen-btn:hover {
-            background: #2563eb;
-        }
-
-        /* Style spécifique lorsque le conteneur passe en plein écran */
-        #bracket-section-container:fullscreen {
-            background: #090d16;
-            padding: 30px;
-            width: 100vw;
-            height: 100vh;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            box-sizing: border-box;
-            justify-content: center;
-        }
-        #bracket-section-container:fullscreen h3 {
-            margin-top: 0;
-            color: #38bdf8;
-        }
-        #bracket-section-container:fullscreen .bracket-scroll {
-            max-height: none !important;
-            height: 100% !important;
-            border: none;
-            background: transparent;
-        }
-
-        .recap-section {
-            margin: 40px auto;
-            text-align: left;
-            max-width: 900px;
-            width: 100%;
-        }
-        .recap-section h3 {
-            color: #38bdf8;
-            border-bottom: 2px solid #334155;
-            padding-bottom: 8px;
-            margin-bottom: 20px;
-        }
-        
-        .fav-badge {
-            background: rgba(234, 179, 8, 0.15);
-            border: 1px solid rgba(234, 179, 8, 0.3);
-            color: #fef08a;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-weight: bold;
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .recap-table {
-            width: 100%;
-            border-collapse: collapse;
-            background: var(--card-bg);
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-            margin-bottom: 30px;
-        }
-        .recap-table th, .recap-table td {
-            padding: 12px 15px;
-            text-align: left;
-            border-bottom: 1px solid #334155;
-        }
-        .recap-table th {
-            background-color: var(--primary);
-            color: white;
-            font-weight: bold;
-        }
-        .recap-table tr:hover { background-color: #334155; }
-        
-        .status-winner { color: #4ade80; font-weight: bold; }
-        .status-finalist { color: #f43f5e; font-weight: bold; }
-
-        .rounds-container {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            margin-bottom: 35px;
-        }
-        .round-box {
-            background: var(--card-bg);
-            border-radius: 10px;
-            padding: 15px;
-            border: 1px solid #334155;
-        }
-        .round-box h4 {
-            margin: 0;
-            color: #f8fafc;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            cursor: pointer;
-            user-select: none;
-            padding: 5px;
-            border-radius: 4px;
-        }
-        .round-box h4:hover {
-            background: rgba(255, 255, 255, 0.05);
-        }
-        .round-matches-list {
-            margin-top: 15px;
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 10px;
-        }
-        .match-recap-row {
-            background: #0f172a;
-            border: 1px solid #334155;
-            border-radius: 8px;
-            padding: 10px;
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-        }
-        .match-recap-num {
-            font-size: 0.75rem;
-            color: #64748b;
-            font-weight: bold;
-            text-transform: uppercase;
-        }
-        .match-recap-player {
-            font-size: 0.9rem;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            max-width: 110px;
-        }
-        .match-recap-player.winner { color: #4ade80; font-weight: bold; }
-        .match-recap-player.loser { color: #64748b; text-decoration: line-through; }
-        .match-recap-vs { color: #ef4444; font-weight: bold; font-size: 0.8rem; margin: 0 5px; }
     </style>
 </head>
 <body>
 
-<!-- EN-TÊTE DU TOURNOI -->
-<div class="header hidden">
-    <h1 id="round-name">Chargement...</h1>
-    <p id="match-info">Match 1 / 32</p>
-</div>
-
-<!-- CONFIGURATION INITIALE ET MENU -->
 <div id="menu-screen">
     <h2 style="color: #38bdf8; margin-top: 0;">🎵 MENU DE CONFIGURATION 🎵</h2>
-    <p style="color: #94a3b8; font-size: 0.9rem;">Préparez vos paramètres avant de démarrer la compétition.</p>
+    <p style="color: #94a3b8; font-size: 0.9rem;">Préparez vos paramètres de saison avant de démarrer la compétition.</p>
     <br>
 
     <div class="menu-group">
@@ -531,82 +158,28 @@
         </select>
     </div>
 
-    <div id="available-count" style="margin-top: 20px; font-size: 0.9rem; color: #94a3b8; line-height: 1.5; background: #0f172a; padding: 15px; border-radius: 8px; border: 1px solid #334155; white-space: pre-line;">
+    <div id="available-count">
         Chargement des informations de saison...
     </div>
 
     <br>
-    <button onclick="initTournament()" style="padding: 15px; width: 100%;">LANCER LE TOURNOI 🚀</button>
-</div>
-
-<!-- ÉCRAN DU TOURNOI EN COURS -->
-<div id="tournament-screen" class="hidden">
-    <div class="container" id="tournament-area">
-        <div class="match-card">
-            <div class="video-box" id="player1"></div>
-            <h3 id="title1">Anime A</h3>
-            <button id="star-0" class="star-btn" onclick="toggleStar(0)">☆ Marquer ?</button>
-            <button onclick="vote(0)">CHOISIR</button>
-        </div>
-
-        <div class="vs">VS</div>
-
-        <div class="match-card">
-            <div class="video-box" id="player2"></div>
-            <h3 id="title2">Anime B</h3>
-            <button id="star-1" class="star-btn" onclick="toggleStar(1)">☆ Marquer ?</button>
-            <button onclick="vote(1)">CHOISIR</button>
-        </div>
-            <button id="undo-btn" class="undo-btn" onclick="undo()">↩ Revenir en arrière</button>
-    </div>
-</div>
-
-<!-- ÉCRAN DE FIN DE TOURNOI -->
-<div id="winner-screen">
-    <h1>🏆 VAINQUEUR FINAL 🏆</h1>
-    <div class="match-card" style="margin: 0 auto; width: 600px; max-width: 100%;">
-        <div class="video-box" id="player-winner"></div>
-        <h2 id="title-winner">Titre</h2>
-    </div>
-    
-    <!-- Conteneur global pour le graphique de l'arbre, les favoris et l'historique -->
-    <div id="tournament-recap-container"></div>
-    
-    <br>
-    <button onclick="location.reload()" style="width: auto; padding: 15px 40px; margin-top: 20px;">Recommencer le tournoi</button>
+    <button onclick="initTournament()">LANCER LE TOURNOI 🚀</button>
 </div>
 
 <script>
-    // --- LISTE DES CHEMINS ET PRÉSETS DES SAISONS DISPONIBLES DANS VOTRE ARCHITECTURE ---
+    // --- CONFIGURATION DES CHEMINS DES PRÉSETS ---
     const presetSeasons = [
         { id: "summer_2026_mix", name: "Été 2026", path: "data/summer-2026-mix.json" },
         { id: "automne_2019", name: "Automne 2019", path: "data/automne_2019.json" },
         { id: "summer_2019", name: "Été 2019", path: "data/summer_2019.json" },
         { id: "winter_2020", name: "Hiver 2020", path: "data/winter_2020.json" },
+        { id: "winter_2022", name: "Hiver 2022", path: "data/winter_2022.json" },
         { id: "underrated_ed", name: "Underrated ED", path: "data/underrated ED.json" }
-
     ];
 
-    // Variables globales du jeu et du système de zoom/déplacement
-    let currentRound = [];
-    const initialShuffled = []; // Sauvegarde exacte de la distribution de départ (références réelles des objets)
-    let nextRound = [];
-    let currentIndex = 0;
-    const matchHistory = []; 
-    const historyStateStack = [];
-
-    // Variables d'état du zoom et déplacement de l'arbre
-    let zoomScale = 1.0;
-    let panX = 0;
-    let panY = 0;
-    let isPanning = false;
-    let startX = 0;
-    let startY = 0;
-
-    // Contenu brut de la saison sélectionnée
     let selectedSeasonData = null;
 
-    // Peuple le sélecteur du menu de démarrage avec les saisons existantes
+    // Peuple le sélecteur d'accueil
     function initMenu() {
         const select = document.getElementById('season-select');
         select.innerHTML = '';
@@ -618,7 +191,6 @@
             select.appendChild(opt);
         });
 
-        // Option d'importation
         const customOpt = document.createElement('option');
         customOpt.value = "custom";
         customOpt.innerText = "Uploader votre fichier JSON de saison (.json)";
@@ -627,6 +199,7 @@
         onSeasonChange();
     }
 
+    // Normalise l'importation de chaque morceau
     function normalizeEntry(entry, index) {
         let title = entry.title || entry.name || entry.song || entry.label || `Entrée ${index + 1}`;
         const yt = entry.yt || entry.youtube || entry.youtubeId || entry.videoId || entry.id || entry.url || "";
@@ -640,7 +213,6 @@
             type = "MIX";
         }
 
-        // Complète l'écriture lisible du titre si (OP) ou (ED) n'est pas déjà indiqué
         if (type === "OP" && !title.toUpperCase().includes("(OP)")) {
             title = `${title} (OP)`;
         } else if (type === "ED" && !title.toUpperCase().includes("(ED)")) {
@@ -674,7 +246,6 @@
         return { seasonName: fallbackName || "Saison importée", entries: [] };
     }
 
-    // Parse et segmente les entrées
     function parseEntries(entries) {
         if (!Array.isArray(entries)) return [];
         return entries.map((entry, index) => normalizeEntry(entry, index));
@@ -687,7 +258,6 @@
         return [];
     }
 
-    // Met à jour les statistiques de sélection sur l'écran d'accueil
     function updateCountLabel() {
         const parsed = getSelectedEntries();
         const total = parsed.length;
@@ -700,7 +270,6 @@
             `Contenu total : ${total} morceaux  |  Openings : ${ops}  |  Endings : ${eds}`;
     }
 
-    // Téléchargement asynchrone des saisons locales
     async function loadPresetSeason(id) {
         const season = presetSeasons.find(s => s.id === id);
         if (!season) return;
@@ -712,7 +281,7 @@
             selectedSeasonData = normalizeSeasonData(data, season.name);
             updateCountLabel();
         } catch (error) {
-            console.error(`Impossible de charger la saison via fetch (${season.path}) :`, error);
+            console.error("Erreur de chargement fetch :", error);
             selectedSeasonData = null;
             document.getElementById('available-count').innerText = 
                 `⚠️ Impossible de charger "${season.name}" automatiquement (Restriction de sécurité locale / CORS).\n` +
@@ -720,7 +289,6 @@
         }
     }
 
-    // Gestion du changement de saison
     async function onSeasonChange() {
         const select = document.getElementById('season-select');
         const uploadGroup = document.getElementById('json-upload-group');
@@ -735,7 +303,6 @@
         }
     }
 
-    // Charge un fichier JSON local
     function loadCustomJson(event) {
         const file = event.target.files[0];
         if (!file) return;
@@ -755,8 +322,7 @@
         reader.readAsText(file);
     }
 
-    // Démarre et initialise le tournoi
-    async function initTournament() {
+    function initTournament() {
         if (!selectedSeasonData || !Array.isArray(selectedSeasonData.entries) || selectedSeasonData.entries.length === 0) {
             alert("Veuillez d'abord charger un fichier de saison valide.");
             return;
@@ -765,7 +331,6 @@
         const category = document.querySelector('input[name="category"]:checked').value;
         let parsed = getSelectedEntries();
 
-        // Filtrer les morceaux
         if (category === "OP") {
             parsed = parsed.filter(e => e.type === "OP");
         } else if (category === "ED") {
@@ -779,10 +344,8 @@
             return;
         }
 
-        // Mélange aléatoire
         parsed.sort(() => Math.random() - 0.5);
 
-        // Ajustement automatique de la taille si les données sont insuffisantes
         if (parsed.length < selectedSize) {
             const powers = [64, 32, 16, 8, 4, 2];
             const targetPower = powers.find(p => p <= parsed.length) || 2;
@@ -790,7 +353,6 @@
             selectedSize = targetPower;
         }
 
-        // Sélectionner les morceaux finaux pour le tournoi
         const finalEntries = parsed.slice(0, selectedSize);
 
         finalEntries.forEach(entry => {
@@ -798,786 +360,20 @@
             entry.result = `Top ${selectedSize}`;
         });
 
-        currentRound = [...finalEntries];
-        initialShuffled.length = 0;
-        initialShuffled.push(...currentRound);
-        nextRound = [];
-        currentIndex = 0;
-        matchHistory.length = 0;
-        historyStateStack.length = 0;
+        // NETTOYAGE ET TRANSFERT VIA LOCALSTORAGE
+        localStorage.removeItem('tournamentParticipants');
+        localStorage.removeItem('tournamentSize');
+        localStorage.removeItem('matchHistory');
+        localStorage.removeItem('historyStateStack');
+        localStorage.removeItem('finalResults');
 
-        // Passage à l'écran de jeu
-        document.getElementById('menu-screen').classList.add('hidden');
-        document.getElementById('tournament-screen').classList.remove('hidden');
-        document.querySelector('.header').classList.remove('hidden');
+        localStorage.setItem('tournamentParticipants', JSON.stringify(finalEntries));
+        localStorage.setItem('tournamentSize', selectedSize);
 
-        updateDisplay();
+        // REDIRECTION VERS L'ECRAN DE JEU
+        window.location.href = 'tournament.html';
     }
 
-    function updateDisplay() {
-        if (currentRound.length === 1) {
-            showWinner(currentRound[0]);
-            return;
-        }
-
-        // Gestion du bouton de retour en arrière
-        const undoBtn = document.getElementById('undo-btn');
-        if (historyStateStack.length > 0) {
-            undoBtn.style.display = 'inline-block';
-        } else {
-            undoBtn.style.display = 'none';
-        }
-
-        document.getElementById('round-name').innerText = getRoundTitle(currentRound.length);
-        document.getElementById('match-info').innerText = `Match ${(currentIndex/2)+1} / ${currentRound.length/2}`;
-
-        const choice1 = currentRound[currentIndex];
-        const choice2 = currentRound[currentIndex + 1];
-
-        document.getElementById('title1').innerText = choice1.title;
-        document.getElementById('title2').innerText = choice2.title;
-
-        updateStarButtonState(0, choice1.starred);
-        updateStarButtonState(1, choice2.starred);
-
-        document.getElementById('player1').innerHTML = `
-            <iframe src="https://www.youtube-nocookie.com/embed/${choice1.yt}?rel=0" allowfullscreen></iframe>
-            <div style="margin-top: 8px; display: flex; flex-direction: column; gap: 5px; align-items: center;">
-                <a class="yt-link" href="https://www.youtube.com/watch?v=${choice1.yt}" target="_blank">
-                    Ouvrir sur YouTube ↗ (si vidéo bloquée)
-                </a>
-                <button class="switch-btn" onclick="switchPlayer(0, '${choice1.yt}')">
-                    <span id="switch-text-0">Lecteur alternatif si bloqué 🔁</span>
-                </button>
-            </div>
-        `;
-        document.getElementById('player2').innerHTML = `
-            <iframe src="https://www.youtube-nocookie.com/embed/${choice2.yt}?rel=0" allowfullscreen></iframe>
-            <div style="margin-top: 8px; display: flex; flex-direction: column; gap: 5px; align-items: center;">
-                <a class="yt-link" href="https://www.youtube.com/watch?v=${choice2.yt}" target="_blank">
-                    Ouvrir sur YouTube ↗ (si vidéo bloquée)
-                </a>
-                <button class="switch-btn" onclick="switchPlayer(1, '${choice2.yt}')">
-                    <span id="switch-text-1">Lecteur alternatif si bloqué 🔁</span>
-                </button>
-            </div>
-        `;
-    }
-
-    function switchPlayer(index, ytId) {
-        const iframe = document.querySelector(`#player${index + 1} iframe`);
-        const textSpan = document.getElementById(`switch-text-${index}`);
-        if (!iframe || !textSpan) return;
-
-        if (iframe.src.includes('youtube')) {
-            iframe.src = `https://yewtu.be/embed/${ytId}`;
-            textSpan.innerText = "Retourner au lecteur YouTube 🔁";
-        } else {
-            iframe.src = `https://www.youtube-nocookie.com/embed/${ytId}?rel=0`;
-            textSpan.innerText = "Lecteur alternatif si bloqué 🔁";
-        }
-    }
-
-    function switchWinnerPlayer(ytId) {
-        const iframe = document.querySelector(`#player-winner iframe`);
-        const textSpan = document.getElementById(`switch-text-winner`);
-        if (!iframe || !textSpan) return;
-
-        if (iframe.src.includes('youtube')) {
-            iframe.src = `https://yewtu.be/embed/${ytId}`;
-            textSpan.innerText = "Retourner au lecteur YouTube 🔁";
-        } else {
-            iframe.src = `https://www.youtube-nocookie.com/embed/${ytId}?autoplay=1`;
-            textSpan.innerText = "Lecteur alternatif si bloqué 🔁";
-        }
-    }
-
-    function toggleStar(indexOffset) {
-        const entry = currentRound[currentIndex + indexOffset];
-        entry.starred = !entry.starred;
-        
-        // Synchronise l'état marqué directement avec l'élément original de initialShuffled
-        const initialEntry = initialShuffled.find(e => e.yt === entry.yt);
-        if (initialEntry) {
-            initialEntry.starred = entry.starred;
-        }
-
-        updateStarButtonState(indexOffset, entry.starred);
-    }
-
-    function updateStarButtonState(indexOffset, isStarred) {
-        const btn = document.getElementById(`star-${indexOffset}`);
-        if (isStarred) {
-            btn.classList.add('starred');
-            btn.innerText = "⭐ Marqué !";
-        } else {
-            btn.classList.remove('starred');
-            btn.innerText = "☆ Marquer ?";
-        }
-    }
-
-    function saveState() {
-        historyStateStack.push({
-            currentRound: currentRound.map(e => ({ ...e })),
-            nextRound: nextRound.map(e => ({ ...e })),
-            currentIndex: currentIndex,
-            matchHistory: matchHistory.map(m => ({
-                roundSize: m.roundSize,
-                p1: { ...m.p1 },
-                p2: { ...m.p2 },
-                winnerTitle: m.winnerTitle
-            })),
-            selectedSeasonData: JSON.parse(JSON.stringify(selectedSeasonData)),
-            // Sauvegarde de l'état précis (etoiles et classement) de initialShuffled pour éviter les ruptures de référence
-            initialShuffledState: initialShuffled.map(e => ({ yt: e.yt, starred: e.starred, result: e.result }))
-        });
-    }
-
-    function undo() {
-        if (historyStateStack.length === 0) return;
-
-        const prevState = historyStateStack.pop();
-
-        currentRound = prevState.currentRound;
-        nextRound = prevState.nextRound;
-        currentIndex = prevState.currentIndex;
-
-        matchHistory.length = 0;
-        matchHistory.push(...prevState.matchHistory);
-
-        selectedSeasonData = prevState.selectedSeasonData;
-
-        // Restauration asynchrone des états de initialShuffled
-        if (prevState.initialShuffledState) {
-            prevState.initialShuffledState.forEach(state => {
-                const target = initialShuffled.find(e => e.yt === state.yt);
-                if (target) {
-                    target.starred = state.starred;
-                    target.result = state.result;
-                }
-            });
-        }
-
-        updateDisplay();
-    }
-
-    function vote(indexOffset) {
-        saveState();
-
-        const p1 = currentRound[currentIndex];
-        const p2 = currentRound[currentIndex + 1];
-
-        const winner = indexOffset === 0 ? p1 : p2;
-        const loser = indexOffset === 0 ? p2 : p1;
-
-        matchHistory.push({
-            roundSize: currentRound.length,
-            p1: { ...p1 },
-            p2: { ...p2 },
-            winnerTitle: winner.title
-        });
-
-        // Met à jour la valeur locale et celle synchronisée dans initialShuffled
-        const stageName = getEliminationStageName(currentRound.length);
-        loser.result = stageName;
-        
-        const initialLoser = initialShuffled.find(e => e.yt === loser.yt);
-        if (initialLoser) {
-            initialLoser.result = stageName;
-        }
-
-        nextRound.push(winner);
-        currentIndex += 2;
-
-        if (currentIndex >= currentRound.length) {
-            currentRound = [...nextRound];
-            nextRound = [];
-            currentIndex = 0;
-        }
-        updateDisplay();
-    }
-
-    function getRoundTitle(n) {
-        if (n === 64) return "32èmes de Finale";
-        if (n === 32) return "16èmes de Finale";
-        if (n === 16) return "8èmes de Finale";
-        if (n === 8) return "Quarts de Finale";
-        if (n === 4) return "Demi-Finales";
-        if (n === 2) return "GRANDE FINALE";
-        return `Tour de ${n}`;
-    }
-
-    function getEliminationStageName(n) {
-        if (n === 64) return "Top 64 (32èmes)";
-        if (n === 32) return "Top 32 (16èmes)";
-        if (n === 16) return "Top 16 (8èmes)";
-        if (n === 8) return "Top 8 (Quarts)";
-        if (n === 4) return "Top 4 (Demi-Finales)";
-        if (n === 2) return "Finaliste (2ème)";
-        return "Éliminé";
-    }
-
-    function showWinner(winner) {
-        winner.result = "🏆 CHAMPION 🏆";
-
-        const initialWinner = initialShuffled.find(e => e.yt === winner.yt);
-        if (initialWinner) {
-            initialWinner.result = "🏆 CHAMPION 🏆";
-        }
-
-        // COUPE L'AUDIO DES LECTEURS ACTIFS immédiatement
-        document.getElementById('player1').innerHTML = "";
-        document.getElementById('player2').innerHTML = "";
-
-        document.getElementById('tournament-screen').classList.add('hidden');
-        document.getElementById('match-info').classList.add('hidden');
-        document.getElementById('round-name').classList.add('hidden');
-        document.getElementById('undo-btn').classList.add('hidden');
-        document.getElementById('winner-screen').style.display = 'block';
-        document.getElementById('title-winner').innerText = winner.title;
-        
-        document.getElementById('player-winner').innerHTML = `
-            <iframe src="https://www.youtube-nocookie.com/embed/${winner.yt}?autoplay=1" allowfullscreen></iframe>
-            <div style="margin-top: 8px; display: flex; flex-direction: column; gap: 5px; align-items: center;">
-                <a class="yt-link" href="https://www.youtube.com/watch?v=${winner.yt}" target="_blank">
-                    Ouvrir sur YouTube ↗
-                </a>
-                <button class="switch-btn" id="switch-btn-winner" onclick="switchWinnerPlayer('${winner.yt}')">
-                    <span id="switch-text-winner">Lecteur alternatif si bloqué 🔁</span>
-                </button>
-            </div>
-        `;
-
-        generateRecap();
-    }
-
-    // Gère le pliage/dépliage des historiques de rounds
-    function toggleCollapse(id) {
-        const el = document.getElementById(id);
-        if (el.style.display === "none") {
-            el.style.display = "grid";
-        } else {
-            el.style.display = "none";
-        }
-    }
-
-    // Active / Désactive le mode Plein Écran sur le bloc du schéma
-    function toggleFullscreen() {
-        const el = document.getElementById('bracket-section-container');
-        if (!el) return;
-
-        if (!document.fullscreenElement) {
-            el.requestFullscreen().catch(err => {
-                alert(`Erreur lors de l'activation du plein écran : ${err.message}`);
-            });
-        } else {
-            document.exitFullscreen();
-        }
-    }
-
-    // Écouteur d'événement pour ajuster le plein écran, l'ajustement auto et le tracé des lignes
-    document.addEventListener('fullscreenchange', () => {
-        const btn = document.querySelector('.fullscreen-btn');
-        if (btn) {
-            if (document.fullscreenElement) {
-                btn.innerText = "❌ Quitter";
-                btn.style.background = "#ef4444";
-            } else {
-                btn.innerText = "🖥️ Plein écran";
-                btn.style.background = "#3b82f6";
-            }
-        }
-        // Force l'ajustement et le tracé asynchrones du schéma
-        setTimeout(() => {
-            autoFitBracket();
-            drawBracketLines();
-        }, 150);
-    });
-
-    // Empêche l'arbre d'être glissé en dehors de la zone visible (clamping)
-    // Limite le déplacement pour éviter de perdre le graphique hors de l'écran
-    function constrainBounds() {
-        const scrollEl = document.querySelector('.bracket-scroll');
-        const wrapperEl = document.querySelector('.bracket-wrapper');
-        if (!scrollEl || !wrapperEl) return;
-
-        const W_view = scrollEl.clientWidth;
-        const H_view = scrollEl.clientHeight;
-        
-        const W_child = wrapperEl.offsetWidth;
-        const H_child = wrapperEl.offsetHeight;
-
-        // Marges de sécurité (l'arbre ne peut pas sortir à plus de 50% de la zone de vision)
-        const marginX = W_view * 0.5;
-        const marginY = H_view * 0.5;
-
-        const panX_min = marginX - (W_child * zoomScale);
-        const panX_max = W_view - marginX;
-
-        const panY_min = marginY - (H_child * zoomScale);
-        const panY_max = H_view - marginY;
-
-        panX = Math.max(panX_min, Math.min(panX, panX_max));
-        panY = Math.max(panY_min, Math.min(panY, panY_max));
-    }
-
-    // Applique les transformations de zoom et déplacement (pan) locales au wrapper de l'arbre
-    function applyZoomPan() {
-        const wrapper = document.querySelector('.bracket-wrapper');
-        if (!wrapper) return;
-        constrainBounds(); // Empêche de sortir du cadre
-        wrapper.style.transform = `translate(${panX}px, ${panY}px) scale(${zoomScale})`;
-    }
-
-    // Calcule l'échelle optimale de lisibilité et centre parfaitement l'arbre au milieu du cadre
-    function autoFitBracket() {
-        const scrollEl = document.querySelector('.bracket-scroll');
-        const wrapperEl = document.querySelector('.bracket-wrapper');
-        if (!scrollEl || !wrapperEl) return;
-
-        const W_view = scrollEl.clientWidth;
-        const H_view = scrollEl.clientHeight;
-
-        const W_child = wrapperEl.offsetWidth;
-        const H_child = wrapperEl.offsetHeight;
-
-        // Échelles nécessaires sur l'axe X et Y
-        const scaleX = W_view / W_child;
-        const scaleY = H_view / H_child;
-
-        // Calcul d'une échelle confortable pour éviter que ce soit illisible d'entrée
-        zoomScale = Math.min(scaleX, scaleY) * 0.95;
-        zoomScale = Math.max(zoomScale, 0.65); // Évite que ce soit trop petit au départ (minimum 0.65)
-
-        // Centrage géométrique par rapport à l'origine (0,0)
-        panX = (W_view - W_child * zoomScale) / 2;
-        panY = (H_view - H_child * zoomScale) / 2;
-
-        applyZoomPan();
-    }
-
-    // Initialise les événements souris et trackpad (Glisser-Déposer pour Panner, Pinch pour Zoomer)
-    function initZoomPan() {
-        const scrollEl = document.querySelector('.bracket-scroll');
-        if (!scrollEl) return;
-
-        // Reset des valeurs par défaut
-        zoomScale = 1.0;
-        panX = 0;
-        panY = 0;
-        applyZoomPan();
-
-        // 1. Déplacement avec clic souris (Drag and Pan)
-        scrollEl.addEventListener('mousedown', (e) => {
-            if (e.button !== 0) return; // Uniquement clic gauche
-            isPanning = true;
-            startX = e.clientX - panX;
-            startY = e.clientY - panY;
-            scrollEl.style.cursor = 'grabbing';
-        });
-
-        window.addEventListener('mousemove', (e) => {
-            if (!isPanning) return;
-            panX = e.clientX - startX;
-            panY = e.clientY - startY;
-            applyZoomPan();
-        });
-
-        window.addEventListener('mouseup', () => {
-            if (isPanning) {
-                isPanning = false;
-                scrollEl.style.cursor = 'grab';
-            }
-        });
-
-        // 2. Zoom Trackpad (Pincement) / Molette Souris (Panner ou Zoomer avec CTRL)
-        scrollEl.addEventListener('wheel', (e) => {
-            e.preventDefault(); // Bloque le zoom natif de la page entière
-
-            if (e.ctrlKey) {
-                // Geste de pincement (Trackpad) ou Molette avec touche CTRL
-                const zoomFactor = 1.08;
-                if (e.deltaY < 0) {
-                    zoomScale = Math.min(zoomScale * zoomFactor, 3.0); // max 3x
-                } else {
-                    zoomScale = Math.max(zoomScale / zoomFactor, 0.15); // min 0.15x
-                }
-            } else {
-                // Défilement classique à deux doigts (Trackpad) : se déplace naturellement (panning)
-                panX -= e.deltaX;
-                panY -= e.deltaY;
-            }
-            applyZoomPan();
-        }, { passive: false });
-    }
-
-    // Génère l'Arbre Graphique Universel et Dynamique pour n'importe quelle taille N (Puissance de 2)
-    function generateBracketVisual() {
-        const tree = [];
-        // Niveau 0 : Distribution initiale
-        tree[0] = initialShuffled.map(e => ({ ...e }));
-
-        const N = initialShuffled.length;
-        const k = Math.log2(N); // Ex: 6 pour 64, 5 pour 32, 4 pour 16
-
-        // Reconstitution mathématique des paliers intermédiaires
-        for (let lvl = 1; lvl <= k; lvl++) {
-            tree[lvl] = [];
-            const prevLvl = tree[lvl - 1];
-            for (let i = 0; i < prevLvl.length; i += 2) {
-                const p1 = prevLvl[i];
-                const p2 = prevLvl[i + 1];
-                if (!p2) {
-                    tree[lvl].push({ ...p1 });
-                    continue;
-                }
-                
-                const match = matchHistory.find(m => 
-                    (m.p1.title === p1.title && m.p2.title === p2.title) ||
-                    (m.p1.title === p2.title && m.p2.title === p1.title)
-                );
-                
-                if (match) {
-                    // Retrouve le morceau correspondant dans l'état de fin de jeu
-                    const winnerObj = initialShuffled.find(e => e.title === match.winnerTitle) || p1;
-                    tree[lvl].push({ ...winnerObj });
-                } else {
-                    tree[lvl].push({ title: "En attente", yt: "", placeholder: true });
-                }
-            }
-        }
-        
-        // Distribution dynamique des colonnes de manière symétrique selon N
-        const columns = {};
-        // Partie Gauche de lvl 0 à k-1
-        for (let j = 0; j < k; j++) {
-            const halfSize = Math.pow(2, k - 1 - j);
-            columns[`L-${j}`] = tree[j].slice(0, halfSize);
-        }
-        // Centre (Champion)
-        columns[`C-${k}`] = tree[k];
-        // Partie Droite de lvl k-1 à 0 (Inversée pour la symétrie)
-        for (let j = k - 1; j >= 0; j--) {
-            const halfSize = Math.pow(2, k - 1 - j);
-            const fullSize = Math.pow(2, k - j);
-            columns[`R-${j}`] = tree[j].slice(halfSize, fullSize);
-        }
-
-        // Calcul dynamique de la hauteur du bracket
-        const wrapperHeight = (N / 2) * 75;
-
-        let bracketHtml = `
-            <div class="bracket-scroll">
-                <div class="bracket-wrapper" style="height: ${wrapperHeight}px;">
-                    <svg id="bracket-lines" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; stroke: #475569; stroke-width: 2; fill: none;"></svg>
-        `;
-
-        // Ordre de rendu strict pour respecter la symétrie
-        const colOrder = [];
-        for (let j = 0; j < k; j++) colOrder.push(`L-${j}`);
-        colOrder.push(`C-${k}`);
-        for (let j = k - 1; j >= 0; j--) colOrder.push(`R-${j}`);
-
-        colOrder.forEach(colKey => {
-            const list = columns[colKey];
-            const [side, lvlStr] = colKey.split('-');
-            const lvl = parseInt(lvlStr);
-            
-            bracketHtml += `<div class="bracket-column">`;
-            
-            list.forEach((node, idx) => {
-                const nodeId = `${side}-${lvl}-${idx}`;
-                const isPlaceholder = node.placeholder || !node.yt;
-                const thumbUrl = isPlaceholder ? "" : `https://img.youtube.com/vi/${node.yt}/mqdefault.jpg`;
-                const isStarred = node.starred;
-                
-                // Cases à hauteur double pour tous les tours au-delà du premier (lvl 0)
-                const isTall = lvl !== 0;
-                
-                bracketHtml += `
-                    <div class="bracket-node ${isStarred ? 'node-starred' : ''} ${isTall ? 'bracket-node-tall' : ''}" id="${nodeId}">
-                        ${isPlaceholder ? `
-                            <div style="background: #0f172a; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #475569;">
-                                <span>-</span>
-                            </div>
-                        ` : `
-                            <img src="${thumbUrl}" crossorigin="anonymous" alt="" />
-                            <div class="node-title" title="${node.title}">
-                                ${isStarred ? '⭐ ' : ''}${node.title}
-                            </div>
-                        `}
-                    </div>
-                `;
-            });
-            
-            bracketHtml += `</div>`;
-        });
-
-        bracketHtml += `
-                </div>
-            </div>
-        `;
-        return bracketHtml;
-    }
-
-    // Recalcule le tracé des lignes de raccordement SVG via les offsets locaux
-    function drawBracketLines() {
-        const svg = document.getElementById('bracket-lines');
-        if (!svg) return;
-        svg.innerHTML = ''; 
-
-        const N = initialShuffled.length;
-        const k = Math.log2(N);
-
-        // Connexions gauches
-        for (let lvl = 0; lvl < k - 1; lvl++) {
-            const count = Math.pow(2, k - 1 - lvl);
-            for (let i = 0; i < count; i++) {
-                connectNodes(`L-${lvl}-${i}`, `L-${lvl+1}-${Math.floor(i/2)}`, svg);
-            }
-        }
-        connectNodes(`L-${k-1}-0`, `C-${k}-0`, svg);
-
-        // Connexions droites
-        for (let lvl = 0; lvl < k - 1; lvl++) {
-            const count = Math.pow(2, k - 1 - lvl);
-            for (let i = 0; i < count; i++) {
-                connectNodes(`R-${lvl}-${i}`, `R-${lvl+1}-${Math.floor(i/2)}`, svg);
-            }
-        }
-        connectNodes(`R-${k-1}-0`, `C-${k}-0`, svg);
-    }
-
-    // Calcule les lignes orthogonales d'un élément enfant à son parent via les offsets locaux
-    function connectNodes(childId, parentId, svg) {
-        const childEl = document.getElementById(childId);
-        const parentEl = document.getElementById(parentId);
-        if (!childEl || !parentEl) return;
-
-        const childCol = childEl.parentElement;
-        const parentCol = parentEl.parentElement;
-
-        // Position locale non altérée par le zoom
-        const childX = childCol.offsetLeft;
-        const childY = childCol.offsetTop + childEl.offsetTop;
-        const parentX = parentCol.offsetLeft;
-        const parentY = parentCol.offsetTop + parentEl.offsetTop;
-
-        const childW = childEl.offsetWidth;
-        const childH = childEl.offsetHeight;
-        const parentW = parentEl.offsetWidth;
-        const parentH = parentEl.offsetHeight;
-
-        const isLeftTree = childId.startsWith('L');
-        let startX, startY, endX, endY;
-
-        if (isLeftTree) {
-            startX = childX + childW;
-            startY = childY + childH / 2;
-            endX = parentX;
-            endY = parentY + parentH / 2;
-        } else {
-            startX = childX;
-            startY = childY + childH / 2;
-            endX = parentX + parentW;
-            endY = parentY + parentH / 2;
-        }
-
-        const midX = (startX + endX) / 2;
-        const pathData = `M ${startX} ${startY} L ${midX} ${startY} L ${midX} ${endY} L ${endX} ${endY}`;
-        
-        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        path.setAttribute('d', pathData);
-        path.setAttribute('stroke', '#475569');
-        path.setAttribute('stroke-width', '2');
-        path.setAttribute('fill', 'none');
-        svg.appendChild(path);
-    }
-
-    function downloadBracket() {
-        const container = document.querySelector('.bracket-wrapper');
-        if (!container) return;
-
-        const btn = document.querySelector('.download-btn');
-        btn.innerText = "Génération de l'image... ⏳";
-        btn.disabled = true;
-
-        // On reset provisoirement le zoom/pan pour que l'export html2canvas se fasse à l'échelle 1:1
-        const originalTransform = container.style.transform;
-        container.style.transform = 'none';
-
-        html2canvas(container, {
-            backgroundColor: "#090d16",
-            useCORS: true, 
-            scale: 1.5 
-        }).then(canvas => {
-            // Restauration de l'affichage utilisateur
-            container.style.transform = originalTransform;
-
-            const link = document.createElement('a');
-            link.download = 'recap-tournoi.png';
-            link.href = canvas.toDataURL();
-            link.click();
-            
-            btn.innerText = "📸 Télécharger le Schéma (PNG)";
-            btn.disabled = false;
-        }).catch(err => {
-            container.style.transform = originalTransform;
-            console.error("Erreur de téléchargement du canevas", err);
-            btn.innerText = "Erreur ❌";
-            btn.disabled = false;
-        });
-    }
-
-    function generateRecap() {
-        const starredEntries = initialShuffled.filter(e => e.starred);
-        let starredHtml = "";
-        if (starredEntries.length > 0) {
-            starredHtml = `
-                <div class="recap-section">
-                    <h3>⭐ VOS MORCEAUX MARQUÉS (Étoilés)</h3>
-                    <div style="display: flex; flex-wrap: wrap; gap: 10px;">
-                        ${starredEntries.map(e => `
-                            <div class="fav-badge">⭐ ${e.title} <span style="font-size: 0.8rem; opacity: 0.75; margin-left:5px;">(${e.result})</span></div>
-                        `).join('')}
-                    </div>
-                </div>
-            `;
-        }
-
-        // Section de l'arbre enveloppé dans son conteneur compatible plein écran
-        const bracketVisualHtml = `
-            <div class="recap-section" id="bracket-section-container">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap:10px;">
-                    <h3>🌿 GRAPH SCHÉMATIQUE DU TOURNOI</h3>
-                    <div style="display: flex; gap: 10px;">
-                        <button class="fullscreen-btn" onclick="toggleFullscreen()">🖥️ Plein écran</button>
-                        <button class="download-btn" onclick="downloadBracket()">📸 Télécharger le Schéma (PNG)</button>
-                    </div>
-                </div>
-                ${generateBracketVisual()}
-            </div>
-        `;
-
-        // Liste dynamique des rounds à tracer en texte
-        const N = initialShuffled.length;
-        const roundsToRender = [];
-        let temp = N;
-        while (temp >= 2) {
-            roundsToRender.push(temp);
-            temp /= 2;
-        }
-
-        let bracketHtml = `
-            <div class="recap-section">
-                <h3>📜 HISTORIQUE DU COMPTE RENDU DES MATCHS</h3>
-                <div class="rounds-container">
-        `;
-
-        roundsToRender.forEach(rSize => {
-            const roundMatches = matchHistory.filter(m => m.roundSize === rSize);
-            if (roundMatches.length === 0) return;
-
-            const rTitle = getRoundTitle(rSize);
-            const isCollapsedByDefault = rSize === 64 || rSize === 32;
-            const displayStyle = isCollapsedByDefault ? "none" : "grid";
-
-            bracketHtml += `
-                <div class="round-box">
-                    <h4 onclick="toggleCollapse('round-${rSize}')">
-                        <span>${rTitle} (${roundMatches.length} Match${roundMatches.length > 1 ? 's' : ''})</span>
-                        <span style="font-size: 0.8rem; opacity: 0.6; font-weight: normal;">[Cliquer pour afficher/masquer]</span>
-                    </h4>
-                    <div id="round-${rSize}" class="round-matches-list" style="display: ${displayStyle};">
-                        ${roundMatches.map((m, i) => {
-                            const isP1Winner = m.p1.title === m.winnerTitle;
-                            return `
-                                <div class="match-recap-row">
-                                    <span class="match-recap-num">Match ${i + 1}</span>
-                                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 5px;">
-                                        <span class="match-recap-player ${isP1Winner ? 'winner' : 'loser'}" title="${m.p1.title}">
-                                            ${m.p1.starred ? '⭐ ' : ''}${m.p1.title}
-                                        </span>
-                                        <span class="match-recap-vs">VS</span>
-                                        <span class="match-recap-player ${!isP1Winner ? 'winner' : 'loser'}" title="${m.p2.title}">
-                                            ${m.p2.starred ? '⭐ ' : ''}${m.p2.title}
-                                        </span>
-                                    </div>
-                                </div>
-                            `;
-                        }).join('')}
-                    </div>
-                </div>
-            `;
-        });
-
-        bracketHtml += `</div></div>`;
-
-        const rankWeight = {
-            "🏆 CHAMPION 🏆": 1,
-            "Finaliste (2ème)": 2,
-            "Top 4 (Demi-Finales)": 3,
-            "Top 8 (Quarts)": 4,
-            "Top 16 (8èmes)": 5,
-            "Top 32 (16èmes)": 6,
-            "Top 64 (32èmes)": 7
-        };
-
-        const sortedEntries = [...initialShuffled].sort((a, b) => {
-            return (rankWeight[a.result] || 9) - (rankWeight[b.result] || 9);
-        });
-
-        let tableHtml = `
-            <div class="recap-section">
-                <h3>📊 CLASSEMENT GÉNÉRAL DES PARTICIPANTS</h3>
-                <table class="recap-table">
-                    <thead>
-                        <tr>
-                            <th style="width: 80px; text-align: center;">Marqué</th>
-                            <th>Titre de l'Anime / Musique</th>
-                            <th>Résultat / Parcours</th>
-                            <th style="width: 140px; text-align: center;">Lien direct</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${sortedEntries.map(e => {
-                            let statusClass = "";
-                            if (e.result === "🏆 CHAMPION 🏆") statusClass = "status-winner";
-                            else if (e.result === "Finaliste (2ème)") statusClass = "status-finalist";
-                            
-                            return `
-                                <tr>
-                                    <td style="text-align: center; font-size: 1.1rem;">${e.starred ? '⭐' : '☆'}</td>
-                                    <td style="font-weight: ${e.result === '🏆 CHAMPION 🏆' ? 'bold' : 'normal'}">${e.title}</td>
-                                    <td class="${statusClass}">${e.result}</td>
-                                    <td style="text-align: center;">
-                                        <a class="yt-link" href="https://www.youtube.com/watch?v=${e.yt}" target="_blank" style="padding: 4px 8px; font-size: 0.8rem; margin: 0;">
-                                            Regarder ↗
-                                        </a>
-                                    </td>
-                                </tr>
-                            `;
-                        }).join('')}
-                    </tbody>
-                </table>
-            </div>
-        `;
-
-        document.getElementById('tournament-recap-container').innerHTML = starredHtml + bracketVisualHtml + bracketHtml + tableHtml;
-
-        setTimeout(() => {
-            initZoomPan();     // Initialise les événements souris et pinch trackpad
-            autoFitBracket();  // Zoom adaptatif automatique de l'arbre
-            drawBracketLines(); // Repositionne les lignes
-        }, 150);
-    }
-
-    window.addEventListener('resize', () => {
-        autoFitBracket();
-        drawBracketLines();
-    });
-
-    // Chargement initial des compteurs du menu de configuration
     initMenu();
 </script>
 </body>

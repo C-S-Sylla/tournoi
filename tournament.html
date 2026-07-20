@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Tournoi Anime OP/ED - Matchs en Cours</title>
+    <style>
+        :root { 
+            --primary: #6366f1; 
+            --bg: #0f172a; 
+            --card-bg: #1e293b; 
+            --text: #f8fafc; 
+        }
+        body { 
+            font-family: sans-serif; 
+            background: var(--bg); 
+            color: var(--text); 
+            margin: 0; 
+            text-align: center; 
+        }
+        .header { 
+            padding: 20px; 
+            background: #1e293b; 
+            margin-bottom: 20px; 
+        }
+        .container { 
+            display: flex; 
+            justify-content: center; 
+            gap: 20px; 
+            padding: 20px; 
+            flex-wrap: wrap; 
+        }
+        .match-card { 
+            background: var(--card-bg); 
+            border-radius: 15px; 
+            padding: 15px; 
+            width: 450px; 
+            border: 3px solid transparent; 
+            transition: 0.3s; 
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .match-card:hover { 
+            border-color: var(--primary); 
+        }
+        .video-box { 
+            width: 100%; 
+            aspect-ratio: 16/9; 
+            background: #000; 
+            border-radius: 10px; 
+            overflow: hidden; 
+            margin-bottom: 10px; 
+        }
+        iframe { 
+            width: 100%; 
+            height: 100%; 
+            border: none; 
+        }
+        button { 
+            background: var(--primary); 
+            color: white; 
+            border: none; 
+            padding: 15px 30px; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            font-size: 1.2rem; 
+            font-weight: bold; 
+            width: 100%; 
+            transition: 0.2s;
+        }
+        button:hover {
+            opacity: 0.9;
+        }
+        .vs { 
+            font-size: 3rem; 
+            align-self: center; 
+            color: #ef4444; 
+            font-weight: bold; 
+        }
+        .hidden { 
+            display: none !important; 
+        }
+
+        /* Boutons interactifs du lecteur */
+        .star-btn { 
+            background: #475569; 
+            color: #e2e8f0; 
+            border: none; 
+            padding: 8px 15px; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            font-size: 1rem; 
+            font-weight: bold; 
+            margin-bottom: 12px; 
+            width: 100%; 
+            transition: 0.2s;
+        }
+        .star-btn:hover { background: #64748b; }
+        .star-btn.starred { background: #eab308; color: #0f172a; }
+        
+        .yt-link {
+            display: inline-block;
+            color: #38bdf8;
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: bold;
+            background: rgba(56, 189, 248, 0.15);
+            padding: 6px 12px;
+            border-radius: 6px;
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            transition: 0.2s;
+        }
+        .yt-link:hover {
+            background: rgba(56, 189, 248, 0.25);
+            border-color: #38bdf8;
+        }
+
+        .switch-btn {
+            background: #1e293b;
+            border: 1px solid #475569;
+            color: #94a3b8;
+            padding: 5px 10px;
+            font-size: 0.8rem;
+            border-radius: 5px;
+            cursor: pointer;
+            width: auto;
+            transition: 0.2s;
+        }
+        .switch-btn:hover {
+            background: #334155;
+            color: #f8fafc;
+            border-color: #64748b;
+        }
+
+        /* Bouton Retour en arrière */
+        .undo-btn {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: bold;
+            margin: 10px auto;
+            transition: 0.2s;
+            display: none;
+        }
+        .undo-btn:hover {
+            background: #dc2626;
+        }
+    </style>
+</head>
+<body>
+
+<!-- EN-TÊTE DU TOURNOI -->
+<div class="header">
+    <h1 id="round-name">Chargement...</h1>
+    <p id="match-info">Match 1 / 32</p>
+    <button id="undo-btn" class="undo-btn" onclick="undo()">↩ Revenir en arrière</button>
+</div>
+
+<!-- L'ARÈNE DE COMBAT -->
+<div id="tournament-screen">
+    <div class="container" id="tournament-area">
+        <div class="match-card">
+            <div class="video-box" id="player1"></div>
+            <h3 id="title1">Anime A</h3>
+            <button id="star-0" class="star-btn" onclick="toggleStar(0)">☆ Marquer ?</button>
+            <button onclick="vote(0)">CHOISIR</button>
+        </div>
+
+        <div class="vs">VS</div>
+
+        <div class="match-card">
+            <div class="video-box" id="player2"></div>
+            <h3 id="title2">Anime B</h3>
+            <button id="star-1" class="star-btn" onclick="toggleStar(1)">☆ Marquer ?</button>
+            <button onclick="vote(1)">CHOISIR</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Variables de contrôle globales
+    let currentRound = [];
+    let initialShuffled = []; // Conservé pour la référence de tracé d'arbre et résultats
+    let nextRound = [];
+    let currentIndex = 0;
+    const matchHistory = [];
+    const historyStateStack = [];
+
+    // Chargement initial depuis localStorage
+    window.onload = () => {
+        const storedParticipants = localStorage.getItem('tournamentParticipants');
+        if (!storedParticipants) {
+            alert("Aucune donnée de tournoi trouvée. Redirection vers le menu...");
+            window.location.href = 'index.html';
+            return;
+        }
+
+        // initialShuffled contient la distribution originale et sert de référence commune
+        initialShuffled = JSON.parse(storedParticipants);
+        currentRound = initialShuffled.map(e => ({ ...e }));
+
+        updateDisplay();
+    };
+
+    function updateDisplay() {
+        if (currentRound.length === 1) {
+            showWinner(currentRound[0]);
+            return;
+        }
+
+        // Afficher/masquer le bouton de retour en arrière
+        const undoBtn = document.getElementById('undo-btn');
+        if (historyStateStack.length > 0) {
+            undoBtn.style.display = 'inline-block';
+        } else {
+            undoBtn.style.display = 'none';
+        }
+
+        document.getElementById('round-name').innerText = getRoundTitle(currentRound.length);
+        document.getElementById('match-info').innerText = `Match ${(currentIndex/2)+1} / ${currentRound.length/2}`;
+
+        const choice1 = currentRound[currentIndex];
+        const choice2 = currentRound[currentIndex + 1];
+
+        document.getElementById('title1').innerText = choice1.title;
+        document.getElementById('title2').innerText = choice2.title;
+
+        updateStarButtonState(0, choice1.starred);
+        updateStarButtonState(1, choice2.starred);
+
+        document.getElementById('player1').innerHTML = getPlayerHTML(choice1, 0);
+        document.getElementById('player2').innerHTML = getPlayerHTML(choice2, 1);
+    }
+
+    function getPlayerHTML(choice, index) {
+        return `
+            <iframe src="https://www.youtube-nocookie.com/embed/${choice.yt}?rel=0" allowfullscreen></iframe>
+            <div style="margin-top: 8px; display: flex; flex-direction: column; gap: 5px; align-items: center;">
+                <a class="yt-link" href="https://www.youtube.com/watch?v=${choice.yt}" target="_blank">
+                    Ouvrir sur YouTube ↗ (si vidéo bloquée)
+                </a>
+                <button class="switch-btn" onclick="switchPlayer(${index}, '${choice.yt}')">
+                    <span id="switch-text-${index}">Lecteur alternatif si bloqué 🔁</span>
+                </button>
+            </div>
+        `;
+    }
+
+    function switchPlayer(index, ytId) {
+        const iframe = document.querySelector(`#player${index + 1} iframe`);
+        const textSpan = document.getElementById(`switch-text-${index}`);
+        if (!iframe || !textSpan) return;
+
+        if (iframe.src.includes('youtube')) {
+            iframe.src = `https://yewtu.be/embed/${ytId}`;
+            textSpan.innerText = "Retourner au lecteur YouTube 🔁";
+        } else {
+            iframe.src = `https://www.youtube-nocookie.com/embed/${ytId}?rel=0`;
+            textSpan.innerText = "Lecteur alternatif si bloqué 🔁";
+        }
+    }
+
+    function toggleStar(indexOffset) {
+        const entry = currentRound[currentIndex + indexOffset];
+        entry.starred = !entry.starred;
+        
+        // Synchronise l'état marqué directement avec l'élément original de initialShuffled
+        const initialEntry = initialShuffled.find(e => e.yt === entry.yt);
+        if (initialEntry) {
+            initialEntry.starred = entry.starred;
+        }
+
+        updateStarButtonState(indexOffset, entry.starred);
+    }
+
+    function updateStarButtonState(indexOffset, isStarred) {
+        const btn = document.getElementById(`star-${indexOffset}`);
+        if (isStarred) {
+            btn.classList.add('starred');
+            btn.innerText = "⭐ Marqué !";
+        } else {
+            btn.classList.remove('starred');
+            btn.innerText = "☆ Marquer ?";
+        }
+    }
+
+    function saveState() {
+        historyStateStack.push({
+            currentRound: currentRound.map(e => ({ ...e })),
+            nextRound: nextRound.map(e => ({ ...e })),
+            currentIndex: currentIndex,
+            matchHistory: matchHistory.map(m => ({
+                roundSize: m.roundSize,
+                p1: { ...m.p1 },
+                p2: { ...m.p2 },
+                winnerTitle: m.winnerTitle
+            })),
+            initialShuffledState: initialShuffled.map(e => ({ yt: e.yt, starred: e.starred, result: e.result }))
+        });
+    }
+
+    function undo() {
+        if (historyStateStack.length === 0) return;
+
+        const prevState = historyStateStack.pop();
+
+        currentRound = prevState.currentRound;
+        nextRound = prevState.nextRound;
+        currentIndex = prevState.currentIndex;
+
+        matchHistory.length = 0;
+        matchHistory.push(...prevState.matchHistory);
+
+        // Restauration asynchrone des états de initialShuffled
+        if (prevState.initialShuffledState) {
+            prevState.initialShuffledState.forEach(state => {
+                const target = initialShuffled.find(e => e.yt === state.yt);
+                if (target) {
+                    target.starred = state.starred;
+                    target.result = state.result;
+                }
+            });
+        }
+
+        updateDisplay();
+    }
+
+    function vote(indexOffset) {
+        saveState();
+
+        const p1 = currentRound[currentIndex];
+        const p2 = currentRound[currentIndex + 1];
+
+        const winner = indexOffset === 0 ? p1 : p2;
+        const loser = indexOffset === 0 ? p2 : p1;
+
+        matchHistory.push({
+            roundSize: currentRound.length,
+            p1: { ...p1 },
+            p2: { ...p2 },
+            winnerTitle: winner.title
+        });
+
+        // Met à jour la valeur locale et celle synchronisée dans initialShuffled
+        const stageName = getEliminationStageName(currentRound.length);
+        loser.result = stageName;
+        
+        const initialLoser = initialShuffled.find(e => e.yt === loser.yt);
+        if (initialLoser) {
+            initialLoser.result = stageName;
+        }
+
+        nextRound.push(winner);
+        currentIndex += 2;
+
+        if (currentIndex >= currentRound.length) {
+            currentRound = [...nextRound];
+            nextRound = [];
+            currentIndex = 0;
+        }
+        updateDisplay();
+    }
+
+    function getRoundTitle(n) {
+        if (n === 64) return "32èmes de Finale";
+        if (n === 32) return "16èmes de Finale";
+        if (n === 16) return "8èmes de Finale";
+        if (n === 8) return "Quarts de Finale";
+        if (n === 4) return "Demi-Finales";
+        if (n === 2) return "GRANDE FINALE";
+        return `Tour de ${n}`;
+    }
+
+    function getEliminationStageName(n) {
+        if (n === 64) return "Top 64 (32èmes)";
+        if (n === 32) return "Top 32 (16èmes)";
+        if (n === 16) return "Top 16 (8èmes)";
+        if (n === 8) return "Top 8 (Quarts)";
+        if (n === 4) return "Top 4 (Demi-Finales)";
+        if (n === 2) return "Finaliste (2ème)";
+        return "Éliminé";
+    }
+
+    function showWinner(winner) {
+        winner.result = "🏆 CHAMPION 🏆";
+
+        const initialWinner = initialShuffled.find(e => e.yt === winner.yt);
+        if (initialWinner) {
+            initialWinner.result = "🏆 CHAMPION 🏆";
+        }
+
+        // COUPE L'AUDIO DES LECTEURS ACTIFS immédiatement
+        document.getElementById('player1').innerHTML = "";
+        document.getElementById('player2').innerHTML = "";
+
+        // Enregistre les résultats dans le localStorage avant de rediriger
+        localStorage.setItem('finalResults', JSON.stringify({
+            winner: winner,
+            matchHistory: matchHistory,
+            initialShuffled: initialShuffled
+        }));
+
+        // Redirection directe vers la page de résultats
+        window.location.href = 'results.html';
+    }
+</script>
+</body>
+</html>
