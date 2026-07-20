@@ -31,7 +31,7 @@
     { "title": "Black Clover OP10", "yt": "XMeQeIG_rQg", "type": "OP" },
     { "title": "Black Clover ED10", "yt": "65_exPZjAKg", "type": "ED" },
     { "title": "HAIKYU!! TO THE TOP OP1", "yt": "M5bKaHHD_Ls", "type": "OP" },
-    { "title": "HAIKYU!! TO THE TOP ED1", "yt": "8GoPui1VCks", "type": "ED" },
+    { "title": "HAIKYU!! TO THE TOP ED1", "at": "https://animethemes.moe/anime/haikyuu_to_the_top/ED1", "type": "ED", "theme": "https://i.ytimg.com/vi/1YrttK0VSIw/maxresdefault.jpg" },
     { "title": "Ishuzoku Reviewers OP", "yt": "QLO4tg0ubXc", "type": "OP" },
     { "title": "Ishuzoku Reviewers ED", "yt": "wK-nnH7FzEw", "type": "ED" },
     { "title": "Infinite Dendrogram OP", "yt": "fpmnDoZBo3o", "type": "OP" },
