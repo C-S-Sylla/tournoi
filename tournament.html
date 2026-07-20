@@ -237,6 +237,32 @@
     }
 
     function getPlayerHTML(choice, index) {
+        if (choice.at) {
+            // Détection si c'est un lien vidéo brut (WebM/MP4) ou une page AnimeThemes
+            const isDirectVideo = choice.at.match(/\.(webm|mp4|ogg)$/i);
+            
+            if (isDirectVideo) {
+                return `
+                    <video src="${choice.at}" controls autoplay muted style="width:100%; height:100%; object-fit:cover; border-radius:10px;"></video>
+                    <div style="margin-top: 8px; display: flex; flex-direction: column; gap: 5px; align-items: center;">
+                        <a class="yt-link" href="${choice.at}" target="_blank" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border-color: rgba(16, 185, 129, 0.3);">
+                            Ouvrir la Vidéo Directe ↗
+                        </a>
+                    </div>
+                `;
+            } else {
+                return `
+                    <iframe src="${choice.at}" allowfullscreen style="background: #000;"></iframe>
+                    <div style="margin-top: 8px; display: flex; flex-direction: column; gap: 5px; align-items: center;">
+                        <a class="yt-link" href="${choice.at}" target="_blank" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border-color: rgba(16, 185, 129, 0.3);">
+                            Ouvrir sur AnimeThemes ↗
+                        </a>
+                    </div>
+                `;
+            }
+        }
+
+        // Rendu par défaut de YouTube
         return `
             <iframe src="https://www.youtube-nocookie.com/embed/${choice.yt}?rel=0" allowfullscreen></iframe>
             <div style="margin-top: 8px; display: flex; flex-direction: column; gap: 5px; align-items: center;">

@@ -200,9 +200,14 @@
     }
 
     // Normalise l'importation de chaque morceau
-    function normalizeEntry(entry, index) {
+function normalizeEntry(entry, index) {
         let title = entry.title || entry.name || entry.song || entry.label || `Entrée ${index + 1}`;
         const yt = entry.yt || entry.youtube || entry.youtubeId || entry.videoId || entry.id || entry.url || "";
+        
+        // CORRECTION : On récupère et conserve le lien AnimeThemes et la miniature personnalisée
+        const at = entry.at || ""; 
+        const thumb = entry.thumb || ""; 
+
         const rawType = entry.type || entry.category || entry.kind || "";
         const titleText = `${title} ${rawType}`.toUpperCase();
 
@@ -222,6 +227,8 @@
         return {
             title,
             yt,
+            at,       // CORRECTION : Sauvegardé
+            thumb,    // CORRECTION : Sauvegardé
             type,
             starred: false,
             result: ""
