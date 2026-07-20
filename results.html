@@ -698,6 +698,66 @@
         return bracketHtml;
     }
 
+    // Interroge l'API AnimeThemes pour trouver le fichier .webm brut
+    async function resolveAnimeThemesVideo(atUrl) {
+        try {
+            const urlParts = atUrl.replace(/\/$/, "").split('/');
+            const animeSlug = urlParts[urlParts.length - 2];
+            const rawThemeSlug = urlParts[urlParts.length - 1];
+            
+            const themeMatch = rawThemeSlug.match(/^(OP|ED)\d+/i);
+            const themeSlug = themeMatch ? themeMatch[0] : rawThemeSlug;
+
+            const apiUrl = `https://api.animethemes.moe/anime?filter[slug]=${animeSlug}&include=animethemes.animethemeentries.videos`;
+            const response = await fetch(apiUrl);
+            if (!response.ok) throw new Error("HTTP " + response.status);
+            
+            const data = await response.json();
+            const animeData = data.anime && data.anime[0];
+            if (!animeData || !animeData.animethemes) return null;
+
+            const theme = animeData.animethemes.find(t => 
+                t.slug.toUpperCase() === themeSlug.toUpperCase() || 
+                (t.type + (t.sequence || "")).toUpperCase() === themeSlug.toUpperCase()
+            );
+
+            if (!theme || !theme.animethemeentries || theme.animethemeentries.length === 0) return null;
+            const entry = theme.animethemeentries[0];
+            if (!entry.videos || entry.videos.length === 0) return null;
+
+            return entry.videos[0].link; // URL directe .webm
+        } catch (error) {
+            console.error("Erreur résolution AnimeThemes :", error);
+            return null;
+        }
+    }
+
+    // Gère le chargement asynchrone du lecteur du vainqueur
+    async function loadWinnerAnimeThemesPlayer(winnerEntry) {
+        const playerDiv = document.getElementById('player-winner');
+        const loader = document.getElementById('video-loader-winner');
+        if (!playerDiv || !loader) return;
+
+        const videoLink = await resolveAnimeThemesVideo(winnerEntry.at);
+
+        if (videoLink) {
+            playerDiv.innerHTML = `
+                <video src="${videoLink}" controls autoplay muted style="width:100%; height:100%; object-fit:cover; border-radius:10px; background:#000;"></video>
+                <div style="margin-top: 8px;">
+                    <a class="yt-link" href="${videoLink}" target="_blank" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border-color: rgba(16, 185, 129, 0.3);">
+                        Ouvrir la Vidéo Directe ↗
+                    </a>
+                </div>
+            `;
+        } else {
+            loader.innerHTML = `
+                <div style="padding: 10px; color: #ef4444; font-size: 0.85rem; font-weight:bold;">
+                    ⚠️ Résolution du Champion impossible.<br>Utilisez le bouton ci-dessous !
+                </div>
+            `;
+        }
+    }
+
     function drawBracketLines() {
         const svg = document.getElementById('bracket-lines');
         if (!svg) return;
