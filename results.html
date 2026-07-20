@@ -673,10 +673,29 @@
             
             bracketHtml += `<div class="bracket-column">`;
             
+            colOrder.forEach(colKey => {
+            const list = columns[colKey];
+            const [side, lvlStr] = colKey.split('-');
+            const lvl = parseInt(lvlStr);
+            
+            bracketHtml += `<div class="bracket-column">`;
+            
             list.forEach((node, idx) => {
                 const nodeId = `${side}-${lvl}-${idx}`;
-                const isPlaceholder = node.placeholder || !node.yt;
-                const thumbUrl = node.yt ? `https://img.youtube.com/vi/${node.yt}/mqdefault.jpg` : (node.thumb || "");
+                
+                // CORRECTIF 1 : Une case n'est vide que si elle n'a ni ID YouTube, ni URL AnimeThemes
+                const isPlaceholder = node.placeholder || (!node.yt && !node.at);
+                
+                // CORRECTIF 2 : Récupération intelligente de la miniature + contournement du blocage de Fandom/Wikia
+                let thumbUrl = "";
+                if (node.yt) {
+                    thumbUrl = `https://img.youtube.com/vi/${node.yt}/mqdefault.jpg`;
+                } else if (node.thumb) {
+                    // On utilise le proxy universel d'image "images.weserv.nl" pour contourner le CORS de Wikia
+                    // Cela permet à html2canvas d'inclure l'image Fandom dans le PNG de fin sans erreur
+                    thumbUrl = `https://images.weserv.nl/?url=${encodeURIComponent(node.thumb)}`;
+                }
+                
                 const isStarred = node.starred;
                 const isTall = lvl !== 0;
                 
@@ -687,7 +706,11 @@
                                 <span>-</span>
                             </div>
                         ` : `
-                            <img src="${thumbUrl}" crossorigin="anonymous" alt="" />
+                            <!-- Affiche l'image si présente, ou une note de musique stylisée par défaut -->
+                            ${thumbUrl 
+                                ? `<img src="${thumbUrl}" crossorigin="anonymous" alt="" />` 
+                                : `<div style="background: #1e293b; width: 100%; height: 40px; display:flex; align-items:center; justify-content:center; color:#64748b; font-size:1.2rem; border-bottom: 1px solid #334155;">🎵</div>`
+                            }
                             <div class="node-title" title="${node.title}">
                                 ${isStarred ? '⭐ ' : ''}${node.title}
                             </div>
@@ -695,6 +718,9 @@
                     </div>
                 `;
             });
+            
+            bracketHtml += `</div>`;
+        });
             bracketHtml += `</div>`;
         });
 
@@ -771,12 +797,12 @@
         if (videoLink) {
             const parent = loader.parentElement;
             if (parent) {
+                // CORRECTIF : Nous avons retiré l'attribut "muted" ici aussi
                 parent.innerHTML = `
-                    <video src="${videoLink}" controls autoplay muted style="width:100%; height:100%; object-fit:cover; border-radius:10px; background:#000;"></video>
+                    <video src="${videoLink}" controls autoplay style="width:100%; height:100%; object-fit:cover; border-radius:10px; background:#000;"></video>
                 `;
             }
         } else {
-            // CORRECTIF : Ajout du bouton d'urgence au milieu du lecteur du champion
             loader.innerHTML = `
                 <div style="padding: 10px; color: #ef4444; font-size: 0.85rem; font-weight:bold; text-align:center;">
                     ⚠️ Résolution du Champion impossible.<br>
@@ -986,7 +1012,7 @@
             return (rankWeight[a.result] || 9) - (rankWeight[b.result] || 9);
         });
 
-        let tableHtml = `
+let tableHtml = `
             <div class="recap-section">
                 <h3>📊 CLASSEMENT GÉNÉRAL DES PARTICIPANTS</h3>
                 <table class="recap-table">
@@ -1004,14 +1030,18 @@
                             if (e.result === "🏆 CHAMPION 🏆") statusClass = "status-winner";
                             else if (e.result === "Finaliste (2ème)") statusClass = "status-finalist";
                             
+                            // CORRECTIF : Lien et texte dynamiques selon YouTube ou AnimeThemes
+                            const directLink = e.yt ? `https://www.youtube.com/watch?v=${e.yt}` : (e.at || "#");
+                            const linkText = e.yt ? "Regarder ↗" : "AnimeThemes ↗";
+                            
                             return `
                                 <tr>
                                     <td style="text-align: center; font-size: 1.1rem;">${e.starred ? '⭐' : '☆'}</td>
                                     <td style="font-weight: ${e.result === '🏆 CHAMPION 🏆' ? 'bold' : 'normal'}">${e.title}</td>
                                     <td class="${statusClass}">${e.result}</td>
                                     <td style="text-align: center;">
-                                        <a class="yt-link" href="https://www.youtube.com/watch?v=${e.yt}" target="_blank" style="padding: 4px 8px; font-size: 0.8rem; margin: 0;">
-                                            Regarder ↗
+                                        <a class="yt-link" href="${directLink}" target="_blank" style="padding: 4px 8px; font-size: 0.8rem; margin: 0;">
+                                            ${linkText}
                                         </a>
                                     </td>
                                 </tr>

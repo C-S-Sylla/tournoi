@@ -341,12 +341,12 @@
         if (videoLink) {
             const parent = loader.parentElement;
             if (parent) {
+                // CORRECTIF : Remplacement de "autoplay" par "preload="auto""
                 parent.innerHTML = `
-                    <video src="${videoLink}" controls autoplay muted style="width:100%; height:100%; object-fit:cover; border-radius:10px; background:#000;"></video>
+                    <video src="${videoLink}" controls preload="auto" style="width:100%; height:100%; object-fit:cover; border-radius:10px; background:#000;"></video>
                 `;
             }
         } else {
-            // CORRECTIF : Génère un bouton d'urgence stylisé directement à l'intérieur de la case noire
             loader.innerHTML = `
                 <div style="padding: 10px; color: #ef4444; font-size: 0.85rem; font-weight:bold; text-align:center;">
                     ⚠️ Résolution automatique impossible.<br>
