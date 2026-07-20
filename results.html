@@ -609,13 +609,16 @@
         }, { passive: false });
     }
 
+    // Génère l'Arbre Graphique Universel et Dynamique pour n'importe quelle taille N (Puissance de 2)
     function generateBracketVisual() {
         const tree = [];
+        // Niveau 0 : Distribution initiale
         tree[0] = initialShuffled.map(e => ({ ...e }));
 
         const N = initialShuffled.length;
-        const k = Math.log2(N);
+        const k = Math.log2(N); // Ex: 6 pour 64, 5 pour 32, 4 pour 16
 
+        // Reconstitution mathématique des paliers intermédiaires
         for (let lvl = 1; lvl <= k; lvl++) {
             tree[lvl] = [];
             const prevLvl = tree[lvl - 1];
@@ -633,6 +636,7 @@
                 );
                 
                 if (match) {
+                    // Retrouve le morceau correspondant dans l'état de fin de jeu
                     const winnerObj = initialShuffled.find(e => e.title === match.winnerTitle) || p1;
                     tree[lvl].push({ ...winnerObj });
                 } else {
@@ -641,18 +645,23 @@
             }
         }
         
+        // Distribution dynamique des colonnes de manière symétrique selon N
         const columns = {};
+        // Partie Gauche de lvl 0 à k-1
         for (let j = 0; j < k; j++) {
             const halfSize = Math.pow(2, k - 1 - j);
             columns[`L-${j}`] = tree[j].slice(0, halfSize);
         }
+        // Centre (Champion)
         columns[`C-${k}`] = tree[k];
+        // Partie Droite de lvl k-1 à 0 (Inversée pour la symétrie)
         for (let j = k - 1; j >= 0; j--) {
             const halfSize = Math.pow(2, k - 1 - j);
             const fullSize = Math.pow(2, k - j);
             columns[`R-${j}`] = tree[j].slice(halfSize, fullSize);
         }
 
+        // Calcul dynamique de la hauteur du bracket
         const wrapperHeight = (N / 2) * 75;
 
         let bracketHtml = `
@@ -714,6 +723,9 @@
             
             bracketHtml += `</div>`;
         });
+
+        bracketHtml += `</div></div>`;
+        return bracketHtml; // Retourne proprement la structure HTML construite
     }
 
     // Interroge l'API AnimeThemes pour trouver le fichier .webm brut
