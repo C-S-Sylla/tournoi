@@ -661,6 +661,7 @@
                     <svg id="bracket-lines" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; stroke: #475569; stroke-width: 2; fill: none;"></svg>
         `;
 
+        // Ordre de rendu strict pour respecter la symétrie
         const colOrder = [];
         for (let j = 0; j < k; j++) colOrder.push(`L-${j}`);
         colOrder.push(`C-${k}`);
@@ -673,26 +674,18 @@
             
             bracketHtml += `<div class="bracket-column">`;
             
-            colOrder.forEach(colKey => {
-            const list = columns[colKey];
-            const [side, lvlStr] = colKey.split('-');
-            const lvl = parseInt(lvlStr);
-            
-            bracketHtml += `<div class="bracket-column">`;
-            
             list.forEach((node, idx) => {
                 const nodeId = `${side}-${lvl}-${idx}`;
                 
-                // CORRECTIF 1 : Une case n'est vide que si elle n'a ni ID YouTube, ni URL AnimeThemes
+                // Une case n'est vide que si elle n'a ni ID YouTube, ni URL AnimeThemes
                 const isPlaceholder = node.placeholder || (!node.yt && !node.at);
                 
-                // CORRECTIF 2 : Récupération intelligente de la miniature + contournement du blocage de Fandom/Wikia
+                // Génération propre de l'URL de miniature (YouTube ou image personnalisée AnimeThemes)
                 let thumbUrl = "";
                 if (node.yt) {
                     thumbUrl = `https://img.youtube.com/vi/${node.yt}/mqdefault.jpg`;
                 } else if (node.thumb) {
-                    // On utilise le proxy universel d'image "images.weserv.nl" pour contourner le CORS de Wikia
-                    // Cela permet à html2canvas d'inclure l'image Fandom dans le PNG de fin sans erreur
+                    // Utilisation du proxy d'image "images.weserv.nl" pour contourner le blocage de CORS du site d'origine (comme Fandom/Wikia)
                     thumbUrl = `https://images.weserv.nl/?url=${encodeURIComponent(node.thumb)}`;
                 }
                 
@@ -721,11 +714,6 @@
             
             bracketHtml += `</div>`;
         });
-            bracketHtml += `</div>`;
-        });
-
-        bracketHtml += `</div></div>`;
-        return bracketHtml;
     }
 
     // Interroge l'API AnimeThemes pour trouver le fichier .webm brut
