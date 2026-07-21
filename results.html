@@ -823,12 +823,31 @@
         const videoLink = await resolveAnimeThemesVideo(winnerEntry.at);
 
         if (videoLink) {
-            const parent = loader.parentElement;
-            if (parent) {
-                // CORRECTIF : Nous avons retiré l'attribut "muted" ici aussi
-                parent.innerHTML = `
-                    <video src="${videoLink}" controls autoplay style="width:100%; height:100%; object-fit:cover; border-radius:10px; background:#000;"></video>
-                `;
+            try {
+                // Téléchargement Blob complet pour le gagnant
+                const blobUrl = await fetchVideoAsBlob(videoLink, (percent) => {
+                    loader.innerHTML = `
+                        <div style="font-size:0.9rem; font-weight:bold; color:#38bdf8; text-align:center;">
+                            Téléchargement de la vidéo du Champion... ⏳<br>
+                            <span style="font-size:1.15rem; color:#10b981; font-family:monospace;">${percent}%</span>
+                        </div>
+                    `;
+                });
+
+                const parent = loader.parentElement;
+                if (parent) {
+                    parent.innerHTML = `
+                        <video src="${blobUrl}" controls style="width:100%; height:100%; object-fit:cover; border-radius:10px; background:#000;"></video>
+                    `;
+                }
+            } catch (err) {
+                console.warn("Échec du téléchargement Blob pour le gagnant :", err);
+                const parent = loader.parentElement;
+                if (parent) {
+                    parent.innerHTML = `
+                        <video src="${videoLink}" controls style="width:100%; height:100%; object-fit:cover; border-radius:10px; background:#000;"></video>
+                    `;
+                }
             }
         } else {
             loader.innerHTML = `

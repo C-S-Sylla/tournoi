@@ -248,32 +248,7 @@
     }
 
     // Télécharge la vidéo brute en tâche de fond et la convertit en URL Blob locale
-    async function fetchVideoAsBlob(url, onProgress) {
-        const response = await fetch(url);
-        if (!response.ok) throw new Error("HTTP " + response.status);
-
-        const reader = response.body.getReader();
-        const contentLength = +response.headers.get('Content-Length');
-        
-        let receivedLength = 0;
-        let chunks = [];
-        
-        while(true) {
-            const {done, value} = await reader.read();
-            if (done) break;
-            
-            chunks.push(value);
-            receivedLength += value.length;
-            
-            if (contentLength && onProgress) {
-                const percent = Math.round((receivedLength / contentLength) * 100);
-                onProgress(percent);
-            }
-        }
-        
-        const blob = new Blob(chunks, { type: 'video/webm' });
-        return URL.createObjectURL(blob);
-    }
+    
 
     // Anticipe et télécharge silencieusement les vidéos du match suivant en tâche de fond
     async function preloadNextMatches() {
@@ -283,29 +258,31 @@
         const nextChoice1 = currentRound[nextIdx];
         const nextChoice2 = currentRound[nextIdx + 1];
 
-        // Précharge à 100% le concurrent gauche du prochain match
+        // Précharge de manière sécurisée le concurrent gauche
         if (nextChoice1 && nextChoice1.at && !nextChoice1.resolvedUrl) {
-            resolveAnimeThemesVideo(nextChoice1.at).then(async url => {
+            console.log(`[Preload] Début de la résolution d'API en tâche de fond pour : ${nextChoice1.title}`);
+            resolveAnimeThemesVideo(nextChoice1.at).then(url => {
                 if (url) {
-                    try {
-                        const blobUrl = await fetchVideoAsBlob(url);
-                        nextChoice1.resolvedUrl = blobUrl; // Remplace par la version locale instantanée
-                    } catch (e) {
-                        nextChoice1.resolvedUrl = url; // Fallback streaming si erreur
+                    nextChoice1.resolvedUrl = url;
+                    const preloader = document.getElementById('preloader-1');
+                    if (preloader) {
+                        preloader.src = url; // Le navigateur télécharge nativement en tâche de fond (CORS-safe)
+                        console.log(`[Preload] Vidéo liée au préchargeur natif 1 : ${url}`);
                     }
                 }
             });
         }
         
-        // Précharge à 100% le concurrent droit du prochain match
+        // Précharge de manière sécurisée le concurrent droit
         if (nextChoice2 && nextChoice2.at && !nextChoice2.resolvedUrl) {
-            resolveAnimeThemesVideo(nextChoice2.at).then(async url => {
+            console.log(`[Preload] Début de la résolution d'API en tâche de fond pour : ${nextChoice2.title}`);
+            resolveAnimeThemesVideo(nextChoice2.at).then(url => {
                 if (url) {
-                    try {
-                        const blobUrl = await fetchVideoAsBlob(url);
-                        nextChoice2.resolvedUrl = blobUrl;
-                    } catch (e) {
-                        nextChoice2.resolvedUrl = url;
+                    nextChoice2.resolvedUrl = url;
+                    const preloader = document.getElementById('preloader-2');
+                    if (preloader) {
+                        preloader.src = url; // Le navigateur télécharge nativement en tâche de fond (CORS-safe)
+                        console.log(`[Preload] Vidéo liée au préchargeur natif 2 : ${url}`);
                     }
                 }
             });
@@ -314,6 +291,15 @@
 
     function getPlayerHTML(choice, index) {
         if (choice.at) {
+            // Si l'URL a déjà été résolue par le préchargeur, on l'affiche directement sans loader
+            if (choice.resolvedUrl) {
+                console.log(`[Lecteur] Le concurrent ${index + 1} (${choice.title}) est déjà résolu. Affichage direct.`);
+                return `
+                    <video src="${choice.resolvedUrl}" controls preload="auto" style="width:100%; height:100%; object-fit:cover; border-radius:10px; background:#000;"></video>
+                `;
+            }
+
+            console.log(`[Lecteur] Le concurrent ${index + 1} (${choice.title}) n'est pas encore résolu. Affichage du loader.`);
             return `
                 <div class="video-box-content" style="width:100%; height:100%;">
                     <div class="video-loader" id="video-loader-${index}" style="width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; background:#000; color:#38bdf8; border-radius:10px;">
@@ -328,6 +314,7 @@
             `;
         }
 
+        console.log(`[Lecteur] Rendu YouTube standard pour le concurrent ${index + 1} (${choice.title}).`);
         return `
             <iframe src="https://www.youtube-nocookie.com/embed/${choice.yt}?rel=0" allowfullscreen></iframe>
             <div style="margin-top: 8px; display: flex; flex-direction: column; gap: 5px; align-items: center;">
@@ -407,43 +394,29 @@
         const loader = document.getElementById(`video-loader-${playerNum - 1}`);
         if (!loader) return;
 
+        console.log(`[API AnimeThemes] Résolution de l'URL pour le joueur ${playerNum} : ${choice.title}`);
+        
+        // On récupère l'URL préchargée en tâche de fond, sinon on la cherche en direct
         let videoLink = choice.resolvedUrl;
         if (!videoLink) {
             videoLink = await resolveAnimeThemesVideo(choice.at);
+            if (videoLink) {
+                choice.resolvedUrl = videoLink;
+            }
         }
 
         if (videoLink) {
-            try {
-                // Tente de télécharger la vidéo à 100% en Blob pour supprimer les lags
-                let finalUrl = videoLink;
-                if (!videoLink.startsWith("blob:")) {
-                    finalUrl = await fetchVideoAsBlob(videoLink, (percent) => {
-                        loader.innerHTML = `
-                            <div style="font-size:0.9rem; font-weight:bold; color:#38bdf8; text-align:center;">
-                                Téléchargement d'AnimeThemes... ⏳<br>
-                                <span style="font-size:1.15rem; color:#10b981; font-family:monospace;">${percent}%</span>
-                            </div>
-                        `;
-                    });
-                    choice.resolvedUrl = finalUrl; // Enregistre la version locale dans le cache
-                }
-
-                const parent = loader.parentElement;
-                if (parent) {
-                    parent.innerHTML = `
-                        <video src="${finalUrl}" controls preload="auto" style="width:100%; height:100%; object-fit:cover; border-radius:10px; background:#000;"></video>
-                    `;
-                }
-            } catch (err) {
-                console.warn("Échec du téléchargement Blob (CORS ou réseau), fallback en streaming standard :", err);
-                const parent = loader.parentElement;
-                if (parent) {
-                    parent.innerHTML = `
-                        <video src="${videoLink}" controls preload="auto" style="width:100%; height:100%; object-fit:cover; border-radius:10px; background:#000;"></video>
-                    `;
-                }
+            console.log(`[Lecteur] Chargement du flux vidéo natif pour : ${choice.title}`);
+            const parent = loader.parentElement;
+            if (parent) {
+                // Plus de Blob ici, juste la balise <video> classique.
+                // Le navigateur utilisera automatiquement ce qu'il a déjà préchargé.
+                parent.innerHTML = `
+                    <video src="${videoLink}" controls preload style="width:100%; height:100%; object-fit:cover; border-radius:10px; background:#000;"></video>
+                `;
             }
         } else {
+            console.error(`[API AnimeThemes] Impossible de résoudre l'adresse d'AnimeThemes pour : ${choice.title}`);
             loader.innerHTML = `
                 <div style="padding: 10px; color: #ef4444; font-size: 0.85rem; font-weight:bold; text-align:center;">
                     ⚠️ Résolution automatique impossible.<br>
