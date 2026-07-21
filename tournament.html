@@ -247,32 +247,66 @@
         preloadNextMatches();
     }
 
+    // Télécharge la vidéo brute en tâche de fond et la convertit en URL Blob locale
+    async function fetchVideoAsBlob(url, onProgress) {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error("HTTP " + response.status);
+
+        const reader = response.body.getReader();
+        const contentLength = +response.headers.get('Content-Length');
+        
+        let receivedLength = 0;
+        let chunks = [];
+        
+        while(true) {
+            const {done, value} = await reader.read();
+            if (done) break;
+            
+            chunks.push(value);
+            receivedLength += value.length;
+            
+            if (contentLength && onProgress) {
+                const percent = Math.round((receivedLength / contentLength) * 100);
+                onProgress(percent);
+            }
+        }
+        
+        const blob = new Blob(chunks, { type: 'video/webm' });
+        return URL.createObjectURL(blob);
+    }
+
     // Anticipe et télécharge silencieusement les vidéos du match suivant en tâche de fond
     async function preloadNextMatches() {
         const nextIdx = currentIndex + 2;
-        if (nextIdx >= currentRound.length) return; // Plus de match dans ce round
+        if (nextIdx >= currentRound.length) return;
 
         const nextChoice1 = currentRound[nextIdx];
         const nextChoice2 = currentRound[nextIdx + 1];
 
-        // Précharge le concurrent gauche du prochain match
+        // Précharge à 100% le concurrent gauche du prochain match
         if (nextChoice1 && nextChoice1.at && !nextChoice1.resolvedUrl) {
-            resolveAnimeThemesVideo(nextChoice1.at).then(url => {
+            resolveAnimeThemesVideo(nextChoice1.at).then(async url => {
                 if (url) {
-                    nextChoice1.resolvedUrl = url;
-                    const preloader = document.getElementById('preloader-1');
-                    if (preloader) preloader.src = url; // Lance le buffering
+                    try {
+                        const blobUrl = await fetchVideoAsBlob(url);
+                        nextChoice1.resolvedUrl = blobUrl; // Remplace par la version locale instantanée
+                    } catch (e) {
+                        nextChoice1.resolvedUrl = url; // Fallback streaming si erreur
+                    }
                 }
             });
         }
         
-        // Précharge le concurrent droit du prochain match
+        // Précharge à 100% le concurrent droit du prochain match
         if (nextChoice2 && nextChoice2.at && !nextChoice2.resolvedUrl) {
-            resolveAnimeThemesVideo(nextChoice2.at).then(url => {
+            resolveAnimeThemesVideo(nextChoice2.at).then(async url => {
                 if (url) {
-                    nextChoice2.resolvedUrl = url;
-                    const preloader = document.getElementById('preloader-2');
-                    if (preloader) preloader.src = url; // Lance le buffering
+                    try {
+                        const blobUrl = await fetchVideoAsBlob(url);
+                        nextChoice2.resolvedUrl = blobUrl;
+                    } catch (e) {
+                        nextChoice2.resolvedUrl = url;
+                    }
                 }
             });
         }
@@ -373,18 +407,41 @@
         const loader = document.getElementById(`video-loader-${playerNum - 1}`);
         if (!loader) return;
 
-        // IMPORTANT : Utilise la vidéo déjà préchargée si disponible, sinon la résout en direct
         let videoLink = choice.resolvedUrl;
         if (!videoLink) {
             videoLink = await resolveAnimeThemesVideo(choice.at);
         }
 
         if (videoLink) {
-            const parent = loader.parentElement;
-            if (parent) {
-                parent.innerHTML = `
-                    <video src="${videoLink}" controls preload style="width:100%; height:100%; object-fit:cover; border-radius:10px; background:#000;"></video>
-                `;
+            try {
+                // Tente de télécharger la vidéo à 100% en Blob pour supprimer les lags
+                let finalUrl = videoLink;
+                if (!videoLink.startsWith("blob:")) {
+                    finalUrl = await fetchVideoAsBlob(videoLink, (percent) => {
+                        loader.innerHTML = `
+                            <div style="font-size:0.9rem; font-weight:bold; color:#38bdf8; text-align:center;">
+                                Téléchargement d'AnimeThemes... ⏳<br>
+                                <span style="font-size:1.15rem; color:#10b981; font-family:monospace;">${percent}%</span>
+                            </div>
+                        `;
+                    });
+                    choice.resolvedUrl = finalUrl; // Enregistre la version locale dans le cache
+                }
+
+                const parent = loader.parentElement;
+                if (parent) {
+                    parent.innerHTML = `
+                        <video src="${finalUrl}" controls preload="auto" style="width:100%; height:100%; object-fit:cover; border-radius:10px; background:#000;"></video>
+                    `;
+                }
+            } catch (err) {
+                console.warn("Échec du téléchargement Blob (CORS ou réseau), fallback en streaming standard :", err);
+                const parent = loader.parentElement;
+                if (parent) {
+                    parent.innerHTML = `
+                        <video src="${videoLink}" controls preload="auto" style="width:100%; height:100%; object-fit:cover; border-radius:10px; background:#000;"></video>
+                    `;
+                }
             }
         } else {
             loader.innerHTML = `

@@ -787,6 +787,34 @@
         return null;
     }
 
+// Télécharge la vidéo brute en tâche de fond et la convertit en URL Blob locale
+    async function fetchVideoAsBlob(url, onProgress) {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error("HTTP " + response.status);
+
+        const reader = response.body.getReader();
+        const contentLength = +response.headers.get('Content-Length');
+        
+        let receivedLength = 0;
+        let chunks = [];
+        
+        while(true) {
+            const {done, value} = await reader.read();
+            if (done) break;
+            
+            chunks.push(value);
+            receivedLength += value.length;
+            
+            if (contentLength && onProgress) {
+                const percent = Math.round((receivedLength / contentLength) * 100);
+                onProgress(percent);
+            }
+        }
+        
+        const blob = new Blob(chunks, { type: 'video/webm' });
+        return URL.createObjectURL(blob);
+    }
+
     // Gère le chargement asynchrone du lecteur du vainqueur
     async function loadWinnerAnimeThemesPlayer(winnerEntry) {
         const loader = document.getElementById('video-loader-winner');
