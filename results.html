@@ -84,18 +84,24 @@
         .switch-btn:hover { background: #334155; color: #f8fafc; }
         .fav-badge { background: rgba(234, 179, 8, 0.15); border: 1px solid rgba(234, 179, 8, 0.3); color: #fef08a; padding: 8px 16px; border-radius: 20px; font-weight: bold; display: inline-flex; align-items: center; gap: 5px; }
 
-        /* ======== MODE GENDER : SCOREBOARD ======== */
+        /* ======== MODE GENDER : SCOREBOARD ET GRAPHE LINÉAIRE ======== */
         .scoreboard { display: flex; justify-content: center; gap: 40px; margin-bottom: 30px; font-size: 2.5rem; font-weight: bold; }
         .score-box { background: var(--card-bg); padding: 30px 50px; border-radius: 15px; border: 2px solid #334155; box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
         .score-male { color: #60a5fa; }
         .score-female { color: #f472b6; }
         .winner-glow { border-color: #eab308; box-shadow: 0 0 20px rgba(234, 179, 8, 0.4); }
 
-        .tally-row { display: flex; justify-content: space-between; align-items: center; background: #1e293b; padding: 15px; margin-bottom: 10px; border-radius: 10px; border: 1px solid #334155; }
-        .tally-player { flex: 1; font-weight: bold; font-size: 1.1rem; }
-        .tally-player.won { color: #4ade80; }
-        .tally-player.lost { color: #64748b; text-decoration: line-through; opacity: 0.6; }
-        .tally-vs { font-size: 1.5rem; color: #ef4444; font-weight: bold; margin: 0 20px; }
+        .tally-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            padding: 30px;
+            background: #090d16;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            width: 100%;
+            box-sizing: border-box;
+        }
 
         /* ======== MODE TOURNOI : BRACKET ======== */
         .bracket-scroll { width: 100%; max-height: 850px; overflow: hidden !important; border: 1px solid #334155; background: #090d16; padding: 30px 15px; border-radius: 12px; position: relative; cursor: grab; user-select: none; -ms-overflow-style: none; scrollbar-width: none; }
@@ -103,13 +109,18 @@
         .bracket-scroll:active { cursor: grabbing; }
         .bracket-wrapper { display: flex; gap: 25px; align-items: center; justify-content: flex-start; width: max-content; position: relative; transform-origin: 0 0; }
         .bracket-column { display: flex; flex-direction: column; justify-content: space-around; height: 100%; width: 140px; position: relative; z-index: 2; }
-        .bracket-node { width: 100%; height: 65px; background: #1e293b; border: 2px solid #475569; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; font-size: 0.7rem; overflow: hidden; }
+        
+        /* Composant Node commun aux deux graphiques */
+        .bracket-node { width: 100%; height: 65px; background: #1e293b; border: 2px solid #475569; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; font-size: 0.7rem; overflow: hidden; transition: 0.2s; }
         .bracket-node img { width: 100%; height: 40px; object-fit: cover; border-bottom: 1px solid #334155; }
-        .bracket-node .node-title { width: 100%; padding: 2px 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: rgba(15, 23, 42, 0.95); color: #f8fafc; }
+        .bracket-node .node-title { width: 100%; padding: 2px 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; box-sizing: border-box; background: rgba(15, 23, 42, 0.95); color: #f8fafc; }
         .node-starred { border-color: #eab308 !important; box-shadow: 0 0 10px rgba(234, 179, 8, 0.5); }
         .node-starred .node-title { color: #eab308 !important; font-weight: bold; }
         .bracket-node-tall { height: 105px !important; }
         .bracket-node-tall img { height: 80px !important; }
+        .node-winner { border-color: #4ade80 !important; box-shadow: 0 0 15px rgba(74, 222, 128, 0.3) !important; }
+        .node-winner .node-title { color: #4ade80 !important; font-weight: bold; }
+        .node-loser { opacity: 0.4; }
 
         .download-btn { background: #10b981; }
         .download-btn:hover { background: #059669; }
@@ -237,30 +248,51 @@
     };
 
     // ==========================================
-    // 1. RENDU DU MODE COMPTE (GENDER)
+    // 1. RENDU DU MODE COMPTE (GENDER LINÉAIRE)
     // ==========================================
     function renderTallyMode(starredHtml) {
         let maleWins = 0, femaleWins = 0;
-        let rowsHtml = "";
+        let graphRowsHtml = "";
 
         matchHistory.forEach(m => {
-            const p1 = m.p1, p2 = m.p2;
-            const isP1Winner = p1.title === m.winnerTitle;
-            const winnerData = isP1Winner ? p1 : p2;
-            
-            const v = (winnerData.vocal || "").toLowerCase();
-            if (v === "male" || v === "m") maleWins++;
-            else if (v === "female" || v === "f") femaleWins++;
+            // Identification de qui est la fille et qui est le garçon pour forcer "Fille à gauche"
+            let femaleP = m.p1;
+            let maleP = m.p2;
 
-            rowsHtml += `
-                <div class="tally-row">
-                    <div class="tally-player ${isP1Winner ? 'won' : 'lost'}" style="text-align: right;">
-                        ${p1.starred ? '⭐' : ''} ${p1.title} 
+            const v1 = (m.p1.vocal || "").toLowerCase();
+            if (v1 !== "female" && v1 !== "f") {
+                femaleP = m.p2;
+                maleP = m.p1;
+            }
+            
+            const fWon = (m.winnerTitle === femaleP.title);
+            const mWon = (m.winnerTitle === maleP.title);
+
+            if (fWon) femaleWins++;
+            if (mWon) maleWins++;
+
+            // Génération des images miniatures
+            const fThumb = femaleP.yt ? `https://img.youtube.com/vi/${femaleP.yt}/mqdefault.jpg` : (femaleP.thumb ? `https://images.weserv.nl/?url=${encodeURIComponent(femaleP.thumb)}` : "");
+            const mThumb = maleP.yt ? `https://img.youtube.com/vi/${maleP.yt}/mqdefault.jpg` : (maleP.thumb ? `https://images.weserv.nl/?url=${encodeURIComponent(maleP.thumb)}` : "");
+
+            // Création de la ligne graphique (Femme à gauche, Homme à droite)
+            graphRowsHtml += `
+                <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; border-bottom: 1px solid #1e293b; padding-bottom: 15px;">
+                    
+                    <!-- FILLE (GAUCHE) -->
+                    <div class="bracket-node bracket-node-tall ${fWon ? 'node-winner' : 'node-loser'} ${femaleP.starred ? 'node-starred' : ''}" style="width: 42%; margin:0;">
+                        ${fThumb ? `<img src="${fThumb}" crossorigin="anonymous" alt="" />` : `<div style="background:#1e293b;width:100%;height:80px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;">🎵</div>`}
+                        <div class="node-title">${femaleP.starred ? '⭐ ' : ''}${femaleP.title}</div>
                     </div>
-                    <div class="tally-vs">VS</div>
-                    <div class="tally-player ${!isP1Winner ? 'won' : 'lost'}" style="text-align: left;">
-                        ${p2.title} ${p2.starred ? '⭐' : ''}
+
+                    <div style="font-size: 1.5rem; font-weight: bold; color: #ef4444; width: 10%; text-align: center;">VS</div>
+
+                    <!-- GARCON (DROITE) -->
+                    <div class="bracket-node bracket-node-tall ${mWon ? 'node-winner' : 'node-loser'} ${maleP.starred ? 'node-starred' : ''}" style="width: 42%; margin:0;">
+                        ${mThumb ? `<img src="${mThumb}" crossorigin="anonymous" alt="" />` : `<div style="background:#1e293b;width:100%;height:80px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;">🎵</div>`}
+                        <div class="node-title">${maleP.starred ? '⭐ ' : ''}${maleP.title}</div>
                     </div>
+
                 </div>
             `;
         });
@@ -271,16 +303,49 @@
 
         document.getElementById('results-container').innerHTML = `
             <h1 style="color:#f8fafc; font-size:3rem; margin-top:20px;">${title}</h1>
+            
+            <!-- Les filles sont à gauche, donc le score des filles est à gauche -->
             <div class="scoreboard">
-                <div class="score-box score-male ${maleGlow}">♂ Hommes<br>${maleWins}</div>
                 <div class="score-box score-female ${femaleGlow}">♀ Femmes<br>${femaleWins}</div>
+                <div class="score-box score-male ${maleGlow}">♂ Hommes<br>${maleWins}</div>
             </div>
+            
             ${starredHtml}
+
             <div class="recap-section">
-                <h3>📜 RÉCAPITULATIF DES DUELS</h3>
-                ${rowsHtml}
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap:10px;">
+                    <h3>📊 GRAPHIQUE LINÉAIRE DES MATCHS</h3>
+                    <button class="download-btn" id="download-tally-btn" onclick="downloadTallyGraph()">📸 Télécharger le Graphique (PNG)</button>
+                </div>
+                
+                <div class="tally-wrapper" id="tally-graph-wrapper">
+                    <div style="display: flex; justify-content: space-between; color: #94a3b8; font-weight: bold; font-size: 1.2rem; padding: 0 10px; margin-bottom: 10px;">
+                        <span style="color: #f472b6;">♀ ÉQUIPE FÉMININE</span>
+                        <span style="color: #60a5fa;">♂ ÉQUIPE MASCULINE</span>
+                    </div>
+                    ${graphRowsHtml}
+                </div>
             </div>
         `;
+    }
+
+    // Fonction de téléchargement dédiée au graphique linéaire (sans zoom/pan)
+    function downloadTallyGraph() {
+        const container = document.getElementById('tally-graph-wrapper');
+        if (!container) return;
+        
+        const btn = document.getElementById('download-tally-btn');
+        btn.innerText = "Génération... ⏳"; btn.disabled = true;
+
+        html2canvas(container, { backgroundColor: "#090d16", useCORS: true, scale: 1.5 }).then(canvas => {
+            const link = document.createElement('a'); 
+            link.download = 'recap-hommes-femmes.png'; 
+            link.href = canvas.toDataURL(); 
+            link.click();
+            btn.innerText = "📸 Télécharger le Graphique (PNG)"; btn.disabled = false;
+        }).catch(err => {
+            console.error(err); btn.innerText = "Erreur ❌"; btn.disabled = false;
+        });
     }
 
     // ==========================================
