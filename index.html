@@ -19,7 +19,6 @@
             padding: 20px;
         }
         
-        /* Styles du Menu de configuration */
         #menu-screen {
             max-width: 600px;
             margin: 50px auto;
@@ -120,14 +119,12 @@
 
 <div id="menu-screen">
     <h2 style="color: #38bdf8; margin-top: 0;">🎵 MENU DE CONFIGURATION 🎵</h2>
-    <p style="color: #94a3b8; font-size: 0.9rem;">Préparez vos paramètres de saison avant de démarrer la compétition.</p>
+    <p style="color: #94a3b8; font-size: 0.9rem;">Préparez vos paramètres avant de démarrer la compétition.</p>
     <br>
 
     <div class="menu-group">
         <label for="season-select">1. Sélectionner la Saison :</label>
-        <select id="season-select" class="menu-select" onchange="onSeasonChange()">
-            <!-- Les options sont peuplées dynamiquement par JS -->
-        </select>
+        <select id="season-select" class="menu-select" onchange="onSeasonChange()"></select>
     </div>
 
     <div class="menu-group" id="json-upload-group" style="display: none;">
@@ -149,8 +146,20 @@
         </div>
     </div>
 
+    <!-- NOUVEAU : Sélection du mode de jeu -->
     <div class="menu-group">
-        <label for="tournament-size-select">3. Taille du Tournoi :</label>
+        <label>3. Mode de Jeu :</label>
+        <div class="radio-group">
+            <input type="radio" id="mode-standard" name="gamemode" value="STANDARD" checked>
+            <label for="mode-standard" class="radio-label">Tournoi Classique</label>
+
+            <input type="radio" id="mode-gender" name="gamemode" value="GENDER">
+            <label for="mode-gender" class="radio-label">male vs female singer</label>
+        </div>
+    </div>
+
+    <div class="menu-group">
+        <label for="tournament-size-select">4. Taille du Tournoi :</label>
         <select id="tournament-size-select" class="menu-select">
             <option value="64">64 Participants</option>
             <option value="32">32 Participants</option>
@@ -163,7 +172,7 @@
     </div>
 
     <br>
-    <button onclick="initTournament()">LANCER LE TOURNOI</button>
+    <button onclick="initTournament()">LANCER LE JEU 🚀</button>
 </div>
 
 <script>
@@ -175,12 +184,12 @@
         { id: "winter_2020", name: "Hiver 2020", path: "data/winter_2020.json" },
         { id: "winter_2022", name: "Hiver 2022", path: "data/winter_2022.json" },
         { id: "fall_2023", name: "Automne 2023", path: "data/fall_2023.json" },
+        { id: "male_vs_female1", name: "male vs female singer 1", path: "data/male_vs_female1.json" },
         { id: "underrated_ed", name: "Underrated ED", path: "data/underrated ED.json" }
     ];
 
     let selectedSeasonData = null;
 
-    // Peuple le sélecteur d'accueil
     function initMenu() {
         const select = document.getElementById('season-select');
         select.innerHTML = '';
@@ -200,14 +209,14 @@
         onSeasonChange();
     }
 
-    // Normalise l'importation de chaque morceau
-function normalizeEntry(entry, index) {
+    function normalizeEntry(entry, index) {
         let title = entry.title || entry.name || entry.song || entry.label || `Entrée ${index + 1}`;
         const yt = entry.yt || entry.youtube || entry.youtubeId || entry.videoId || entry.id || entry.url || "";
-        
-        // CORRECTION : On récupère et conserve le lien AnimeThemes et la miniature personnalisée
         const at = entry.at || ""; 
         const thumb = entry.thumb || ""; 
+        
+        // NOUVEAU : On récupère le genre (male/female) depuis le JSON
+        const vocal = (entry.vocal || entry.gender || "").toLowerCase();
 
         const rawType = entry.type || entry.category || entry.kind || "";
         const titleText = `${title} ${rawType}`.toUpperCase();
@@ -225,32 +234,16 @@ function normalizeEntry(entry, index) {
             title = `${title} (ED)`;
         }
 
-        return {
-            title,
-            yt,
-            at,       // CORRECTION : Sauvegardé
-            thumb,    // CORRECTION : Sauvegardé
-            type,
-            starred: false,
-            result: ""
-        };
+        return { title, yt, at, thumb, type, vocal, starred: false, result: "" };
     }
 
     function normalizeSeasonData(raw, fallbackName) {
-        if (Array.isArray(raw)) {
-            return { seasonName: fallbackName || "Saison importée", entries: raw };
-        }
-
+        if (Array.isArray(raw)) return { seasonName: fallbackName || "Saison importée", entries: raw };
         if (raw && typeof raw === "object") {
-            const possibleArrays = [raw.entries, raw.items, raw.data, raw.tracks, raw.songs, raw.musics]
-                .filter(Array.isArray);
+            const possibleArrays = [raw.entries, raw.items, raw.data, raw.tracks, raw.songs, raw.musics].filter(Array.isArray);
             const source = possibleArrays[0] || [];
-            return {
-                seasonName: raw.seasonName || raw.name || raw.title || fallbackName || "Saison importée",
-                entries: source
-            };
+            return { seasonName: raw.seasonName || raw.name || raw.title || fallbackName || "Saison importée", entries: source };
         }
-
         return { seasonName: fallbackName || "Saison importée", entries: [] };
     }
 
@@ -271,11 +264,17 @@ function normalizeEntry(entry, index) {
         const total = parsed.length;
         const ops = parsed.filter(e => e.type === "OP").length;
         const eds = parsed.filter(e => e.type === "ED").length;
+        
+        // Affiche le nombre d'hommes et de femmes trouvés dans le JSON
+        const males = parsed.filter(e => e.vocal === "male" || e.vocal === "m").length;
+        const females = parsed.filter(e => e.vocal === "female" || e.vocal === "f").length;
+
         const name = selectedSeasonData ? selectedSeasonData.seasonName : "Aucune saison";
 
         document.getElementById('available-count').innerText =
             `Saison chargée : ${name}\n` +
-            `Contenu total : ${total} morceaux  |  Openings : ${ops}  |  Endings : ${eds}`;
+            `Total : ${total} morceaux  |  OP : ${ops}  |  ED : ${eds}\n` +
+            `Tags trouvés : ${males} Hommes  |  ${females} Femmes`;
     }
 
     async function loadPresetSeason(id) {
@@ -292,8 +291,7 @@ function normalizeEntry(entry, index) {
             console.error("Erreur de chargement fetch :", error);
             selectedSeasonData = null;
             document.getElementById('available-count').innerText = 
-                `⚠️ Impossible de charger "${season.name}" automatiquement (Restriction de sécurité locale / CORS).\n` +
-                `👉 Veuillez choisir l'option "Uploader votre fichier" et sélectionner le fichier depuis votre dossier "data/"`;
+                `⚠️ Impossible de charger "${season.name}" automatiquement.\n👉 Veuillez choisir l'option "Uploader votre fichier JSON"`;
         }
     }
 
@@ -320,7 +318,7 @@ function normalizeEntry(entry, index) {
             try {
                 const data = JSON.parse(e.target.result);
                 selectedSeasonData = normalizeSeasonData(data, file.name.replace(/\.json$/i, ""));
-                alert(`Saison "${selectedSeasonData.seasonName}" chargée avec succès ! (${selectedSeasonData.entries.length} morceaux détectés)`);
+                alert(`Saison "${selectedSeasonData.seasonName}" chargée avec succès !`);
                 updateCountLabel();
             } catch (err) {
                 alert("Erreur lors de la lecture du fichier JSON : " + err.message);
@@ -337,38 +335,68 @@ function normalizeEntry(entry, index) {
         }
 
         const category = document.querySelector('input[name="category"]:checked').value;
+        const gameMode = document.querySelector('input[name="gamemode"]:checked').value;
         let parsed = getSelectedEntries();
 
-        if (category === "OP") {
-            parsed = parsed.filter(e => e.type === "OP");
-        } else if (category === "ED") {
-            parsed = parsed.filter(e => e.type === "ED");
-        }
+        if (category === "OP") parsed = parsed.filter(e => e.type === "OP");
+        else if (category === "ED") parsed = parsed.filter(e => e.type === "ED");
 
         let selectedSize = parseInt(document.getElementById('tournament-size-select').value);
+        let finalEntries = [];
 
-        if (parsed.length === 0) {
-            alert("Aucun morceau ne correspond aux critères choisis dans cette saison !");
-            return;
+        // NOUVEAU : Logique spécifique si le mode "Hommes vs Femmes" est sélectionné
+        if (gameMode === "GENDER") {
+            const males = parsed.filter(e => e.vocal === "male" || e.vocal === "m");
+            const females = parsed.filter(e => e.vocal === "female" || e.vocal === "f");
+
+            let halfSize = selectedSize / 2;
+
+            if (males.length < halfSize || females.length < halfSize) {
+                const maxHalf = Math.min(males.length, females.length);
+                const powers = [32, 16, 8, 4, 2, 1];
+                halfSize = powers.find(p => p <= maxHalf);
+
+                if (!halfSize || halfSize === 0) {
+                    alert(`Impossible de lancer ce mode : il n'y a pas assez de musiques taguées "vocal": "male" ou "female" ! (Hommes: ${males.length}, Femmes: ${females.length})`);
+                    return;
+                }
+                selectedSize = halfSize * 2;
+                alert(`Données insuffisantes. Ajustement automatique : Le jeu passe à ${selectedSize} participants (${halfSize} H vs ${halfSize} F).`);
+            }
+
+            males.sort(() => Math.random() - 0.5);
+            females.sort(() => Math.random() - 0.5);
+
+            // On entrelace les hommes et les femmes (1 homme, 1 femme, 1 homme, 1 femme...)
+            for (let i = 0; i < halfSize; i++) {
+                if (Math.random() > 0.5) finalEntries.push(males[i], females[i]);
+                else finalEntries.push(females[i], males[i]);
+            }
+
+        } else {
+            // Mode Tournoi Standard
+            if (parsed.length === 0) {
+                alert("Aucun morceau ne correspond aux critères choisis dans cette saison !");
+                return;
+            }
+
+            parsed.sort(() => Math.random() - 0.5);
+
+            if (parsed.length < selectedSize) {
+                const powers = [64, 32, 16, 8, 4, 2];
+                selectedSize = powers.find(p => p <= parsed.length) || 2;
+                alert(`Données insuffisantes. Le tournoi est automatiquement ajusté à ${selectedSize} participants.`);
+            }
+
+            finalEntries = parsed.slice(0, selectedSize);
         }
-
-        parsed.sort(() => Math.random() - 0.5);
-
-        if (parsed.length < selectedSize) {
-            const powers = [64, 32, 16, 8, 4, 2];
-            const targetPower = powers.find(p => p <= parsed.length) || 2;
-            alert(`Données insuffisantes (${parsed.length} morceaux). Le tournoi est automatiquement ajusté à ${targetPower} participants.`);
-            selectedSize = targetPower;
-        }
-
-        const finalEntries = parsed.slice(0, selectedSize);
 
         finalEntries.forEach(entry => {
             entry.starred = false;
             entry.result = `Top ${selectedSize}`;
         });
 
-        // NETTOYAGE ET TRANSFERT VIA LOCALSTORAGE
+        // Envoi au Storage
         localStorage.removeItem('tournamentParticipants');
         localStorage.removeItem('tournamentSize');
         localStorage.removeItem('matchHistory');
@@ -376,10 +404,14 @@ function normalizeEntry(entry, index) {
         localStorage.removeItem('finalResults');
 
         localStorage.setItem('tournamentParticipants', JSON.stringify(finalEntries));
-        localStorage.setItem('tournamentSize', selectedSize);
+        localStorage.setItem('gameMode', gameMode);
 
-        // REDIRECTION VERS L'ECRAN DE JEU
-        window.location.href = 'tournament.html';
+        // NOUVEAU : Redirection vers la bonne arène de jeu selon le mode
+        if (gameMode === "GENDER") {
+            window.location.href = 'gender_match.html';
+        } else {
+            window.location.href = 'tournament.html';
+        }
     }
 
     initMenu();

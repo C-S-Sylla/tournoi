@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Guerre des Sexes - Matchs</title>
+    <style>
+        :root { --primary: #6366f1; --bg: #0f172a; --card-bg: #1e293b; --text: #f8fafc; }
+        body { font-family: sans-serif; background: var(--bg); color: var(--text); margin: 0; text-align: center; }
+        .header { padding: 20px; background: #1e293b; margin-bottom: 20px; }
+        .container { display: flex; justify-content: center; gap: 20px; padding: 20px; flex-wrap: wrap; }
+        .match-card { background: var(--card-bg); border-radius: 15px; padding: 15px; width: 450px; display: flex; flex-direction: column; justify-content: space-between; border: 3px solid transparent; transition: 0.3s; }
+        .match-card.male-card { border-color: rgba(59, 130, 246, 0.5); }
+        .match-card.female-card { border-color: rgba(236, 72, 153, 0.5); }
+        .video-box { width: 100%; aspect-ratio: 16/9; background: #000; border-radius: 10px; overflow: hidden; margin-bottom: 10px; }
+        iframe, video { width: 100%; height: 100%; border: none; object-fit: cover; }
+        button { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 8px; cursor: pointer; font-size: 1.2rem; font-weight: bold; width: 100%; }
+        .vs { font-size: 3rem; align-self: center; color: #ef4444; font-weight: bold; }
+        .star-btn { background: #475569; padding: 8px; margin-bottom: 12px; font-size: 1rem; width: 100%; }
+        .star-btn.starred { background: #eab308; color: #0f172a; }
+        .yt-link { color: #38bdf8; font-size: 0.85rem; padding: 6px; background: rgba(56,189,248,0.15); border-radius: 6px; text-decoration: none; display: inline-block; font-weight: bold; }
+        .switch-btn { background: #1e293b; font-size: 0.8rem; padding: 5px; color: #94a3b8; border: 1px solid #475569; border-radius: 5px; cursor: pointer; margin-top: 5px;}
+        .undo-btn { background: #ef4444; margin-top: 10px; display: none; padding: 10px 20px; font-size: 1rem; color: white; border-radius: 8px; border: none; cursor: pointer; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1 id="round-name" style="color: #38bdf8;">🎵 Mode Compte : Hommes VS Femmes 🎵</h1>
+    <p id="match-info">Duel 1 / X</p>
+    <button id="undo-btn" class="undo-btn" onclick="undo()">↩ Revenir en arrière</button>
+</div>
+
+<div class="container" id="tournament-area">
+    <div class="match-card" id="card1">
+        <div class="video-box" id="player1"></div>
+        <h3 id="title1">Anime A</h3>
+        <button id="star-0" class="star-btn" onclick="toggleStar(0)">☆ Marquer ?</button>
+        <button onclick="vote(0)">CHOISIR</button>
+    </div>
+    
+    <div class="vs">VS</div>
+    
+    <div class="match-card" id="card2">
+        <div class="video-box" id="player2"></div>
+        <h3 id="title2">Anime B</h3>
+        <button id="star-1" class="star-btn" onclick="toggleStar(1)">☆ Marquer ?</button>
+        <button onclick="vote(1)">CHOISIR</button>
+    </div>
+</div>
+
+<!-- Préchargement -->
+<video id="preloader-1" preload="auto" style="display:none;"></video>
+<video id="preloader-2" preload="auto" style="display:none;"></video>
+
+<script>
+    let currentList = [];
+    let currentIndex = 0;
+    const matchHistory = [];
+    const historyStateStack = [];
+
+    window.onload = () => {
+        const stored = localStorage.getItem('tournamentParticipants');
+        if (!stored) return window.location.href = 'index.html';
+        
+        currentList = JSON.parse(stored);
+        updateDisplay();
+    };
+
+    function updateDisplay() {
+        if (currentIndex >= currentList.length) {
+            return endCompte();
+        }
+
+        document.getElementById('undo-btn').style.display = historyStateStack.length > 0 ? 'inline-block' : 'none';
+        document.getElementById('match-info').innerText = `Duel ${(currentIndex/2)+1} / ${currentList.length/2}`;
+
+        const c1 = currentList[currentIndex];
+        const c2 = currentList[currentIndex + 1];
+
+        // Applique une couleur de bordure selon le genre
+        document.getElementById('card1').className = `match-card ${c1.vocal === 'male' || c1.vocal === 'm' ? 'male-card' : 'female-card'}`;
+        document.getElementById('card2').className = `match-card ${c2.vocal === 'male' || c2.vocal === 'm' ? 'male-card' : 'female-card'}`;
+
+        document.getElementById('title1').innerText = c1.title;
+        document.getElementById('title2').innerText = c2.title;
+        updateStarButtonState(0, c1.starred);
+        updateStarButtonState(1, c2.starred);
+
+        document.getElementById('player1').innerHTML = getPlayerHTML(c1, 0);
+        document.getElementById('player2').innerHTML = getPlayerHTML(c2, 1);
+
+        if (c1.at && !c1.resolvedUrl) loadAnimeThemesPlayer(c1, 1);
+        if (c2.at && !c2.resolvedUrl) loadAnimeThemesPlayer(c2, 2);
+
+        setTimeout(preloadNextMatches, 2500);
+    }
+
+    function getPlayerHTML(choice, index) {
+        if (choice.at) {
+            if (choice.resolvedUrl) return `<video src="${choice.resolvedUrl}" controls preload="auto"></video>`;
+            return `<div id="video-loader-${index}" style="height:100%; display:flex; align-items:center; justify-content:center; color:#38bdf8; background:#000;">⏳ Résolution...</div>`;
+        }
+        return `
+            <iframe src="https://www.youtube-nocookie.com/embed/${choice.yt}?rel=0" allowfullscreen></iframe>
+            <div style="margin-top: 8px;"><button class="switch-btn" onclick="switchPlayer(${index}, '${choice.yt}')">Lecteur alternatif 🔁</button></div>
+        `;
+    }
+
+    function switchPlayer(i, ytId) {
+        const iframe = document.querySelector(`#player${i + 1} iframe`);
+        if(iframe.src.includes('youtube')) iframe.src = `https://yewtu.be/embed/${ytId}`;
+        else iframe.src = `https://www.youtube-nocookie.com/embed/${ytId}?rel=0`;
+    }
+
+    async function resolveAnimeThemesVideo(atUrl) {
+        try {
+            const parts = atUrl.replace(/\/$/, "").split('/');
+            const resp = await fetch(`https://api.animethemes.moe/anime/${parts[parts.length-2]}?include=animethemes.animethemeentries.videos`);
+            const json = await resp.json();
+            const themes = json.anime?.animethemes || [];
+            const targetTheme = parts[parts.length-1].split('-')[0].toUpperCase();
+            
+            const match = themes.find(t => t.slug.toUpperCase() === targetTheme);
+            if (match && match.animethemeentries) {
+                let videos = [];
+                match.animethemeentries.forEach(e => { if(e.videos) videos.push(...e.videos) });
+                if (videos.length > 0) return videos.sort((a,b) => (a.resolution||1080) - (b.resolution||1080))[0].link;
+            }
+        } catch(e) { console.error(e); }
+        return null;
+    }
+
+    async function loadAnimeThemesPlayer(choice, playerNum) {
+        let url = await resolveAnimeThemesVideo(choice.at);
+        if (url) {
+            choice.resolvedUrl = url;
+            const loader = document.getElementById(`video-loader-${playerNum - 1}`);
+            if (loader && loader.parentElement) {
+                loader.parentElement.innerHTML = `<video src="${url}" controls preload="auto"></video>`;
+            }
+        }
+    }
+
+    async function preloadNextMatches() {
+        const nextIdx = currentIndex + 2;
+        if (nextIdx >= currentList.length) return;
+        const c1 = currentList[nextIdx], c2 = currentList[nextIdx + 1];
+        if (c1 && c1.at && !c1.resolvedUrl) resolveAnimeThemesVideo(c1.at).then(u => { if(u){ c1.resolvedUrl = u; document.getElementById('preloader-1').src = u; }});
+        if (c2 && c2.at && !c2.resolvedUrl) resolveAnimeThemesVideo(c2.at).then(u => { if(u){ c2.resolvedUrl = u; document.getElementById('preloader-2').src = u; }});
+    }
+
+    function toggleStar(idx) {
+        const entry = currentList[currentIndex + idx];
+        entry.starred = !entry.starred;
+        updateStarButtonState(idx, entry.starred);
+    }
+    
+    function updateStarButtonState(idx, st) {
+        const btn = document.getElementById(`star-${idx}`);
+        btn.classList.toggle('starred', st); 
+        btn.innerText = st ? "⭐ Marqué !" : "☆ Marquer ?";
+    }
+
+    function undo() {
+        if (!historyStateStack.length) return;
+        const prev = historyStateStack.pop();
+        currentList = prev.currentList;
+        currentIndex = prev.currentIndex;
+        matchHistory.length = 0;
+        matchHistory.push(...prev.matchHistory);
+        updateDisplay();
+    }
+
+    function vote(idx) {
+        // Sauvegarde de l'état
+        historyStateStack.push({
+            currentList: currentList.map(e => ({...e})), 
+            currentIndex: currentIndex,
+            matchHistory: matchHistory.map(m => ({...m}))
+        });
+
+        const winner = currentList[currentIndex + idx];
+        matchHistory.push({ 
+            p1: currentList[currentIndex], 
+            p2: currentList[currentIndex+1], 
+            winnerTitle: winner.title 
+        });
+
+        currentIndex += 2; // On passe simplement au duo suivant
+        updateDisplay();
+    }
+
+    function endCompte() {
+        document.getElementById('player1').innerHTML = ""; 
+        document.getElementById('player2').innerHTML = "";
+        
+        // On sauvegarde l'historique et on prévient la page de résultat du mode actuel
+        localStorage.setItem('finalResults', JSON.stringify({ 
+            matchHistory: matchHistory, 
+            initialShuffled: currentList, // Passé pour les favoris
+            gameMode: "GENDER" 
+        }));
+        window.location.href = 'results.html';
+    }
+</script>
+</body>
+</html>
