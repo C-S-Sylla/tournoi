@@ -251,42 +251,62 @@
     
 
     // Anticipe et télécharge silencieusement les vidéos du match suivant en tâche de fond
+// LE HACK ABSOLU : Force 100% de téléchargement (UNIQUEMENT POUR ANIMETHEMES)
+    function force100PercentDownload(url, preloaderId, title) {
+        const preloader = document.getElementById(preloaderId);
+        if (!preloader) return;
+        
+        console.log(`🚀 [Forçage 100%] Aspiration lancée pour : ${title}`);
+        
+        preloader.src = url;
+        preloader.muted = true;        
+        preloader.playsInline = true;
+        preloader.playbackRate = 16.0; // VITESSE MAX : Le navigateur aspire le fichier
+
+        // Lance la lecture fantôme
+        preloader.play().then(() => {
+            console.log(`🚀 [Forçage 100%] Téléchargement à vitesse x16 en cours...`);
+        }).catch(e => console.warn(`Le navigateur attend un clic pour télécharger.`, e));
+
+        // Signal de fin de téléchargement complet
+        preloader.onended = () => {
+            console.log(`✅ [100%] TERMINÉ ! Fichier stocké en cache : ${title}`);
+            preloader.pause();
+        };
+    }
+
+    // Le préchargeur adapté pour tournament.html
     async function preloadNextMatches() {
         const nextIdx = currentIndex + 2;
         if (nextIdx >= currentRound.length) return;
-
+        
         const nextChoice1 = currentRound[nextIdx];
         const nextChoice2 = currentRound[nextIdx + 1];
 
-        // Précharge de manière sécurisée le concurrent gauche
-        if (nextChoice1 && nextChoice1.at && !nextChoice1.resolvedUrl) {
-            console.log(`[Preload] Début de la résolution d'API en tâche de fond pour : ${nextChoice1.title}`);
-            resolveAnimeThemesVideo(nextChoice1.at).then(url => {
-                if (url) {
-                    nextChoice1.resolvedUrl = url;
-                    const preloader = document.getElementById('preloader-1');
-                    if (preloader) {
-                        preloader.src = url; // Le navigateur télécharge nativement en tâche de fond (CORS-safe)
-                        console.log(`[Preload] Vidéo liée au préchargeur natif 1 : ${url}`);
-                    }
-                }
-            });
-        }
-        
-        // Précharge de manière sécurisée le concurrent droit
-        if (nextChoice2 && nextChoice2.at && !nextChoice2.resolvedUrl) {
-            console.log(`[Preload] Début de la résolution d'API en tâche de fond pour : ${nextChoice2.title}`);
-            resolveAnimeThemesVideo(nextChoice2.at).then(url => {
-                if (url) {
-                    nextChoice2.resolvedUrl = url;
-                    const preloader = document.getElementById('preloader-2');
-                    if (preloader) {
-                        preloader.src = url; // Le navigateur télécharge nativement en tâche de fond (CORS-safe)
-                        console.log(`[Preload] Vidéo liée au préchargeur natif 2 : ${url}`);
-                    }
-                }
-            });
-        }
+        // Fonction interne pour gérer chaque vidéo proprement
+        const processPreload = async (choice, preloaderId) => {
+            // Si ce n'est pas du AnimeThemes, ou si c'est DÉJÀ téléchargé, on ignore.
+            if (!choice || !choice.at || choice.isDownloaded) return;
+
+            let url = choice.resolvedUrl;
+            
+            // Si l'URL n'a pas encore été trouvée, on interroge l'API
+            if (!url) {
+                console.log(`[Preload] Recherche de l'URL pour : ${choice.title}`);
+                url = await resolveAnimeThemesVideo(choice.at);
+                if (url) choice.resolvedUrl = url;
+            }
+
+            // Si on a l'URL, on lance le HACK x16 et on verrouille pour ne pas le refaire
+            if (url) {
+                choice.isDownloaded = true; 
+                force100PercentDownload(url, preloaderId, choice.title);
+            }
+        };
+
+        // Lance le processus d'aspiration pour le joueur Gauche et le joueur Droit
+        processPreload(nextChoice1, 'preloader-1');
+        processPreload(nextChoice2, 'preloader-2');
     }
 
     function getPlayerHTML(choice, index) {
