@@ -6,19 +6,22 @@
     <style>
         :root { --primary: #6366f1; --bg: #0f172a; --card-bg: #1e293b; --text: #f8fafc; }
         body { font-family: sans-serif; background: var(--bg); color: var(--text); margin: 0; text-align: center; }
-        .header { padding: 20px; background: #1e293b; margin-bottom: 20px; }
+        .header { padding: 20px; background: #1e293b; margin-bottom: 20px; position: relative; }
         .container { display: flex; justify-content: center; gap: 20px; padding: 20px; flex-wrap: wrap; }
         .match-card { background: var(--card-bg); border-radius: 15px; padding: 15px; width: 450px; display: flex; flex-direction: column; justify-content: space-between; border: 3px solid transparent; transition: 0.3s; }
-        .match-card.male-card { border-color: rgba(59, 130, 246, 0.5); }
-        .match-card.female-card { border-color: rgba(236, 72, 153, 0.5); }
+        
+        /* Couleurs pour les Hommes et les Femmes */
+        .match-card.male-card { border-color: rgba(59, 130, 246, 0.5); box-shadow: 0 0 15px rgba(59, 130, 246, 0.2); }
+        .match-card.female-card { border-color: rgba(236, 72, 153, 0.5); box-shadow: 0 0 15px rgba(236, 72, 153, 0.2); }
+        
         .video-box { width: 100%; aspect-ratio: 16/9; background: #000; border-radius: 10px; overflow: hidden; margin-bottom: 10px; }
         iframe, video { width: 100%; height: 100%; border: none; object-fit: cover; }
         button { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 8px; cursor: pointer; font-size: 1.2rem; font-weight: bold; width: 100%; }
         .vs { font-size: 3rem; align-self: center; color: #ef4444; font-weight: bold; }
-        .star-btn { background: #475569; padding: 8px; margin-bottom: 12px; font-size: 1rem; width: 100%; }
+        .star-btn { background: #475569; padding: 8px; margin-bottom: 12px; font-size: 1rem; width: 100%; transition: 0.2s;}
         .star-btn.starred { background: #eab308; color: #0f172a; }
-        .yt-link { color: #38bdf8; font-size: 0.85rem; padding: 6px; background: rgba(56,189,248,0.15); border-radius: 6px; text-decoration: none; display: inline-block; font-weight: bold; }
-        .switch-btn { background: #1e293b; font-size: 0.8rem; padding: 5px; color: #94a3b8; border: 1px solid #475569; border-radius: 5px; cursor: pointer; margin-top: 5px;}
+        .switch-btn { background: #1e293b; font-size: 0.8rem; padding: 5px; color: #94a3b8; border: 1px solid #475569; border-radius: 5px; cursor: pointer; margin-top: 5px; transition: 0.2s;}
+        .switch-btn:hover { background: #334155; color: white;}
         .undo-btn { background: #ef4444; margin-top: 10px; display: none; padding: 10px 20px; font-size: 1rem; color: white; border-radius: 8px; border: none; cursor: pointer; font-weight: bold; }
     </style>
 </head>
@@ -26,7 +29,7 @@
 
 <div class="header">
     <h1 id="round-name" style="color: #38bdf8;">🎵 Mode Compte : Hommes VS Femmes 🎵</h1>
-    <p id="match-info">Duel 1 / X</p>
+    <p id="match-info" style="color: #94a3b8; font-weight: bold;">Duel 1 / X</p>
 </div>
 
 <div class="container" id="tournament-area">
@@ -45,11 +48,11 @@
         <button id="star-1" class="star-btn" onclick="toggleStar(1)">☆ Marquer ?</button>
         <button onclick="vote(1)">CHOISIR</button>
     </div>
-        <button id="undo-btn" class="undo-btn" onclick="undo()">↩ Revenir en arrière</button>
+        <button id="undo-btn" class="undo-btn" onclick="undo()">↩ Revenir au duel précédent</button>
 
 </div>
 
-<!-- Préchargement -->
+<!-- Lecteurs de Préchargement Silencieux -->
 <video id="preloader-1" preload="auto" style="display:none;"></video>
 <video id="preloader-2" preload="auto" style="display:none;"></video>
 
@@ -64,8 +67,57 @@
         if (!stored) return window.location.href = 'index.html';
         
         currentList = JSON.parse(stored);
+        
+        // Lance la résolution silencieuse de toutes les URLs AnimeThemes dès l'ouverture
+        resolveAllAnimeThemesInBackground();
+        
         updateDisplay();
     };
+
+    // 🤖 ROBOT DE FOND : Résout toutes les URLs AnimeThemes de la liste, une par une (Zéro lag)
+    async function resolveAllAnimeThemesInBackground() {
+        console.log("🤖 [Background] Lancement de la résolution d'API pour toutes les musiques...");
+        for (let i = 0; i < currentList.length; i++) {
+            const entry = currentList[i];
+            if (entry.at && !entry.resolvedUrl) {
+                const url = await resolveAnimeThemesVideo(entry.at);
+                if (url) {
+                    entry.resolvedUrl = url; // Sauvegardé pour tout le reste du jeu !
+                }
+                // Petit délai de sécurité pour ne pas se faire bloquer par le serveur AnimeThemes
+                await new Promise(resolve => setTimeout(resolve, 200));
+            }
+        }
+        console.log("🤖 [Background] Toutes les musiques ont été résolues !");
+    }
+
+    // Interrogation de l'API AnimeThemes (Tri des résolutions)
+    async function resolveAnimeThemesVideo(atUrl) {
+        try {
+            const parts = atUrl.replace(/\/$/, "").split('/');
+            const resp = await fetch(`https://api.animethemes.moe/anime/${parts[parts.length-2]}?include=animethemes.animethemeentries.videos`);
+            const json = await resp.json();
+            const themes = json.anime?.animethemes || [];
+            const targetTheme = parts[parts.length-1].split('-')[0].toUpperCase();
+            
+            const match = themes.find(t => t.slug.toUpperCase() === targetTheme);
+            if (match && match.animethemeentries) {
+                let videos = [];
+                match.animethemeentries.forEach(e => { if(e.videos) videos.push(...e.videos) });
+                if (videos.length > 0) return videos.sort((a,b) => (a.resolution||1080) - (b.resolution||1080))[0].link;
+            }
+            
+            // Secours texte
+            for (const t of themes) {
+                for (const e of t.animethemeentries || []) {
+                    for (const v of e.videos || []) {
+                        if ((v.link||"").toLowerCase().includes(parts[parts.length-1].toLowerCase())) return v.link;
+                    }
+                }
+            }
+        } catch(e) {}
+        return null;
+    }
 
     function updateDisplay() {
         if (currentIndex >= currentList.length) {
@@ -84,51 +136,49 @@
 
         document.getElementById('title1').innerText = c1.title;
         document.getElementById('title2').innerText = c2.title;
+        
         updateStarButtonState(0, c1.starred);
         updateStarButtonState(1, c2.starred);
 
+        // Affiche les lecteurs
         document.getElementById('player1').innerHTML = getPlayerHTML(c1, 0);
         document.getElementById('player2').innerHTML = getPlayerHTML(c2, 1);
 
+        // Résolution d'urgence si le robot de fond n'a pas encore eu le temps de le faire
         if (c1.at && !c1.resolvedUrl) loadAnimeThemesPlayer(c1, 1);
         if (c2.at && !c2.resolvedUrl) loadAnimeThemesPlayer(c2, 2);
 
+        // Lance la mise en mémoire tampon des vidéos du prochain match (Zéro latence)
         setTimeout(preloadNextMatches, 2500);
     }
 
     function getPlayerHTML(choice, index) {
         if (choice.at) {
-            if (choice.resolvedUrl) return `<video src="${choice.resolvedUrl}" controls preload="auto"></video>`;
+            // Si la vidéo a été résolue par le robot, elle s'affiche directement
+            if (choice.resolvedUrl) {
+                return `<video src="${choice.resolvedUrl}" controls preload="auto"></video>`;
+            }
             return `<div id="video-loader-${index}" style="height:100%; display:flex; align-items:center; justify-content:center; color:#38bdf8; background:#000;">⏳ Résolution...</div>`;
         }
+        
+        // CORRECTION DE YOUTUBE
         return `
             <iframe src="https://www.youtube-nocookie.com/embed/${choice.yt}?rel=0" allowfullscreen></iframe>
-            <div style="margin-top: 8px;"><button class="switch-btn" onclick="switchPlayer(${index}, '${choice.yt}')">Lecteur alternatif 🔁</button></div>
+            <div style="margin-top: 8px;">
+                <button class="switch-btn" onclick="switchPlayer(${index}, '${choice.yt}')">Lecteur alternatif si bloqué 🔁</button>
+            </div>
         `;
     }
 
+    // CORRECTION DU SWITCH YOUTUBE
     function switchPlayer(i, ytId) {
         const iframe = document.querySelector(`#player${i + 1} iframe`);
-        if(iframe.src.includes('youtube')) iframe.src = `https://yewtu.be/embed/${ytId}`;
-        else iframe.src = `https://www.youtube-nocookie.com/embed/${ytId}?rel=0`;
-    }
-
-    async function resolveAnimeThemesVideo(atUrl) {
-        try {
-            const parts = atUrl.replace(/\/$/, "").split('/');
-            const resp = await fetch(`https://api.animethemes.moe/anime/${parts[parts.length-2]}?include=animethemes.animethemeentries.videos`);
-            const json = await resp.json();
-            const themes = json.anime?.animethemes || [];
-            const targetTheme = parts[parts.length-1].split('-')[0].toUpperCase();
-            
-            const match = themes.find(t => t.slug.toUpperCase() === targetTheme);
-            if (match && match.animethemeentries) {
-                let videos = [];
-                match.animethemeentries.forEach(e => { if(e.videos) videos.push(...e.videos) });
-                if (videos.length > 0) return videos.sort((a,b) => (a.resolution||1080) - (b.resolution||1080))[0].link;
-            }
-        } catch(e) { console.error(e); }
-        return null;
+        if (!iframe) return;
+        if (iframe.src.includes('youtube')) {
+            iframe.src = `https://yewtu.be/embed/${ytId}`;
+        } else {
+            iframe.src = `https://www.youtube-nocookie.com/embed/${ytId}?rel=0`;
+        }
     }
 
     async function loadAnimeThemesPlayer(choice, playerNum) {
@@ -145,9 +195,23 @@
     async function preloadNextMatches() {
         const nextIdx = currentIndex + 2;
         if (nextIdx >= currentList.length) return;
-        const c1 = currentList[nextIdx], c2 = currentList[nextIdx + 1];
-        if (c1 && c1.at && !c1.resolvedUrl) resolveAnimeThemesVideo(c1.at).then(u => { if(u){ c1.resolvedUrl = u; document.getElementById('preloader-1').src = u; }});
-        if (c2 && c2.at && !c2.resolvedUrl) resolveAnimeThemesVideo(c2.at).then(u => { if(u){ c2.resolvedUrl = u; document.getElementById('preloader-2').src = u; }});
+        
+        const c1 = currentList[nextIdx];
+        const c2 = currentList[nextIdx + 1];
+        
+        const pre1 = document.getElementById('preloader-1');
+        const pre2 = document.getElementById('preloader-2');
+
+        // Si le robot a déjà trouvé l'URL, on dit juste au lecteur invisible de la charger en mémoire
+        if (c1 && c1.at) {
+            if (c1.resolvedUrl) pre1.src = c1.resolvedUrl;
+            else resolveAnimeThemesVideo(c1.at).then(u => { if(u){ c1.resolvedUrl = u; pre1.src = u; }});
+        }
+        
+        if (c2 && c2.at) {
+            if (c2.resolvedUrl) pre2.src = c2.resolvedUrl;
+            else resolveAnimeThemesVideo(c2.at).then(u => { if(u){ c2.resolvedUrl = u; pre2.src = u; }});
+        }
     }
 
     function toggleStar(idx) {
@@ -165,15 +229,18 @@
     function undo() {
         if (!historyStateStack.length) return;
         const prev = historyStateStack.pop();
+        
+        // Restaure la liste exacte et l'historique
         currentList = prev.currentList;
         currentIndex = prev.currentIndex;
         matchHistory.length = 0;
         matchHistory.push(...prev.matchHistory);
+        
         updateDisplay();
     }
 
     function vote(idx) {
-        // Sauvegarde de l'état
+        // Sauvegarde de l'état avant le choix
         historyStateStack.push({
             currentList: currentList.map(e => ({...e})), 
             currentIndex: currentIndex,
@@ -192,15 +259,17 @@
     }
 
     function endCompte() {
+        // Coupe le son
         document.getElementById('player1').innerHTML = ""; 
         document.getElementById('player2').innerHTML = "";
         
-        // On sauvegarde l'historique et on prévient la page de résultat du mode actuel
+        // On sauvegarde l'historique final et on prévient la page de résultat
         localStorage.setItem('finalResults', JSON.stringify({ 
             matchHistory: matchHistory, 
-            initialShuffled: currentList, // Passé pour les favoris
+            initialShuffled: currentList, // Passé pour les musiques marquées
             gameMode: "GENDER" 
         }));
+        
         window.location.href = 'results.html';
     }
 </script>
