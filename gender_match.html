@@ -192,26 +192,64 @@
         }
     }
 
-    async function preloadNextMatches() {
-        const nextIdx = currentIndex + 2;
-        if (nextIdx >= currentList.length) return;
+// LE HACK ABSOLU : Force 100% de téléchargement (UNIQUEMENT POUR ANIMETHEMES)
+    function force100PercentDownload(url, preloaderId, title) {
+        const preloader = document.getElementById(preloaderId);
+        if (!preloader) return;
         
-        const c1 = currentList[nextIdx];
-        const c2 = currentList[nextIdx + 1];
+        console.log(`🚀 [Forçage 100%] Aspiration lancée pour : ${title}`);
         
-        const pre1 = document.getElementById('preloader-1');
-        const pre2 = document.getElementById('preloader-2');
+        preloader.src = url;
+        preloader.muted = true;        
+        preloader.playsInline = true;
+        preloader.playbackRate = 16.0; // VITESSE MAX : Le navigateur aspire le fichier
 
-        // Si le robot a déjà trouvé l'URL, on dit juste au lecteur invisible de la charger en mémoire
-        if (c1 && c1.at) {
-            if (c1.resolvedUrl) pre1.src = c1.resolvedUrl;
-            else resolveAnimeThemesVideo(c1.at).then(u => { if(u){ c1.resolvedUrl = u; pre1.src = u; }});
-        }
+        // Lance la lecture fantôme
+        preloader.play().then(() => {
+            console.log(`🚀 [Forçage 100%] Téléchargement à vitesse x16 en cours...`);
+        }).catch(e => console.warn(`Le navigateur attend un clic pour télécharger.`, e));
+
+        // Signal de fin de téléchargement complet
+        preloader.onended = () => {
+            console.log(`✅ [100%] TERMINÉ ! Fichier stocké en cache : ${title}`);
+            preloader.pause();
+        };
+    }
+
+    // Le préchargeur corrigé (ne se fait plus avoir par le robot)
+    async function preloadNextMatches() {
+        // S'adapte que tu sois dans tournament.html ou gender_match.html
+        const listToUse = typeof currentList !== 'undefined' ? currentList : currentRound; 
         
-        if (c2 && c2.at) {
-            if (c2.resolvedUrl) pre2.src = c2.resolvedUrl;
-            else resolveAnimeThemesVideo(c2.at).then(u => { if(u){ c2.resolvedUrl = u; pre2.src = u; }});
-        }
+        const nextIdx = currentIndex + 2;
+        if (nextIdx >= listToUse.length) return;
+        
+        const c1 = listToUse[nextIdx];
+        const c2 = listToUse[nextIdx + 1];
+
+        // Fonction interne pour gérer chaque vidéo proprement
+        const processPreload = async (choice, preloaderId) => {
+            // Si ce n'est pas du AnimeThemes, ou si c'est DÉJÀ téléchargé, on ignore.
+            if (!choice || !choice.at || choice.isDownloaded) return;
+
+            let url = choice.resolvedUrl;
+            
+            // Si l'URL n'a pas encore été trouvée, on la cherche
+            if (!url) {
+                url = await resolveAnimeThemesVideo(choice.at);
+                if (url) choice.resolvedUrl = url;
+            }
+
+            // Si on a l'URL, on lance le HACK et on verrouille pour ne pas le refaire 2 fois
+            if (url) {
+                choice.isDownloaded = true; 
+                force100PercentDownload(url, preloaderId, choice.title);
+            }
+        };
+
+        // Lance le processus pour le joueur Gauche et le joueur Droit
+        processPreload(c1, 'preloader-1');
+        processPreload(c2, 'preloader-2');
     }
 
     function toggleStar(idx) {
