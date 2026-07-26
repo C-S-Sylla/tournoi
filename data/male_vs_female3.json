@@ -1,6 +1,191 @@
+{
+  "seasonName": "Saison Mixte",
+  "entries": [
     {
       "title": "Naruto Shippuden (Diver - NICO Touches the Walls)",
       "yt": "Vli10X4EQGU",
       "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Overlord (Clattanoia - OxT)",
+      "yt": "1IATT73T2BQ",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Mobile Suit Gundam the Witch from Mercury (slash - yama)",
+      "yt": "DVsTObmkotY",
+      "type": "OP",
+      "vocal": "female"
+    },
+        {
+      "title": "Black Clover (Black Rover - Vickeblanka)",
+      "yt": "-GWuZ247ais",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Mobile Suit Gundam the Witch from Mercury (Kimiyo Kedakakuare - Shiyui)",
+      "yt": "YXC_9IQkajs",
+      "type": "ED",
+      "vocal": "female"
+    },    {
+      "title": "Gantz (Super Shooter - RIP SLYME)",
+      "yt": "KcDWXo8M8fQ",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Ao Ashi (Presence - Superfly)",
+      "yt": "sQtPHnun_9A",
+      "type": "OP",
+      "vocal": "female"
+    },    {
+      "title": "Delicious in Dungeon (Unmei - Sumika)",
+      "yt": "asyT-N1Ip70",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Classroom of the Elite (Minor Piece - ZAQ)",
+      "yt": "4_Gw_EqRBPw",
+      "type": "OP",
+      "vocal": "female"
+    },    {
+      "title": "Akane-banashi (Hitotarashi - Keisuke Kuwata)",
+      "yt": "33pSxvDNnIQ",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Ya Boy Kongming! (Chitty Chitty Bang Bang - QUEENDOM)",
+      "yt": "gNn9NxZH2Vo",
+      "type": "OP",
+      "vocal": "female"
+    },    {
+      "title": "Darker than Black (Howling - Abingdon Boys School)",
+      "yt": "Wv-SLk1OIkI",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "To Your Eternity (Pink Blood - Hikaru Utada)",
+      "yt": "JvVIq36OXAg",
+      "type": "OP",
+      "vocal": "female"
+    },    {
+      "title": "Death Parade (Flyers - BRADIO)",
+      "yt": "L90XoAtwMic",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Rascal Does Not Dream of Bunny Girl Senpai (Kimi no Sei - the peggies)",
+      "yt": "HIoeEngUiKU",
+      "type": "OP",
+      "vocal": "female"
+    },    {
+      "title": "One Punch Man (The Hero!! Set Fire to the Furious Fist - JAM Project)",
+      "yt": "erQURy_Ys5Y",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Botan Kamiina Fully Blossoms When Drunk (Mebuku Toki - yonige)",
+      "yt": "fUU_VKLXzRQ",
+      "type": "OP",
+      "vocal": "female"
+    },
+    {
+      "title": "JoJo's Bizarre Adventure (Fighting Gold - Daisuke Hasegawa)",
+      "yt": "i1N2cclJVys",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "BLEACH (Hitohira no Hanabira - Stereopony)",
+      "yt": "lLEqAvVRMi4",
+      "type": "ED",
+      "vocal": "female"
+    },    {
+      "title": "Katekyo Hitman Reborn! (BOYS & GIRLS - LM.C)",
+      "at": "https://animethemes.moe/anime/katekyo_hitman_reborn/OP2-NCBD",
+      "type": "OP",
+      "vocal": "male",
+        "thumb" : "https://tse4.mm.bing.net/th/id/OIP.KNRH23wafNn9KP_P5z6qPgHaD4?r=0&rs=1&pid=ImgDetMain&o=7&rm=3"
+    },
+    {
+      "title": "To Be Hero X (KONTINUUM - SennaRin)",
+      "yt": "gQ940ZInrTY",
+      "type": "ED",
+      "vocal": "female"
+    },    {
+      "title": "Boruto: Naruto Next Generations (Bibouroku - Lenny code fiction)",
+      "at": "https://animethemes.moe/anime/boruto_naruto_next_generations/ED21",
+      "type": "ED",
+      "vocal": "male",
+        "thumb" : "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEj_nwaMMdDCcKDhDElPEuWP35sFDR8Epaf_rYkCBIEHj_s2nt80n1LxmwiA9d6EwmVo154Xh4A1BWfwO3Xn65L_on4KRZSNDlJlT4jA8FPPjWXvOo-dp4TCWidxyuNzyVZoZVui4dEIrANe9bSVOpChuT8P4YeGjx34pg5DmEd1MiDy_MqpWq_HvGrD/s1230/CYMERA_20220704_081642.jpg"
+    },
+    {
+      "title": "Puella Magi Madoka Magica (Claris - Connect)",
+      "yt": "VifUij53XXU",
+      "type": "OP",
+      "vocal": "female"
+    },    {
+      "title": "Fairy Tail (STRIKE BACK - BACK-ON)",
+      "at": "https://animethemes.moe/anime/fairy_tail_2014/OP2-NCBD",
+      "type": "OP",
+      "vocal": "male",
+        "thumb" : "https://i.ytimg.com/vi/aAdCro4WuLU/maxresdefault.jpg"
+    },
+    {
+      "title": "Plastic Memories (Ring of Fortune - Eri Sasaki)",
+      "yt": "1CFxCe5apY4",
+      "type": "OP",
+      "vocal": "female"
+    },    {
+      "title": "Fairy Tail (Believe In Myself - EDGE of LIFE)",
+      "at": "https://animethemes.moe/anime/fairy_tail_2014/OP7-NCBD",
+      "type": "OP",
+      "vocal": "male",
+        "thumb" : "https://static.wikitide.net/fairytailwiki/thumb/6/6b/Opening_21.png/300px-Opening_21.png"
+    },
+    {
+      "title": "One Piece Opening (Hope - Namie Amuro)",
+      "yt": "Oo52vQyAR6w",
+      "type": "OP",
+      "vocal": "female"
+    },    {
+      "title": "DANDADAN (Otonoke - Creepy Nuts)",
+      "yt": "Xikv3UPvy0U",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Fire Force (SPARK-AGAIN - Aimer)",
+      "yt": "iBzkMZ2ca6s",
+      "type": "OP",
+      "vocal": "female"
+    },    {
+      "title": "Dragon Ball GT (DAN DAN Kokoro Hikarete ku - Field of View)",
+      "yt": "qfUbqI_q0Ho",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Sword Art Online: Alicization (ADAMAS - LiSA)",
+      "yt": "3hdJ8PKNXrc",
+      "type": "OP",
+      "vocal": "female"
+    },
+    {
+      "title": "Oshi no Ko (TEST ME - CHANMINA)",
+      "yt": "QgIQbeRzkkc",
+      "type": "OP",
       "vocal": "female"
     }
+
+
+  ]
+}
