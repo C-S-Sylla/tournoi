@@ -2,13 +2,30 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
+    <!-- NOUVEAU : La balise Viewport indispensable pour les téléphones -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Guerre des Sexes - Matchs</title>
     <style>
         :root { --primary: #6366f1; --bg: #0f172a; --card-bg: #1e293b; --text: #f8fafc; }
         body { font-family: sans-serif; background: var(--bg); color: var(--text); margin: 0; text-align: center; }
         .header { padding: 20px; background: #1e293b; margin-bottom: 20px; position: relative; }
+        
         .container { display: flex; justify-content: center; gap: 20px; padding: 20px; flex-wrap: wrap; }
-        .match-card { background: var(--card-bg); border-radius: 15px; padding: 15px; width: 450px; display: flex; flex-direction: column; justify-content: space-between; border: 3px solid transparent; transition: 0.3s; }
+        
+        /* ADAPTATION MOBILE : On remplace la largeur fixe par un max-width fluide */
+        .match-card { 
+            background: var(--card-bg); 
+            border-radius: 15px; 
+            padding: 15px; 
+            width: 100%; 
+            max-width: 450px; 
+            box-sizing: border-box;
+            display: flex; 
+            flex-direction: column; 
+            justify-content: space-between; 
+            border: 3px solid transparent; 
+            transition: 0.3s; 
+        }
         
         /* Couleurs pour les Hommes et les Femmes */
         .match-card.male-card { border-color: rgba(59, 130, 246, 0.5); box-shadow: 0 0 15px rgba(59, 130, 246, 0.2); }
@@ -16,19 +33,34 @@
         
         .video-box { width: 100%; aspect-ratio: 16/9; background: #000; border-radius: 10px; overflow: hidden; margin-bottom: 10px; }
         iframe, video { width: 100%; height: 100%; border: none; object-fit: cover; }
-        button { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 8px; cursor: pointer; font-size: 1.2rem; font-weight: bold; width: 100%; }
+        
+        button { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 8px; cursor: pointer; font-size: 1.2rem; font-weight: bold; width: 100%; transition: 0.2s;}
+        button:hover { opacity: 0.9; }
+        
         .vs { font-size: 3rem; align-self: center; color: #ef4444; font-weight: bold; }
         .star-btn { background: #475569; padding: 8px; margin-bottom: 12px; font-size: 1rem; width: 100%; transition: 0.2s;}
         .star-btn.starred { background: #eab308; color: #0f172a; }
-        .switch-btn { background: #1e293b; font-size: 0.8rem; padding: 5px; color: #94a3b8; border: 1px solid #475569; border-radius: 5px; cursor: pointer; margin-top: 5px; transition: 0.2s;}
+        
+        .yt-link { color: #38bdf8; font-size: 0.85rem; padding: 6px; background: rgba(56,189,248,0.15); border-radius: 6px; text-decoration: none; display: inline-block; font-weight: bold; }
+        .switch-btn { background: #1e293b; font-size: 0.8rem; padding: 8px; color: #94a3b8; border: 1px solid #475569; border-radius: 5px; cursor: pointer; margin-top: 5px; transition: 0.2s;}
         .switch-btn:hover { background: #334155; color: white;}
         .undo-btn { background: #ef4444; margin-top: 10px; display: none; padding: 10px 20px; font-size: 1rem; color: white; border-radius: 8px; border: none; cursor: pointer; font-weight: bold; }
+
+        /* ======== OPTIMISATIONS POUR TÉLÉPHONE ======== */
+        @media (max-width: 768px) {
+            .header { padding: 15px 10px; }
+            .header h1 { font-size: 1.5rem; margin-top: 0; }
+            .container { padding: 10px; gap: 10px; }
+            .vs { font-size: 2rem; width: 100%; margin: 5px 0; }
+            button { padding: 12px; font-size: 1.1rem; }
+            .match-card h3 { font-size: 1.1rem; margin: 10px 0; }
+        }
     </style>
 </head>
 <body>
 
 <div class="header">
-    <h1 id="round-name" style="color: #38bdf8;">🎵 Mode Compte : Hommes VS Femmes 🎵</h1>
+    <h1 id="round-name" style="color: #38bdf8;">Male vs Female singer</h1>
     <p id="match-info" style="color: #94a3b8; font-weight: bold;">Duel 1 / X</p>
 </div>
 
@@ -161,7 +193,7 @@
             return `<div id="video-loader-${index}" style="height:100%; display:flex; align-items:center; justify-content:center; color:#38bdf8; background:#000;">⏳ Résolution...</div>`;
         }
         
-        // CORRECTION DE YOUTUBE
+        // CORRECTION DE LA SYNTAXE YOUTUBE
         return `
             <iframe src="https://www.youtube-nocookie.com/embed/${choice.yt}?rel=0" allowfullscreen></iframe>
             <div style="margin-top: 8px;">
@@ -192,7 +224,7 @@
         }
     }
 
-// LE HACK ABSOLU : Force 100% de téléchargement (UNIQUEMENT POUR ANIMETHEMES)
+    // LE HACK ABSOLU : Force 100% de téléchargement (UNIQUEMENT POUR ANIMETHEMES)
     function force100PercentDownload(url, preloaderId, title) {
         const preloader = document.getElementById(preloaderId);
         if (!preloader) return;
@@ -218,7 +250,6 @@
 
     // Le préchargeur corrigé (ne se fait plus avoir par le robot)
     async function preloadNextMatches() {
-        // S'adapte que tu sois dans tournament.html ou gender_match.html
         const listToUse = typeof currentList !== 'undefined' ? currentList : currentRound; 
         
         const nextIdx = currentIndex + 2;
@@ -229,25 +260,21 @@
 
         // Fonction interne pour gérer chaque vidéo proprement
         const processPreload = async (choice, preloaderId) => {
-            // Si ce n'est pas du AnimeThemes, ou si c'est DÉJÀ téléchargé, on ignore.
             if (!choice || !choice.at || choice.isDownloaded) return;
 
             let url = choice.resolvedUrl;
             
-            // Si l'URL n'a pas encore été trouvée, on la cherche
             if (!url) {
                 url = await resolveAnimeThemesVideo(choice.at);
                 if (url) choice.resolvedUrl = url;
             }
 
-            // Si on a l'URL, on lance le HACK et on verrouille pour ne pas le refaire 2 fois
             if (url) {
                 choice.isDownloaded = true; 
                 force100PercentDownload(url, preloaderId, choice.title);
             }
         };
 
-        // Lance le processus pour le joueur Gauche et le joueur Droit
         processPreload(c1, 'preloader-1');
         processPreload(c2, 'preloader-2');
     }
@@ -268,7 +295,6 @@
         if (!historyStateStack.length) return;
         const prev = historyStateStack.pop();
         
-        // Restaure la liste exacte et l'historique
         currentList = prev.currentList;
         currentIndex = prev.currentIndex;
         matchHistory.length = 0;
@@ -292,7 +318,7 @@
             winnerTitle: winner.title 
         });
 
-        currentIndex += 2; // On passe simplement au duo suivant
+        currentIndex += 2; // On passe au duo suivant
         updateDisplay();
     }
 
@@ -301,10 +327,10 @@
         document.getElementById('player1').innerHTML = ""; 
         document.getElementById('player2').innerHTML = "";
         
-        // On sauvegarde l'historique final et on prévient la page de résultat
+        // Sauvegarde et redirection
         localStorage.setItem('finalResults', JSON.stringify({ 
             matchHistory: matchHistory, 
-            initialShuffled: currentList, // Passé pour les musiques marquées
+            initialShuffled: currentList, 
             gameMode: "GENDER" 
         }));
         

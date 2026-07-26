@@ -2,224 +2,288 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Tournoi Anime OP/ED - Menu de Configuration</title>
+    <title>Tournoi Anime OP/ED - Menu</title>
     <style>
         :root { 
-            --primary: #6366f1; 
-            --bg: #0f172a; 
-            --card-bg: #1e293b; 
+            --c-purple-dark: #44077A; 
+            --c-blue-light: #67B0E0; 
+            --c-blue-purple: #3420E0; 
             --text: #f8fafc; 
         }
+        
         body { 
             font-family: sans-serif; 
-            background: var(--bg); 
+            /* Dégradé de fond basé sur vos couleurs */
+            background: linear-gradient(135deg, #15022b, var(--c-purple-dark)); 
             color: var(--text); 
             margin: 0; 
-            text-align: center; 
-            padding: 20px;
-        }
-        
-        #menu-screen {
-            max-width: 600px;
-            margin: 50px auto;
-            background: var(--card-bg);
-            border-radius: 15px;
-            padding: 30px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-            border: 1px solid #334155;
-        }
-        .menu-group {
-            margin-bottom: 25px;
-            text-align: left;
-        }
-        .menu-group label {
-            display: block;
-            font-weight: bold;
-            margin-bottom: 8px;
-            color: #38bdf8;
-            font-size: 1.05rem;
-        }
-        .menu-select, .menu-input {
-            width: 100%;
-            padding: 12px;
-            border-radius: 8px;
-            background: #0f172a;
-            color: white;
-            border: 1px solid #334155;
-            font-size: 1rem;
-            box-sizing: border-box;
-            outline: none;
-            transition: 0.2s;
-        }
-        .menu-select:focus, .menu-input:focus {
-            border-color: var(--primary);
-        }
-        .radio-group {
-            display: flex;
-            gap: 12px;
-            margin-top: 5px;
-        }
-        .radio-group input[type="radio"] {
-            display: none;
-        }
-        .radio-label {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            cursor: pointer;
-            background: #0f172a;
-            padding: 12px 15px;
-            border-radius: 8px;
-            border: 1px solid #334155;
-            transition: 0.2s;
-            flex: 1;
-            justify-content: center;
-            font-weight: bold;
-            user-select: none;
-        }
-        .radio-label:hover {
-            border-color: var(--primary);
-        }
-        .radio-group input[type="radio"]:checked + .radio-label {
-            background: var(--primary);
-            border-color: var(--primary);
-            color: white;
-        }
-        
-        button { 
-            background: var(--primary); 
-            color: white; 
-            border: none; 
-            padding: 15px 30px; 
-            border-radius: 8px; 
-            cursor: pointer; 
-            font-size: 1.2rem; 
-            font-weight: bold; 
-            width: 100%; 
-            transition: 0.2s;
-        }
-        button:hover {
-            opacity: 0.9;
+            min-height: 100vh;
+            
+            /* CORRECTIF : On autorise le défilement vertical, mais on bloque l'horizontal */
+            overflow-x: hidden;
+            overflow-y: auto; 
         }
 
-        #available-count {
-            margin-top: 20px; 
-            font-size: 0.9rem; 
-            color: #94a3b8; 
-            line-height: 1.5; 
-            background: #0f172a; 
+        /* ====== DECORATION ÉTOILES FIXES ====== */
+        .sparkle {
+            position: fixed; /* Reste en place pendant le défilement */
+            background: var(--c-blue-light);
+            clip-path: polygon(50% 0%, 60% 40%, 100% 50%, 60% 60%, 50% 100%, 40% 60%, 0% 50%, 40% 40%);
+            animation: twinkle 3s infinite alternate ease-in-out;
+            z-index: 0;
+            pointer-events: none; /* Empêche les étoiles de bloquer les clics */
+        }
+        @keyframes twinkle {
+            0% { transform: scale(0.8) rotate(0deg); opacity: 0.5; }
+            100% { transform: scale(1.2) rotate(5deg); opacity: 1; }
+        }
+
+        .s1 { top: 10%; left: 15%; width: 50px; height: 50px; animation-delay: 0s; }
+        .s2 { top: 25%; left: 8%; width: 40px; height: 40px; animation-delay: 1s; }
+        .s3 { top: 50%; left: 18%; width: 60px; height: 60px; animation-delay: 0.5s; }
+        .s4 { bottom: 15%; left: 10%; width: 70px; height: 70px; animation-delay: 2s; }
+        .s5 { top: 5%; left: 40%; width: 50px; height: 50px; animation-delay: 1.5s; }
+        .s6 { top: 5%; right: 25%; width: 60px; height: 60px; animation-delay: 0.2s; }
+        .s7 { top: 20%; right: 10%; width: 80px; height: 80px; animation-delay: 1.2s; }
+        .s8 { top: 55%; right: 30%; width: 45px; height: 45px; animation-delay: 0.8s; }
+        .s9 { bottom: 15%; right: 12%; width: 70px; height: 70px; animation-delay: 1.8s; }
+
+        /* ====== CONTENEUR PRINCIPAL ====== */
+        .layout-wrapper {
+            max-width: 800px;
+            width: 90%;
+            margin: 40px auto; /* Centre la boite et laisse de l'espace en haut/bas */
+            position: relative;
+            z-index: 10;
+        }
+
+        /* ====== MAIN CARD (Le grand menu) ====== */
+        .main-card {
+            background: rgba(52, 32, 224, 0.25);
+            border: 4px solid var(--c-blue-light);
+            border-radius: 50px; 
+            padding: 40px 50px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+            backdrop-filter: blur(10px);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        h2 {
+            margin-top: 0;
+            color: var(--c-blue-light);
+            font-size: 2rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .menu-group { margin-bottom: 25px; text-align: left; }
+        .menu-group label { display: block; font-weight: bold; margin-bottom: 8px; color: var(--c-blue-light); font-size: 1.05rem; }
+        
+        .menu-select, .menu-input { 
+            width: 100%; 
             padding: 15px; 
-            border-radius: 8px; 
-            border: 1px solid #334155; 
-            white-space: pre-line;
+            border-radius: 12px; 
+            background: rgba(255, 255, 255, 0.05); 
+            color: white; 
+            border: 2px solid var(--c-blue-light); 
+            font-size: 1.1rem; 
+            box-sizing: border-box; 
+            transition: 0.2s; 
+        }
+        .menu-select:focus, .menu-input:focus { outline: none; background: rgba(255, 255, 255, 0.1); }
+        .menu-select option { background: var(--c-purple-dark); color: white; }
+
+        .radio-group { display: flex; gap: 12px; margin-top: 5px; }
+        .radio-group input[type="radio"] { display: none; }
+        .radio-label { 
+            display: flex; align-items: center; cursor: pointer; 
+            background: rgba(255, 255, 255, 0.05); 
+            padding: 12px 15px; border-radius: 12px; border: 2px solid var(--c-blue-light); 
+            transition: 0.2s; flex: 1; justify-content: center; font-weight: bold; color: var(--c-blue-light);
+        }
+        .radio-group input[type="radio"]:checked + .radio-label { 
+            background: var(--c-blue-light); color: var(--c-purple-dark); 
+        }
+
+        #available-count { 
+            margin-top: 20px; font-size: 1rem; color: #cbd5e1; line-height: 1.5; text-align: left;
+            background: rgba(0,0,0,0.3); padding: 15px; border-radius: 12px; 
+            border: 1px solid rgba(103, 176, 224, 0.5); white-space: pre-line; 
+        }
+
+        .launch-btn { 
+            background: var(--c-blue-light); color: var(--c-purple-dark); border: none; 
+            padding: 15px 30px; border-radius: 15px; cursor: pointer; font-size: 1.5rem; 
+            font-weight: bold; width: 100%; transition: 0.3s; margin-top: 20px;
+        }
+        .launch-btn:hover { background: #8bd0fc; transform: scale(1.02); }
+
+        /* ====== MODE CARDS (Les 3 boutons du bas) ====== */
+        .mode-cards-container {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap; /* S'adapte sur mobile */
+        }
+
+        .mode-card {
+            border: 4px solid var(--c-blue-light);
+            border-radius: 30px;
+            padding: 25px 15px;
+            flex: 1;
+            min-width: 150px;
+            cursor: pointer;
+            background: rgba(52, 32, 224, 0.1);
+            color: var(--c-blue-light);
+            transition: 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.2rem;
+            text-align: center;
+            backdrop-filter: blur(5px);
+        }
+        .mode-card:hover:not(.disabled) {
+            background: rgba(103, 176, 224, 0.2);
+            transform: translateY(-5px);
+        }
+        
+        .mode-card.active {
+            background: var(--c-blue-light);
+            color: var(--c-purple-dark);
+            box-shadow: 0 0 20px rgba(103, 176, 224, 0.6);
+        }
+
+        .mode-card.disabled {
+            cursor: not-allowed;
+            border-style: dashed;
+            opacity: 0.5;
         }
     </style>
 </head>
 <body>
 
-<div id="menu-screen">
-    <h2 style="color: #38bdf8; margin-top: 0;">🎵 MENU DE CONFIGURATION 🎵</h2>
-    <p style="color: #94a3b8; font-size: 0.9rem;">Préparez vos paramètres avant de démarrer la compétition.</p>
-    <br>
+<!-- Décoration étoiles -->
+<div class="sparkle s1"></div>
+<div class="sparkle s2"></div>
+<div class="sparkle s3"></div>
+<div class="sparkle s4"></div>
+<div class="sparkle s5"></div>
+<div class="sparkle s6"></div>
+<div class="sparkle s7"></div>
+<div class="sparkle s8"></div>
+<div class="sparkle s9"></div>
 
-    <div class="menu-group">
-        <label for="season-select">1. Sélectionner la Saison :</label>
-        <select id="season-select" class="menu-select" onchange="onSeasonChange()"></select>
+<div class="layout-wrapper">
+    <!-- CARTE PRINCIPALE -->
+    <div class="main-card">
+        <h2>Menu de Configuration</h2>
+        
+        <div class="menu-group">
+            <label>Liste des Saisons / Fichiers :</label>
+            <select id="season-select" class="menu-select" onchange="onSeasonChange()"></select>
+        </div>
+
+        <div class="menu-group" id="json-upload-group" style="display: none;">
+            <label>Uploader un fichier JSON local :</label>
+            <input type="file" id="custom-json-file" class="menu-input" accept=".json" onchange="loadCustomJson(event)">
+        </div>
+
+<div class="menu-group" id="category-group">
+        <label>Catégorie :</label>
+            <div class="radio-group">
+                <input type="radio" id="cat-mix" name="category" value="MIX" checked onchange="updateCountLabel()"><label for="cat-mix" class="radio-label">Mix</label>
+                <input type="radio" id="cat-op" name="category" value="OP" onchange="updateCountLabel()"><label for="cat-op" class="radio-label">Openings</label>
+                <input type="radio" id="cat-ed" name="category" value="ED" onchange="updateCountLabel()"><label for="cat-ed" class="radio-label">Endings</label>
+            </div>
+        </div>
+
+        <div class="menu-group">
+            <label>Taille de la partie (Max) :</label>
+            <select id="tournament-size-select" class="menu-select">
+                <option value="64">64 Participants</option>
+                <option value="32">32 Participants</option>
+                <option value="16">16 Participants</option>
+            </select>
+        </div>
+
+        <div id="available-count">Chargement...</div>
+        
+        <button class="launch-btn" onclick="initTournament()">LANCER LE JEU 🚀</button>
     </div>
 
-    <div class="menu-group" id="json-upload-group" style="display: none;">
-        <label for="custom-json-file">Charger le fichier JSON personnalisé :</label>
-        <input type="file" id="custom-json-file" class="menu-input" accept=".json" onchange="loadCustomJson(event)">
-    </div>
-
-    <div class="menu-group">
-        <label>2. Catégorie des musiques :</label>
-        <div class="radio-group">
-            <input type="radio" id="cat-mix" name="category" value="MIX" checked onchange="updateCountLabel()">
-            <label for="cat-mix" class="radio-label">Mix (OP + ED)</label>
-
-            <input type="radio" id="cat-op" name="category" value="OP" onchange="updateCountLabel()">
-            <label for="cat-op" class="radio-label">Openings</label>
-
-            <input type="radio" id="cat-ed" name="category" value="ED" onchange="updateCountLabel()">
-            <label for="cat-ed" class="radio-label">Endings</label>
+    <!-- SÉLECTEUR DE MODES -->
+    <div class="mode-cards-container">
+        <div id="card-STANDARD" class="mode-card active" onclick="selectMode('STANDARD')">
+            Tournoi Classique
+        </div>
+        <div id="card-GENDER" class="mode-card" onclick="selectMode('GENDER')">
+            Male VS Female<br>Singer
+        </div>
+        <div class="mode-card disabled">
+            À venir
         </div>
     </div>
-
-    <!-- NOUVEAU : Sélection du mode de jeu -->
-    <div class="menu-group">
-        <label>3. Mode de Jeu :</label>
-        <div class="radio-group">
-            <input type="radio" id="mode-standard" name="gamemode" value="STANDARD" checked>
-            <label for="mode-standard" class="radio-label">Tournoi Classique</label>
-
-            <input type="radio" id="mode-gender" name="gamemode" value="GENDER">
-            <label for="mode-gender" class="radio-label">male vs female singer</label>
-        </div>
-    </div>
-
-    <div class="menu-group">
-        <label for="tournament-size-select">4. Taille du Tournoi :</label>
-        <select id="tournament-size-select" class="menu-select">
-            <option value="64">64 Participants</option>
-            <option value="32">32 Participants</option>
-            <option value="16">16 Participants</option>
-        </select>
-    </div>
-
-    <div id="available-count">
-        Chargement des informations de saison...
-    </div>
-
-    <br>
-    <button onclick="initTournament()">LANCER LE JEU 🚀</button>
 </div>
 
 <script>
-    // --- CONFIGURATION DES CHEMINS DES PRÉSETS ---
+    // --- LISTE GLOBALE DES SAISONS ---
     const presetSeasons = [
+        // Saisons Classiques
         { id: "summer_2026_mix", name: "Été 2026", path: "data/summer-2026-mix.json" },
         { id: "automne_2019", name: "Automne 2019", path: "data/automne_2019.json" },
         { id: "summer_2019", name: "Été 2019", path: "data/summer_2019.json" },
         { id: "winter_2020", name: "Hiver 2020", path: "data/winter_2020.json" },
         { id: "winter_2022", name: "Hiver 2022", path: "data/winter_2022.json" },
         { id: "fall_2023", name: "Automne 2023", path: "data/fall_2023.json" },
-        { id: "male_vs_female1", name: "male vs female singer 1", path: "data/male_vs_female1.json" },
-        { id: "male_vs_female2", name: "male vs female singer 2", path: "data/male_vs_female2.json" },
-        { id: "underrated_ed", name: "Underrated ED", path: "data/underrated ED.json" }
+        { id: "underrated_ed", name: "Underrated ED", path: "data/underrated ED.json" },
+        
+        // Fichiers exclusifs "Male VS Female"
+        { id: "male_vs_female1", name: "Male vs Female Singer 1", path: "data/male_vs_female1.json" },
+        { id: "male_vs_female2", name: "Male vs Female Singer 2", path: "data/male_vs_female2.json" }
     ];
 
     let selectedSeasonData = null;
+    let currentMode = 'STANDARD';
 
-    function initMenu() {
+    // --- GESTION DU MODE DE JEU ---
+    function selectMode(mode) {
+        currentMode = mode;
+        document.getElementById('category-group').style.display = (mode === 'GENDER') ? 'none' : 'block';
+
+        document.getElementById('card-STANDARD').classList.remove('active');
+        document.getElementById('card-GENDER').classList.remove('active');
+        document.getElementById(`card-${mode}`).classList.add('active');
+
         const select = document.getElementById('season-select');
         select.innerHTML = '';
+        
+        const filteredSeasons = presetSeasons.filter(s => {
+            if (mode === 'GENDER') return s.id.startsWith('male_vs_female');
+            return !s.id.startsWith('male_vs_female');
+        });
 
-        presetSeasons.forEach(season => {
+        filteredSeasons.forEach(season => {
             const opt = document.createElement('option');
             opt.value = season.id;
             opt.innerText = season.name;
             select.appendChild(opt);
         });
 
-        const customOpt = document.createElement('option');
-        customOpt.value = "custom";
-        customOpt.innerText = "Uploader votre fichier JSON de saison (.json)";
-        select.appendChild(customOpt);
-
+        select.add(new Option("Uploader votre fichier JSON", "custom"));
         onSeasonChange();
     }
 
-    function normalizeEntry(entry, index) {
-        let title = entry.title || entry.name || entry.song || entry.label || `Entrée ${index + 1}`;
-        const yt = entry.yt || entry.youtube || entry.youtubeId || entry.videoId || entry.id || entry.url || "";
-        const at = entry.at || ""; 
-        const thumb = entry.thumb || ""; 
-        
-        // NOUVEAU : On récupère le genre (male/female) depuis le JSON
-        const vocal = (entry.vocal || entry.gender || "").toLowerCase();
+    function normalizeEntry(e, index) {
+        let title = e.title || e.name || e.song || e.label || `Entrée ${index + 1}`;
+        const yt = e.yt || e.youtube || e.youtubeId || e.videoId || e.id || e.url || "";
+        const at = e.at || ""; 
+        const thumb = e.thumb || ""; 
+        const vocal = (e.vocal || e.gender || "").toLowerCase();
 
-        const rawType = entry.type || entry.category || entry.kind || "";
+        const rawType = e.type || e.category || e.kind || "";
         const titleText = `${title} ${rawType}`.toUpperCase();
 
         let type = "OP";
@@ -229,11 +293,8 @@
             type = "MIX";
         }
 
-        if (type === "OP" && !title.toUpperCase().includes("(OP)")) {
-            title = `${title} (OP)`;
-        } else if (type === "ED" && !title.toUpperCase().includes("(ED)")) {
-            title = `${title} (ED)`;
-        }
+        if (type === "OP" && !title.toUpperCase().includes("(OP)")) title = `${title} (OP)`;
+        else if (type === "ED" && !title.toUpperCase().includes("(ED)")) title = `${title} (ED)`;
 
         return { title, yt, at, thumb, type, vocal, starred: false, result: "" };
     }
@@ -261,161 +322,94 @@
     }
 
     function updateCountLabel() {
+        if (!selectedSeasonData) return;
         const parsed = getSelectedEntries();
         const total = parsed.length;
         const ops = parsed.filter(e => e.type === "OP").length;
         const eds = parsed.filter(e => e.type === "ED").length;
         
-        // Affiche le nombre d'hommes et de femmes trouvés dans le JSON
         const males = parsed.filter(e => e.vocal === "male" || e.vocal === "m").length;
         const females = parsed.filter(e => e.vocal === "female" || e.vocal === "f").length;
 
-        const name = selectedSeasonData ? selectedSeasonData.seasonName : "Aucune saison";
+        const name = selectedSeasonData.seasonName || "Aucune saison";
 
         document.getElementById('available-count').innerText =
             `Saison chargée : ${name}\n` +
-            `Total : ${total} morceaux  |  OP : ${ops}  |  ED : ${eds}\n` +
-            `Tags trouvés : ${males} Hommes  |  ${females} Femmes`;
+            `Total disponible : ${total} morceaux (OP: ${ops} | ED: ${eds})\n` +
+            `Tags trouvés : ${males} ♂ Hommes | ${females} ♀ Femmes`;
     }
 
     async function loadPresetSeason(id) {
         const season = presetSeasons.find(s => s.id === id);
         if (!season) return;
-
-        try {
+        try { 
             const response = await fetch(season.path);
-            if (!response.ok) throw new Error("HTTP " + response.status);
+            if (!response.ok) throw new Error("Erreur HTTP");
             const data = await response.json();
             selectedSeasonData = normalizeSeasonData(data, season.name);
-            updateCountLabel();
-        } catch (error) {
-            console.error("Erreur de chargement fetch :", error);
-            selectedSeasonData = null;
-            document.getElementById('available-count').innerText = 
-                `⚠️ Impossible de charger "${season.name}" automatiquement.\n👉 Veuillez choisir l'option "Uploader votre fichier JSON"`;
+            updateCountLabel(); 
+        } catch(e) {
+            document.getElementById('available-count').innerText = "⚠️ Impossible de charger le fichier (CORS). Importez-le manuellement avec le bouton Uploader.";
         }
     }
 
     async function onSeasonChange() {
         const select = document.getElementById('season-select');
-        const uploadGroup = document.getElementById('json-upload-group');
-        
-        if (select.value === "custom") {
-            uploadGroup.style.display = "block";
-            selectedSeasonData = null;
-            document.getElementById('available-count').innerText = "Veuillez uploader un fichier JSON.";
-        } else {
-            uploadGroup.style.display = "none";
-            await loadPresetSeason(select.value);
-        }
+        document.getElementById('json-upload-group').style.display = select.value === "custom" ? "block" : "none";
+        if (select.value !== "custom") await loadPresetSeason(select.value);
     }
 
-    function loadCustomJson(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-
+    function loadCustomJson(e) {
         const reader = new FileReader();
-        reader.onload = function(e) {
-            try {
-                const data = JSON.parse(e.target.result);
-                selectedSeasonData = normalizeSeasonData(data, file.name.replace(/\.json$/i, ""));
-                alert(`Saison "${selectedSeasonData.seasonName}" chargée avec succès !`);
-                updateCountLabel();
-            } catch (err) {
-                alert("Erreur lors de la lecture du fichier JSON : " + err.message);
-                event.target.value = "";
-            }
+        reader.onload = ev => { 
+            selectedSeasonData = normalizeSeasonData(JSON.parse(ev.target.result), "Saison importée"); 
+            updateCountLabel(); 
         };
-        reader.readAsText(file);
+        reader.readAsText(e.target.files[0]);
     }
 
     function initTournament() {
         if (!selectedSeasonData || !Array.isArray(selectedSeasonData.entries) || selectedSeasonData.entries.length === 0) {
-            alert("Veuillez d'abord charger un fichier de saison valide.");
-            return;
+            return alert("Chargez un fichier de saison valide.");
         }
-
-        const category = document.querySelector('input[name="category"]:checked').value;
-        const gameMode = document.querySelector('input[name="gamemode"]:checked').value;
+        
         let parsed = getSelectedEntries();
-
-        if (category === "OP") parsed = parsed.filter(e => e.type === "OP");
-        else if (category === "ED") parsed = parsed.filter(e => e.type === "ED");
-
-        let selectedSize = parseInt(document.getElementById('tournament-size-select').value);
+        const cat = document.querySelector('input[name="category"]:checked').value;
+        let size = parseInt(document.getElementById('tournament-size-select').value);
         let finalEntries = [];
 
-        // NOUVEAU : Logique spécifique si le mode "Hommes vs Femmes" est sélectionné
-        if (gameMode === "GENDER") {
-            const males = parsed.filter(e => e.vocal === "male" || e.vocal === "m");
-            const females = parsed.filter(e => e.vocal === "female" || e.vocal === "f");
+        if (cat !== "MIX") parsed = parsed.filter(e => e.type === cat);
 
-            let halfSize = selectedSize / 2;
-
-            if (males.length < halfSize || females.length < halfSize) {
-                const maxHalf = Math.min(males.length, females.length);
-                const powers = [32, 16, 8, 4, 2, 1];
-                halfSize = powers.find(p => p <= maxHalf);
-
-                if (!halfSize || halfSize === 0) {
-                    alert(`Impossible de lancer ce mode : il n'y a pas assez de musiques taguées "vocal": "male" ou "female" ! (Hommes: ${males.length}, Femmes: ${females.length})`);
-                    return;
-                }
-                selectedSize = halfSize * 2;
-                alert(`Données insuffisantes. Ajustement automatique : Le jeu passe à ${selectedSize} participants (${halfSize} H vs ${halfSize} F).`);
-            }
-
-            males.sort(() => Math.random() - 0.5);
-            females.sort(() => Math.random() - 0.5);
-
-            // On entrelace les hommes et les femmes (1 homme, 1 femme, 1 homme, 1 femme...)
-            for (let i = 0; i < halfSize; i++) {
+        if (currentMode === "GENDER") {
+            const males = parsed.filter(e => e.vocal === "male" || e.vocal === "m").sort(() => Math.random() - 0.5);
+            const females = parsed.filter(e => e.vocal === "female" || e.vocal === "f").sort(() => Math.random() - 0.5);
+            
+            let pairs = Math.min(males.length, females.length, size / 2);
+            if (pairs === 0) return alert("Pas assez de musiques taguées vocal: male et female dans ce fichier !");
+            
+            for (let i = 0; i < pairs; i++) {
                 if (Math.random() > 0.5) finalEntries.push(males[i], females[i]);
                 else finalEntries.push(females[i], males[i]);
             }
-
         } else {
-            // Mode Tournoi Standard
-            if (parsed.length === 0) {
-                alert("Aucun morceau ne correspond aux critères choisis dans cette saison !");
-                return;
-            }
-
+            if (parsed.length === 0) return alert("Aucun morceau ne correspond aux critères choisis !");
             parsed.sort(() => Math.random() - 0.5);
-
-            if (parsed.length < selectedSize) {
-                const powers = [64, 32, 16, 8, 4, 2];
-                selectedSize = powers.find(p => p <= parsed.length) || 2;
-                alert(`Données insuffisantes. Le tournoi est automatiquement ajusté à ${selectedSize} participants.`);
-            }
-
-            finalEntries = parsed.slice(0, selectedSize);
+            const powers = [64, 32, 16, 8, 4, 2];
+            size = powers.find(p => p <= parsed.length) || 2;
+            finalEntries = parsed.slice(0, size);
         }
 
-        finalEntries.forEach(entry => {
-            entry.starred = false;
-            entry.result = `Top ${selectedSize}`;
-        });
-
-        // Envoi au Storage
-        localStorage.removeItem('tournamentParticipants');
-        localStorage.removeItem('tournamentSize');
-        localStorage.removeItem('matchHistory');
-        localStorage.removeItem('historyStateStack');
-        localStorage.removeItem('finalResults');
+        finalEntries.forEach(entry => { entry.starred = false; entry.result = `Top ${size}`; });
 
         localStorage.setItem('tournamentParticipants', JSON.stringify(finalEntries));
-        localStorage.setItem('gameMode', gameMode);
-
-        // NOUVEAU : Redirection vers la bonne arène de jeu selon le mode
-        if (gameMode === "GENDER") {
-            window.location.href = 'gender_match.html';
-        } else {
-            window.location.href = 'tournament.html';
-        }
+        localStorage.setItem('gameMode', currentMode);
+        
+        if (currentMode === "GENDER") window.location.href = 'gender_match.html';
+        else window.location.href = 'tournament.html';
     }
 
-    initMenu();
+    // Initialisation au démarrage
+    selectMode('STANDARD');
 </script>
 </body>
 </html>

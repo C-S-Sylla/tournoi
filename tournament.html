@@ -2,6 +2,8 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
+    <!-- NOUVEAU : La balise Viewport indispensable pour l'affichage sur téléphone -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Tournoi Anime OP/ED - Matchs en Cours</title>
     <style>
         :root { 
@@ -21,6 +23,7 @@
             padding: 20px; 
             background: #1e293b; 
             margin-bottom: 20px; 
+            position: relative;
         }
         .container { 
             display: flex; 
@@ -29,11 +32,15 @@
             padding: 20px; 
             flex-wrap: wrap; 
         }
+        
+        /* ADAPTATION MOBILE : Remplacement de la largeur fixe par max-width */
         .match-card { 
             background: var(--card-bg); 
             border-radius: 15px; 
             padding: 15px; 
-            width: 450px; 
+            width: 100%; 
+            max-width: 450px; 
+            box-sizing: border-box;
             border: 3px solid transparent; 
             transition: 0.3s; 
             display: flex;
@@ -51,10 +58,11 @@
             overflow: hidden; 
             margin-bottom: 10px; 
         }
-        iframe { 
+        iframe, video { 
             width: 100%; 
             height: 100%; 
             border: none; 
+            object-fit: cover;
         }
         button { 
             background: var(--primary); 
@@ -81,7 +89,7 @@
             display: none !important; 
         }
 
-        /* Boutons interactifs du lecteur */
+        /* Boutons interactifs */
         .star-btn { 
             background: #475569; 
             color: #e2e8f0; 
@@ -125,6 +133,7 @@
             cursor: pointer;
             width: auto;
             transition: 0.2s;
+            margin-top: 5px;
         }
         .switch-btn:hover {
             background: #334155;
@@ -149,18 +158,28 @@
         .undo-btn:hover {
             background: #dc2626;
         }
+
+        /* ======== OPTIMISATIONS POUR TÉLÉPHONE ======== */
+        @media (max-width: 768px) {
+            .header { padding: 15px 10px; }
+            .header h1 { font-size: 1.5rem; margin-top: 0; }
+            .container { padding: 10px; gap: 10px; }
+            .vs { font-size: 2rem; width: 100%; margin: 5px 0; }
+            button { padding: 12px; font-size: 1.1rem; }
+            .match-card h3 { font-size: 1.1rem; margin: 10px 0; }
+        }
     </style>
 </head>
 <body>
 
-    <!-- Lecteurs invisibles pour précharger le match suivant en tâche de fond -->
+<!-- Lecteurs invisibles pour précharger le match suivant en tâche de fond -->
 <video id="preloader-1" preload="auto" style="display:none;"></video>
 <video id="preloader-2" preload="auto" style="display:none;"></video>
 
 <!-- EN-TÊTE DU TOURNOI -->
 <div class="header">
-    <h1 id="round-name">Chargement...</h1>
-    <p id="match-info">Match 1 / 32</p>
+    <h1 id="round-name" style="color: #38bdf8;">Chargement...</h1>
+    <p id="match-info" style="color: #94a3b8; font-weight: bold;">Match 1 / 32</p>
 </div>
 
 <!-- L'ARÈNE DE COMBAT -->
@@ -181,9 +200,9 @@
             <button id="star-1" class="star-btn" onclick="toggleStar(1)">☆ Marquer ?</button>
             <button onclick="vote(1)">CHOISIR</button>
         </div>
-            <button id="undo-btn" class="undo-btn" onclick="undo()">↩ Revenir en arrière</button>
-
     </div>
+        <button id="undo-btn" class="undo-btn" onclick="undo()">↩ Revenir en arrière</button>
+
 </div>
 
 <script>
