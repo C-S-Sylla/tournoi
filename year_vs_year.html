@@ -2,9 +2,8 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <!-- NOUVEAU : La balise Viewport indispensable pour les téléphones -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Guerre des Sexes - Matchs</title>
+    <title>Battle d'Années - Matchs</title>
     <style>
         :root { --primary: #6366f1; --bg: #0f172a; --card-bg: #1e293b; --text: #f8fafc; }
         body { font-family: sans-serif; background: var(--bg); color: var(--text); margin: 0; text-align: center; }
@@ -12,7 +11,7 @@
         
         .container { display: flex; justify-content: center; gap: 20px; padding: 20px; flex-wrap: wrap; }
         
-        /* ADAPTATION MOBILE : On remplace la largeur fixe par un max-width fluide */
+        /* ADAPTATION MOBILE */
         .match-card { 
             background: var(--card-bg); 
             border-radius: 15px; 
@@ -27,9 +26,9 @@
             transition: 0.3s; 
         }
         
-        /* Couleurs pour les Hommes et les Femmes */
-        .match-card.male-card { border-color: rgba(59, 130, 246, 0.5); box-shadow: 0 0 15px rgba(59, 130, 246, 0.2); }
-        .match-card.female-card { border-color: rgba(232, 11, 11, 0.5); box-shadow: 0 0 15px rgba(236, 72, 153, 0.2); }
+        /* Couleurs pour Zone Gauche (Bleu) et Zone Droite (Rouge) */
+        .match-card.year-left-card { border-color: rgba(59, 130, 246, 0.5); box-shadow: 0 0 15px rgba(59, 130, 246, 0.2); }
+        .match-card.year-right-card { border-color: rgba(236, 72, 153, 0.5); box-shadow: 0 0 15px rgba(236, 72, 153, 0.2); }
         
         .video-box { width: 100%; aspect-ratio: 16/9; background: #000; border-radius: 10px; overflow: hidden; margin-bottom: 10px; }
         iframe, video { width: 100%; height: 100%; border: none; object-fit: cover; }
@@ -46,10 +45,9 @@
         .switch-btn:hover { background: #334155; color: white;}
         .undo-btn { background: #ef4444; margin-top: 10px; display: none; padding: 10px 20px; font-size: 1rem; color: white; border-radius: 8px; border: none; cursor: pointer; font-weight: bold; }
 
-        /* ======== OPTIMISATIONS POUR TÉLÉPHONE ======== */
         @media (max-width: 768px) {
             .header { padding: 15px 10px; }
-            .header h1 { font-size: 1.5rem; margin-top: 0; }
+            .header h1 { font-size: 1.3rem; margin-top: 0; }
             .container { padding: 10px; gap: 10px; }
             .vs { font-size: 2rem; width: 100%; margin: 5px 0; }
             button { padding: 12px; font-size: 1.1rem; }
@@ -60,12 +58,16 @@
 <body>
 
 <div class="header">
-    <h1 id="round-name" style="color: #38bdf8;">Male vs Female singer</h1>
+    <h1 id="round-name">
+        <span id="score-left-name" style="color: #38bdf8;">Année A</span> 
+        <span style="color: #ef4444;">VS</span> 
+        <span id="score-right-name" style="color: #ec4899;">Année B</span>
+    </h1>
     <p id="match-info" style="color: #94a3b8; font-weight: bold;">Duel 1 / X</p>
 </div>
 
 <div class="container" id="tournament-area">
-    <div class="match-card" id="card1">
+    <div class="match-card year-left-card" id="card1">
         <div class="video-box" id="player1"></div>
         <h3 id="title1">Anime A</h3>
         <button id="star-0" class="star-btn" onclick="toggleStar(0)">☆ Marquer ?</button>
@@ -74,14 +76,14 @@
     
     <div class="vs">VS</div>
     
-    <div class="match-card" id="card2">
+    <div class="match-card year-right-card" id="card2">
         <div class="video-box" id="player2"></div>
         <h3 id="title2">Anime B</h3>
         <button id="star-1" class="star-btn" onclick="toggleStar(1)">☆ Marquer ?</button>
         <button onclick="vote(1)">CHOISIR</button>
     </div>
-        <button id="undo-btn" class="undo-btn" onclick="undo()">↩ Revenir au duel précédent</button>
-
+    
+    <button id="undo-btn" class="undo-btn" onclick="undo()">↩ Revenir au duel précédent</button>
 </div>
 
 <!-- Lecteurs de Préchargement Silencieux -->
@@ -98,15 +100,19 @@
         const stored = localStorage.getItem('tournamentParticipants');
         if (!stored) return window.location.href = 'index.html';
         
+        // Récupération des vrais noms des années sélectionnées
+        const yearNames = JSON.parse(localStorage.getItem('yearNames') || '{}');
+        if (yearNames.left) document.getElementById('score-left-name').innerText = yearNames.left;
+        if (yearNames.right) document.getElementById('score-right-name').innerText = yearNames.right;
+        
         currentList = JSON.parse(stored);
         
-        // Lance la résolution silencieuse de toutes les URLs AnimeThemes dès l'ouverture
+        // Lance la résolution silencieuse d'AnimeThemes
         resolveAllAnimeThemesInBackground();
         
         updateDisplay();
     };
 
-    // 🤖 ROBOT DE FOND : Résout toutes les URLs AnimeThemes de la liste, une par une (Zéro lag)
     async function resolveAllAnimeThemesInBackground() {
         console.log("🤖 [Background] Lancement de la résolution d'API pour toutes les musiques...");
         for (let i = 0; i < currentList.length; i++) {
@@ -114,16 +120,14 @@
             if (entry.at && !entry.resolvedUrl) {
                 const url = await resolveAnimeThemesVideo(entry.at);
                 if (url) {
-                    entry.resolvedUrl = url; // Sauvegardé pour tout le reste du jeu !
+                    entry.resolvedUrl = url;
                 }
-                // Petit délai de sécurité pour ne pas se faire bloquer par le serveur AnimeThemes
                 await new Promise(resolve => setTimeout(resolve, 200));
             }
         }
         console.log("🤖 [Background] Toutes les musiques ont été résolues !");
     }
 
-    // Interrogation de l'API AnimeThemes (Tri des résolutions)
     async function resolveAnimeThemesVideo(atUrl) {
         try {
             const parts = atUrl.replace(/\/$/, "").split('/');
@@ -139,7 +143,6 @@
                 if (videos.length > 0) return videos.sort((a,b) => (a.resolution||1080) - (b.resolution||1080))[0].link;
             }
             
-            // Secours texte
             for (const t of themes) {
                 for (const e of t.animethemeentries || []) {
                     for (const v of e.videos || []) {
@@ -162,54 +165,46 @@
         const c1 = currentList[currentIndex];
         const c2 = currentList[currentIndex + 1];
 
-        // Applique une couleur de bordure selon le genre
-        document.getElementById('card1').className = `match-card ${c1.vocal === 'male' || c1.vocal === 'm' ? 'male-card' : 'female-card'}`;
-        document.getElementById('card2').className = `match-card ${c2.vocal === 'male' || c2.vocal === 'm' ? 'male-card' : 'female-card'}`;
-
         document.getElementById('title1').innerText = c1.title;
         document.getElementById('title2').innerText = c2.title;
         
         updateStarButtonState(0, c1.starred);
         updateStarButtonState(1, c2.starred);
 
-        // Affiche les lecteurs
         document.getElementById('player1').innerHTML = getPlayerHTML(c1, 0);
         document.getElementById('player2').innerHTML = getPlayerHTML(c2, 1);
 
-        // Résolution d'urgence si le robot de fond n'a pas encore eu le temps de le faire
         if (c1.at && !c1.resolvedUrl) loadAnimeThemesPlayer(c1, 1);
         if (c2.at && !c2.resolvedUrl) loadAnimeThemesPlayer(c2, 2);
 
-        // Lance la mise en mémoire tampon des vidéos du prochain match (Zéro latence)
         setTimeout(preloadNextMatches, 2500);
     }
 
     function getPlayerHTML(choice, index) {
         if (choice.at) {
-            // Si la vidéo a été résolue par le robot, elle s'affiche directement
             if (choice.resolvedUrl) {
                 return `<video src="${choice.resolvedUrl}" controls preload="auto"></video>`;
             }
             return `<div id="video-loader-${index}" style="height:100%; display:flex; align-items:center; justify-content:center; color:#38bdf8; background:#000;">⏳ Résolution...</div>`;
         }
         
-        // CORRECTION DE LA SYNTAXE YOUTUBE
+        // CORRIGÉ : Intégration YouTube propre
         return `
-            <iframe src="https://www.youtube-nocookie.com/embed/${choice.yt}?rel=0" allowfullscreen></iframe>
+            <iframe src="https://www.youtube.com/embed/${choice.yt}?rel=0" allowfullscreen></iframe>
             <div style="margin-top: 8px;">
                 <button class="switch-btn" onclick="switchPlayer(${index}, '${choice.yt}')">Lecteur alternatif si bloqué 🔁</button>
             </div>
         `;
     }
 
-    // CORRECTION DU SWITCH YOUTUBE
+    // CORRIGÉ : Switch de lecteur alternatif
     function switchPlayer(i, ytId) {
         const iframe = document.querySelector(`#player${i + 1} iframe`);
         if (!iframe) return;
         if (iframe.src.includes('youtube')) {
             iframe.src = `https://yewtu.be/embed/${ytId}`;
         } else {
-            iframe.src = `https://www.youtube-nocookie.com/embed/${ytId}?rel=0`;
+            iframe.src = `https://www.youtube.com/embed/${ytId}?rel=0`;
         }
     }
 
@@ -224,7 +219,6 @@
         }
     }
 
-    // LE HACK ABSOLU : Force 100% de téléchargement (UNIQUEMENT POUR ANIMETHEMES)
     function force100PercentDownload(url, preloaderId, title) {
         const preloader = document.getElementById(preloaderId);
         if (!preloader) return;
@@ -234,21 +228,18 @@
         preloader.src = url;
         preloader.muted = true;        
         preloader.playsInline = true;
-        preloader.playbackRate = 16.0; // VITESSE MAX : Le navigateur aspire le fichier
+        preloader.playbackRate = 16.0;
 
-        // Lance la lecture fantôme
         preloader.play().then(() => {
-            console.log(`🚀 [Forçage 100%] Téléchargement à vitesse x16 en cours...`);
-        }).catch(e => console.warn(`Le navigateur attend un clic pour télécharger.`, e));
+            console.log(`🚀 [Forçage 100%] Téléchargement en cours...`);
+        }).catch(e => console.warn(`Attente interaction utilisateur.`, e));
 
-        // Signal de fin de téléchargement complet
         preloader.onended = () => {
-            console.log(`✅ [100%] TERMINÉ ! Fichier stocké en cache : ${title}`);
+            console.log(`✅ [100%] TERMINÉ : ${title}`);
             preloader.pause();
         };
     }
 
-    // Le préchargeur corrigé (ne se fait plus avoir par le robot)
     async function preloadNextMatches() {
         const listToUse = typeof currentList !== 'undefined' ? currentList : currentRound; 
         
@@ -258,7 +249,6 @@
         const c1 = listToUse[nextIdx];
         const c2 = listToUse[nextIdx + 1];
 
-        // Fonction interne pour gérer chaque vidéo proprement
         const processPreload = async (choice, preloaderId) => {
             if (!choice || !choice.at || choice.isDownloaded) return;
 
@@ -304,7 +294,6 @@
     }
 
     function vote(idx) {
-        // Sauvegarde de l'état avant le choix
         historyStateStack.push({
             currentList: currentList.map(e => ({...e})), 
             currentIndex: currentIndex,
@@ -318,24 +307,25 @@
             winnerTitle: winner.title 
         });
 
-        currentIndex += 2; // On passe au duo suivant
+        currentIndex += 2; 
         updateDisplay();
     }
 
     function endCompte() {
-        // Coupe le son
-        document.getElementById('player1').innerHTML = ""; 
-        document.getElementById('player2').innerHTML = "";
-        
-        // Sauvegarde et redirection
-        localStorage.setItem('finalResults', JSON.stringify({ 
-            matchHistory: matchHistory, 
-            initialShuffled: currentList, 
-            gameMode: "GENDER" 
-        }));
-        
-        window.location.href = 'results.html';
-    }
+    document.getElementById('player1').innerHTML = ""; 
+    document.getElementById('player2').innerHTML = "";
+    
+    const yearNames = JSON.parse(localStorage.getItem('yearNames') || '{}');
+
+    localStorage.setItem('finalResults', JSON.stringify({ 
+        matchHistory: matchHistory, 
+        initialShuffled: currentList, 
+        gameMode: "YEARS",
+        yearNames: yearNames
+    }));
+    
+    window.location.href = 'results.html'; // <-- NOM DU FICHIER CORRIGÉ
+}
 </script>
 </body>
 </html>

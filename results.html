@@ -2,6 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tournoi Anime OP/ED - Résultats Finaux</title>
     <!-- Inclusion de html2canvas pour l'export d'image du schéma -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -23,7 +24,7 @@
         .recap-section { 
             margin: 40px auto; 
             text-align: left; 
-            max-width: 900px; 
+            max-width: 1100px; 
             width: 100%; 
         }
         h3 { 
@@ -84,23 +85,56 @@
         .switch-btn:hover { background: #334155; color: #f8fafc; }
         .fav-badge { background: rgba(234, 179, 8, 0.15); border: 1px solid rgba(234, 179, 8, 0.3); color: #fef08a; padding: 8px 16px; border-radius: 20px; font-weight: bold; display: inline-flex; align-items: center; gap: 5px; }
 
-        /* ======== MODE GENDER : SCOREBOARD ET GRAPHE LINÉAIRE ======== */
-        .scoreboard { display: flex; justify-content: center; gap: 40px; margin-bottom: 30px; font-size: 2.5rem; font-weight: bold; }
-        .score-box { background: var(--card-bg); padding: 30px 50px; border-radius: 15px; border: 2px solid #334155; box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
-        .score-male { color: #60a5fa; }
-        .score-female { color: #f472b6; }
+        /* ======== SCOREBOARD ======== */
+        .scoreboard { display: flex; justify-content: center; gap: 30px; margin-bottom: 30px; font-size: 2rem; font-weight: bold; flex-wrap: wrap; }
+        .score-box { background: var(--card-bg); padding: 25px 40px; border-radius: 15px; border: 2px solid #334155; box-shadow: 0 10px 20px rgba(0,0,0,0.5); min-width: 180px; }
         .winner-glow { border-color: #eab308; box-shadow: 0 0 20px rgba(234, 179, 8, 0.4); }
 
+        /* ======== GRAPHIQUES ======== */
         .tally-wrapper {
             display: flex;
             flex-direction: column;
-            gap: 15px;
-            padding: 30px;
+            gap: 20px;
+            padding: 25px;
             background: #090d16;
             border: 1px solid #334155;
             border-radius: 12px;
             width: 100%;
             box-sizing: border-box;
+        }
+
+        /* Mode Gender : 1 Colonne */
+        .tally-single-column {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            width: 100%;
+        }
+
+        /* Mode Years : 2 Colonnes */
+        .tally-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            width: 100%;
+        }
+
+        .tally-card {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #1e293b;
+            border: 1px solid #334155;
+            padding: 10px;
+            border-radius: 10px;
+            gap: 8px;
+            box-sizing: border-box;
+        }
+
+        @media (max-width: 900px) {
+            .tally-grid {
+                grid-template-columns: 1fr;
+            }
         }
 
         /* ======== MODE TOURNOI : BRACKET ======== */
@@ -110,7 +144,6 @@
         .bracket-wrapper { display: flex; gap: 25px; align-items: center; justify-content: flex-start; width: max-content; position: relative; transform-origin: 0 0; }
         .bracket-column { display: flex; flex-direction: column; justify-content: space-around; height: 100%; width: 140px; position: relative; z-index: 2; }
         
-        /* Composant Node commun aux deux graphiques */
         .bracket-node { width: 100%; height: 65px; background: #1e293b; border: 2px solid #475569; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; font-size: 0.7rem; overflow: hidden; transition: 0.2s; }
         .bracket-node img { width: 100%; height: 40px; object-fit: cover; border-bottom: 1px solid #334155; }
         .bracket-node .node-title { width: 100%; padding: 2px 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; box-sizing: border-box; background: rgba(15, 23, 42, 0.95); color: #f8fafc; }
@@ -127,7 +160,6 @@
         .fullscreen-btn { background: #3b82f6; }
         .fullscreen-btn:hover { background: #2563eb; }
 
-        /* Plein écran */
         #bracket-section-container:fullscreen { background: #090d16; padding: 30px; width: 100vw; height: 100vh; display: flex; flex-direction: column; justify-content: center; }
         #bracket-section-container:fullscreen h3 { margin-top: 0; }
         #bracket-section-container:fullscreen .bracket-scroll { max-height: none !important; height: 100% !important; border: none; background: transparent; }
@@ -148,7 +180,7 @@
 <script>
     // Variables globales
     let data = JSON.parse(localStorage.getItem('finalResults') || "{}");
-    const { winner, matchHistory, initialShuffled, gameMode } = data;
+    const { winner, matchHistory, initialShuffled, gameMode, yearNames } = data;
 
     let zoomScale = 1.0;
     let panX = 0;
@@ -183,7 +215,6 @@
                 }
             }
             
-            // Secours
             for (const theme of themes) {
                 for (const entry of theme.animethemeentries || []) {
                     for (const video of entry.videos || []) {
@@ -194,7 +225,7 @@
                     }
                 }
             }
-        } catch (e) { console.error("Erreur de récupération AnimeThemes API :", e); }
+        } catch (e) { console.error("Erreur API AnimeThemes :", e); }
         return null;
     }
 
@@ -215,7 +246,7 @@
             loader.innerHTML = `
                 <div style="padding: 10px; color: #ef4444; font-size: 0.85rem; font-weight:bold; text-align:center;">
                     ⚠️ Résolution du Champion impossible.<br>
-                    <a href="${winnerEntry.at}" target="_blank" style="display:inline-block; margin-top:8px; background:#ef4444; color:white; text-decoration:none; padding:6px 12px; border-radius:5px; font-size:0.8rem; box-shadow: 0 4px 6px rgba(0,0,0,0.2);">
+                    <a href="${winnerEntry.at}" target="_blank" style="display:inline-block; margin-top:8px; background:#ef4444; color:white; text-decoration:none; padding:6px 12px; border-radius:5px; font-size:0.8rem;">
                         Écouter sur AnimeThemes ↗
                     </a>
                 </div>
@@ -223,7 +254,7 @@
         }
     }
 
-    // --- INITIALISATION DE LA PAGE ---
+    // --- INITIALISATION ---
     window.onload = () => {
         if (!matchHistory) return window.location.href = 'index.html';
         
@@ -240,96 +271,135 @@
             `;
         }
 
-        if (gameMode === "GENDER") {
+        if (gameMode === "GENDER" || gameMode === "YEARS") {
             renderTallyMode(starredHtml);
         } else {
             renderTournamentMode(starredHtml);
         }
     };
 
-    // ==========================================
-    // 1. RENDU DU MODE COMPTE (GENDER LINÉAIRE)
-    // ==========================================
+    // =========================================================
+    // RENDU DES MODES DUEL (GENDER & YEARS)
+    // =========================================================
     function renderTallyMode(starredHtml) {
-        let maleWins = 0, femaleWins = 0;
-        let graphRowsHtml = "";
+    const isYearsMode = (gameMode === "YEARS");
 
-        matchHistory.forEach(m => {
-            // Identification de qui est la fille et qui est le garçon pour forcer "Fille à gauche"
-            let femaleP = m.p1;
-            let maleP = m.p2;
+    // RÉCUPÉRATION DES VRAIS NOMS (ex: "Année 2021" / "Année 2022")
+    const storedYears = yearNames || JSON.parse(localStorage.getItem('yearNames') || '{}');
+    const leftLabel = isYearsMode ? (storedYears.left || "Année 1") : "♀ ÉQUIPE FÉMININE";
+    const rightLabel = isYearsMode ? (storedYears.right || "Année 2") : "♂ ÉQUIPE MASCULINE";
 
+    const leftColor = isYearsMode ? "#00d2ff" : "#f472b6";
+    const rightColor = isYearsMode ? "#ff0055" : "#60a5fa";
+
+    let leftWins = 0, rightWins = 0;
+    let graphRowsHtml = "";
+
+    matchHistory.forEach(m => {
+        let leftP, rightP;
+
+        if (isYearsMode) {
+            leftP = m.p1;
+            rightP = m.p2;
+        } else {
             const v1 = (m.p1.vocal || "").toLowerCase();
-            if (v1 !== "female" && v1 !== "f") {
-                femaleP = m.p2;
-                maleP = m.p1;
+            if (v1 === "female" || v1 === "f") {
+                leftP = m.p1; rightP = m.p2;
+            } else {
+                leftP = m.p2; rightP = m.p1;
             }
-            
-            const fWon = (m.winnerTitle === femaleP.title);
-            const mWon = (m.winnerTitle === maleP.title);
+        }
 
-            if (fWon) femaleWins++;
-            if (mWon) maleWins++;
+        const leftWon = (m.winnerTitle === leftP.title);
+        const rightWon = (m.winnerTitle === rightP.title);
 
-            // Génération des images miniatures
-            const fThumb = femaleP.yt ? `https://img.youtube.com/vi/${femaleP.yt}/mqdefault.jpg` : (femaleP.thumb ? `https://images.weserv.nl/?url=${encodeURIComponent(femaleP.thumb)}` : "");
-            const mThumb = maleP.yt ? `https://img.youtube.com/vi/${maleP.yt}/mqdefault.jpg` : (maleP.thumb ? `https://images.weserv.nl/?url=${encodeURIComponent(maleP.thumb)}` : "");
+        if (leftWon) leftWins++;
+        if (rightWon) rightWins++;
 
-            // Création de la ligne graphique (Femme à gauche, Homme à droite)
+        const lThumb = leftP.yt ? `https://img.youtube.com/vi/${leftP.yt}/mqdefault.jpg` : (leftP.thumb ? `https://images.weserv.nl/?url=${encodeURIComponent(leftP.thumb)}` : "");
+        const rThumb = rightP.yt ? `https://img.youtube.com/vi/${rightP.yt}/mqdefault.jpg` : (rightP.thumb ? `https://images.weserv.nl/?url=${encodeURIComponent(rightP.thumb)}` : "");
+
+        if (isYearsMode) {
+            // GRAPHIQUE A 2 COLONNES POUR LE MODE YEARS
+            graphRowsHtml += `
+                <div class="tally-card">
+                    <div class="bracket-node bracket-node-tall ${leftWon ? 'node-winner' : 'node-loser'} ${leftP.starred ? 'node-starred' : ''}" style="flex: 1; margin:0;">
+                        ${lThumb ? `<img src="${lThumb}" crossorigin="anonymous" alt="" />` : `<div style="background:#1e293b;width:100%;height:80px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;">🎵</div>`}
+                        <div class="node-title">${leftP.starred ? '⭐ ' : ''}${leftP.title}</div>
+                    </div>
+
+                    <div style="font-size: 1.1rem; font-weight: 900; color: #ef4444; padding: 0 4px;">VS</div>
+
+                    <div class="bracket-node bracket-node-tall ${rightWon ? 'node-winner' : 'node-loser'} ${rightP.starred ? 'node-starred' : ''}" style="flex: 1; margin:0;">
+                        ${rThumb ? `<img src="${rThumb}" crossorigin="anonymous" alt="" />` : `<div style="background:#1e293b;width:100%;height:80px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;">🎵</div>`}
+                        <div class="node-title">${rightP.starred ? '⭐ ' : ''}${rightP.title}</div>
+                    </div>
+                </div>
+            `;
+        } else {
+            // GRAPHIQUE A 1 COLONNE UNIQUE POUR LE MODE GENDER
             graphRowsHtml += `
                 <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; border-bottom: 1px solid #1e293b; padding-bottom: 15px;">
-                    
-                    <!-- FILLE (GAUCHE) -->
-                    <div class="bracket-node bracket-node-tall ${fWon ? 'node-winner' : 'node-loser'} ${femaleP.starred ? 'node-starred' : ''}" style="width: 42%; margin:0;">
-                        ${fThumb ? `<img src="${fThumb}" crossorigin="anonymous" alt="" />` : `<div style="background:#1e293b;width:100%;height:80px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;">🎵</div>`}
-                        <div class="node-title">${femaleP.starred ? '⭐ ' : ''}${femaleP.title}</div>
+                    <div class="bracket-node bracket-node-tall ${leftWon ? 'node-winner' : 'node-loser'} ${leftP.starred ? 'node-starred' : ''}" style="width: 42%; margin:0;">
+                        ${lThumb ? `<img src="${lThumb}" crossorigin="anonymous" alt="" />` : `<div style="background:#1e293b;width:100%;height:80px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;">🎵</div>`}
+                        <div class="node-title">${leftP.starred ? '⭐ ' : ''}${leftP.title}</div>
                     </div>
 
                     <div style="font-size: 1.5rem; font-weight: bold; color: #ef4444; width: 10%; text-align: center;">VS</div>
 
-                    <!-- GARCON (DROITE) -->
-                    <div class="bracket-node bracket-node-tall ${mWon ? 'node-winner' : 'node-loser'} ${maleP.starred ? 'node-starred' : ''}" style="width: 42%; margin:0;">
-                        ${mThumb ? `<img src="${mThumb}" crossorigin="anonymous" alt="" />` : `<div style="background:#1e293b;width:100%;height:80px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;">🎵</div>`}
-                        <div class="node-title">${maleP.starred ? '⭐ ' : ''}${maleP.title}</div>
+                    <div class="bracket-node bracket-node-tall ${rightWon ? 'node-winner' : 'node-loser'} ${rightP.starred ? 'node-starred' : ''}" style="width: 42%; margin:0;">
+                        ${rThumb ? `<img src="${rThumb}" crossorigin="anonymous" alt="" />` : `<div style="background:#1e293b;width:100%;height:80px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;">🎵</div>`}
+                        <div class="node-title">${rightP.starred ? '⭐ ' : ''}${rightP.title}</div>
                     </div>
-
                 </div>
             `;
-        });
+        }
+    });
 
-        const maleGlow = maleWins > femaleWins ? 'winner-glow' : '';
-        const femaleGlow = femaleWins > maleWins ? 'winner-glow' : '';
-        let title = maleWins === femaleWins ? "⚖️ ÉGALITÉ PARFAITE ⚖️" : (maleWins > femaleWins ? "🏆 LES HOMMES L'EMPORTENT" : "🏆 LES FEMMES L'EMPORTENT");
-
-        document.getElementById('results-container').innerHTML = `
-            <h1 style="color:#f8fafc; font-size:3rem; margin-top:20px;">${title}</h1>
-            
-            <!-- Les filles sont à gauche, donc le score des filles est à gauche -->
-            <div class="scoreboard">
-                <div class="score-box score-female ${femaleGlow}">♀ Femmes<br>${femaleWins}</div>
-                <div class="score-box score-male ${maleGlow}">♂ Hommes<br>${maleWins}</div>
-            </div>
-            
-            ${starredHtml}
-
-            <div class="recap-section">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap:10px;">
-                    <h3>📊 GRAPHIQUE LINÉAIRE DES MATCHS</h3>
-                    <button class="download-btn" id="download-tally-btn" onclick="downloadTallyGraph()">📸 Télécharger le Graphique (PNG)</button>
-                </div>
-                
-                <div class="tally-wrapper" id="tally-graph-wrapper">
-                    <div style="display: flex; justify-content: space-between; color: #94a3b8; font-weight: bold; font-size: 1.2rem; padding: 0 10px; margin-bottom: 10px;">
-                        <span style="color: #f472b6;">♀ ÉQUIPE FÉMININE</span>
-                        <span style="color: #60a5fa;">♂ ÉQUIPE MASCULINE</span>
-                    </div>
-                    ${graphRowsHtml}
-                </div>
-            </div>
-        `;
+    const leftGlow = leftWins > rightWins ? 'winner-glow' : '';
+    const rightGlow = rightWins > leftWins ? 'winner-glow' : '';
+    
+    let title = "";
+    if (leftWins === rightWins) {
+        title = "⚖️ ÉGALITÉ PARFAITE ⚖️";
+    } else if (leftWins > rightWins) {
+        title = isYearsMode ? `🏆 ${leftLabel.toUpperCase()} L'EMPORTE` : "🏆 LES FEMMES L'EMPORTENT";
+    } else {
+        title = isYearsMode ? `🏆 ${rightLabel.toUpperCase()} L'EMPORTE` : "🏆 LES HOMMES L'EMPORTENT";
     }
 
-    // Fonction de téléchargement dédiée au graphique linéaire (sans zoom/pan)
+    const graphContainerHtml = isYearsMode 
+        ? `<div class="tally-grid">${graphRowsHtml}</div>` 
+        : `<div class="tally-single-column">${graphRowsHtml}</div>`;
+
+    document.getElementById('results-container').innerHTML = `
+        <h1 style="color:#f8fafc; font-size:2.5rem; margin-top:20px;">${title}</h1>
+        
+        <div class="scoreboard">
+            <div class="score-box ${leftGlow}" style="color: ${leftColor};">${leftLabel}<br>${leftWins}</div>
+            <div class="score-box ${rightGlow}" style="color: ${rightColor};">${rightLabel}<br>${rightWins}</div>
+        </div>
+        
+        ${starredHtml}
+
+        <div class="recap-section">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap:10px;">
+                <h3>📊 GRAPHIQUE DES MATCHS</h3>
+                <button class="download-btn" id="download-tally-btn" onclick="downloadTallyGraph()">📸 Télécharger le Graphique (PNG)</button>
+            </div>
+            
+            <div class="tally-wrapper" id="tally-graph-wrapper">
+                <div style="display: flex; justify-content: space-between; color: #94a3b8; font-weight: bold; font-size: 1.1rem; padding: 0 10px; margin-bottom: 10px;">
+                    <span style="color: ${leftColor};">${leftLabel}</span>
+                    <span style="color: ${rightColor};">${rightLabel}</span>
+                </div>
+
+                ${graphContainerHtml}
+            </div>
+        </div>
+    `;
+}
+
     function downloadTallyGraph() {
         const container = document.getElementById('tally-graph-wrapper');
         if (!container) return;
@@ -339,7 +409,7 @@
 
         html2canvas(container, { backgroundColor: "#090d16", useCORS: true, scale: 1.5 }).then(canvas => {
             const link = document.createElement('a'); 
-            link.download = 'recap-hommes-femmes.png'; 
+            link.download = 'recap-matchs.png'; 
             link.href = canvas.toDataURL(); 
             link.click();
             btn.innerText = "📸 Télécharger le Graphique (PNG)"; btn.disabled = false;
@@ -349,7 +419,7 @@
     }
 
     // ==========================================
-    // 2. RENDU DU MODE TOURNOI CLASSIQUE (ARBRE)
+    // RENDU DU MODE TOURNOI CLASSIQUE
     // ==========================================
     function renderTournamentMode(starredHtml) {
         let playerHTML = "";
@@ -368,7 +438,6 @@
                         </a>
                     </div>
                 `;
-                // Lancement de la résolution native
                 loadWinnerAnimeThemesPlayer(winner);
             } else {
                 playerHTML = `
@@ -427,7 +496,6 @@
         }
     }
 
-    // --- ARBRE GRAPHIQUE ---
     function generateBracketVisual() {
         const tree = []; tree[0] = initialShuffled.map(e => ({ ...e }));
         const N = initialShuffled.length; const k = Math.log2(N);
@@ -514,7 +582,6 @@
         svg.appendChild(path);
     }
 
-    // --- TABLEAU RÉCAPITULATIF ---
     function generateTableHTML() {
         const rankWeight = { "🏆 CHAMPION 🏆": 1, "Finaliste (2ème)": 2, "Top 4 (Demi-Finales)": 3, "Top 8 (Quarts)": 4, "Top 16 (8èmes)": 5, "Top 32 (16èmes)": 6, "Top 64 (32èmes)": 7 };
         const sortedEntries = [...initialShuffled].sort((a, b) => (rankWeight[a.result] || 9) - (rankWeight[b.result] || 9));
@@ -550,7 +617,6 @@
         `;
     }
 
-    // --- GESTION DU ZOOM, FULLSCREEN & DOWNLOAD ---
     function toggleFullscreen() {
         const el = document.getElementById('bracket-section-container');
         if (!el) return;

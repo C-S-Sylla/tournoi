@@ -9,29 +9,28 @@
             --c-blue-light: #67B0E0; 
             --c-blue-purple: #3420E0; 
             --text: #f8fafc; 
+            --accent-left: #00d2ff;
+            --accent-right: #ff0055;
         }
         
         body { 
             font-family: sans-serif; 
-            /* Dégradé de fond basé sur vos couleurs */
             background: linear-gradient(135deg, #15022b, var(--c-purple-dark)); 
             color: var(--text); 
             margin: 0; 
             min-height: 100vh;
-            
-            /* CORRECTIF : On autorise le défilement vertical, mais on bloque l'horizontal */
             overflow-x: hidden;
             overflow-y: auto; 
         }
 
         /* ====== DECORATION ÉTOILES FIXES ====== */
         .sparkle {
-            position: fixed; /* Reste en place pendant le défilement */
+            position: fixed; 
             background: var(--c-blue-light);
             clip-path: polygon(50% 0%, 60% 40%, 100% 50%, 60% 60%, 50% 100%, 40% 60%, 0% 50%, 40% 40%);
             animation: twinkle 3s infinite alternate ease-in-out;
             z-index: 0;
-            pointer-events: none; /* Empêche les étoiles de bloquer les clics */
+            pointer-events: none; 
         }
         @keyframes twinkle {
             0% { transform: scale(0.8) rotate(0deg); opacity: 0.5; }
@@ -52,7 +51,7 @@
         .layout-wrapper {
             max-width: 800px;
             width: 90%;
-            margin: 40px auto; /* Centre la boite et laisse de l'espace en haut/bas */
+            margin: 40px auto; 
             position: relative;
             z-index: 10;
         }
@@ -94,6 +93,44 @@
         .menu-select:focus, .menu-input:focus { outline: none; background: rgba(255, 255, 255, 0.1); }
         .menu-select option { background: var(--c-purple-dark); color: white; }
 
+        /* ====== RENDER MODE ANNÉE VS ANNÉE (ZONE GAUCHE / VS / ZONE DROITE) ====== */
+        .vs-select-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            width: 100%;
+        }
+        .vs-select-box {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .vs-zone-label {
+            font-size: 0.9rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .vs-zone-label.left { color: var(--accent-left); }
+        .vs-zone-label.right { color: var(--accent-right); }
+
+        .vs-circle {
+            font-size: 1.3rem;
+            font-weight: 900;
+            font-style: italic;
+            color: #fff;
+            background: linear-gradient(135deg, var(--accent-left), var(--accent-right));
+            border-radius: 50%;
+            width: 45px;
+            height: 45px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            box-shadow: 0 0 15px rgba(255, 0, 85, 0.5);
+            margin-top: 20px;
+        }
+
         .radio-group { display: flex; gap: 12px; margin-top: 5px; }
         .radio-group input[type="radio"] { display: none; }
         .radio-label { 
@@ -124,7 +161,7 @@
             display: flex;
             justify-content: center;
             gap: 20px;
-            flex-wrap: wrap; /* S'adapte sur mobile */
+            flex-wrap: wrap; 
         }
 
         .mode-card {
@@ -145,7 +182,7 @@
             text-align: center;
             backdrop-filter: blur(5px);
         }
-        .mode-card:hover:not(.disabled) {
+        .mode-card:hover {
             background: rgba(103, 176, 224, 0.2);
             transform: translateY(-5px);
         }
@@ -154,12 +191,6 @@
             background: var(--c-blue-light);
             color: var(--c-purple-dark);
             box-shadow: 0 0 20px rgba(103, 176, 224, 0.6);
-        }
-
-        .mode-card.disabled {
-            cursor: not-allowed;
-            border-style: dashed;
-            opacity: 0.5;
         }
     </style>
 </head>
@@ -181,9 +212,26 @@
     <div class="main-card">
         <h2>Menu de Configuration</h2>
         
-        <div class="menu-group">
-            <label>Liste des Saisons / Fichiers :</label>
+        <!-- SÉLECTION SIMPLE (Mode Standard & Gender) -->
+        <div class="menu-group" id="single-select-group">
+            <label id="season-label">Liste des Saisons / Fichiers :</label>
             <select id="season-select" class="menu-select" onchange="onSeasonChange()"></select>
+        </div>
+
+        <!-- SÉLECTION DOUBLE VS (Mode Année VS Année) -->
+        <div class="menu-group" id="year-vs-year-group" style="display: none;">
+            <label>Confrontation d'Années (Choisis 2 fichiers "Année") :</label>
+            <div class="vs-select-container">
+                <div class="vs-select-box">
+                    <span class="vs-zone-label left">Zone Gauche</span>
+                    <select id="season-select-left" class="menu-select" onchange="onYearVsYearChange()"></select>
+                </div>
+                <div class="vs-circle">VS</div>
+                <div class="vs-select-box">
+                    <span class="vs-zone-label right">Zone Droite</span>
+                    <select id="season-select-right" class="menu-select" onchange="onYearVsYearChange()"></select>
+                </div>
+            </div>
         </div>
 
         <div class="menu-group" id="json-upload-group" style="display: none;">
@@ -191,8 +239,8 @@
             <input type="file" id="custom-json-file" class="menu-input" accept=".json" onchange="loadCustomJson(event)">
         </div>
 
-<div class="menu-group" id="category-group">
-        <label>Catégorie :</label>
+        <div class="menu-group" id="category-group">
+            <label>Catégorie :</label>
             <div class="radio-group">
                 <input type="radio" id="cat-mix" name="category" value="MIX" checked onchange="updateCountLabel()"><label for="cat-mix" class="radio-label">Mix</label>
                 <input type="radio" id="cat-op" name="category" value="OP" onchange="updateCountLabel()"><label for="cat-op" class="radio-label">Openings</label>
@@ -222,8 +270,9 @@
         <div id="card-GENDER" class="mode-card" onclick="selectMode('GENDER')">
             Male VS Female<br>Singer
         </div>
-        <div class="mode-card disabled">
-            À venir
+        <!-- BOUTON RENDU FONCTIONNEL -->
+        <div id="card-YEARS" class="mode-card" onclick="selectMode('YEARS')">
+            Année VS Année
         </div>
     </div>
 </div>
@@ -240,6 +289,10 @@
         { id: "fall_2023", name: "Automne 2023", path: "data/fall_2023.json" },
         { id: "underrated_ed", name: "Underrated ED", path: "data/underrated ED.json" },
         
+        // Fichiers "Année" pour le mode Année vs Année
+        { id: "annee_2021", name: "Année 2021", path: "data/annee_2021.json" },
+        { id: "annee_2022", name: "Année 2022", path: "data/annee_2022.json" },
+        
         // Fichiers exclusifs "Male VS Female"
         { id: "male_vs_female1", name: "Male vs Female Singer 1", path: "data/male_vs_female1.json" },
         { id: "male_vs_female2", name: "Male vs Female Singer 2", path: "data/male_vs_female2.json" },
@@ -247,34 +300,91 @@
     ];
 
     let selectedSeasonData = null;
+    let leftSeasonData = null;
+    let rightSeasonData = null;
     let currentMode = 'STANDARD';
 
     // --- GESTION DU MODE DE JEU ---
     function selectMode(mode) {
         currentMode = mode;
-        document.getElementById('category-group').style.display = (mode === 'GENDER') ? 'none' : 'block';
-
+        
+        // Activer la carte choisie
         document.getElementById('card-STANDARD').classList.remove('active');
         document.getElementById('card-GENDER').classList.remove('active');
+        document.getElementById('card-YEARS').classList.remove('active');
         document.getElementById(`card-${mode}`).classList.add('active');
 
-        const select = document.getElementById('season-select');
-        select.innerHTML = '';
-        
-        const filteredSeasons = presetSeasons.filter(s => {
-            if (mode === 'GENDER') return s.id.startsWith('male_vs_female');
-            return !s.id.startsWith('male_vs_female');
+        const singleGroup = document.getElementById('single-select-group');
+        const yearGroup = document.getElementById('year-vs-year-group');
+        const categoryGroup = document.getElementById('category-group');
+
+        // Affichage conditionnel de la catégorie
+        categoryGroup.style.display = (mode === 'GENDER') ? 'none' : 'block';
+
+        if (mode === 'YEARS') {
+            // MODE ANNÉE VS ANNÉE : On bascule en mode split (Gauche / Droite)
+            singleGroup.style.display = 'none';
+            yearGroup.style.display = 'block';
+
+            populateYearVsYearSelects();
+            onYearVsYearChange();
+        } else {
+            // MODES STANDARD ET GENDER : Sélection simple
+            singleGroup.style.display = 'block';
+            yearGroup.style.display = 'none';
+
+            const select = document.getElementById('season-select');
+            select.innerHTML = '';
+            
+            const filteredSeasons = presetSeasons.filter(s => {
+                if (mode === 'GENDER') return s.id.startsWith('male_vs_female');
+                // En mode standard, on masque les fichiers de duel spécifique
+                return !s.id.startsWith('male_vs_female') && !isYearFile(s);
+            });
+
+            filteredSeasons.forEach(season => {
+                const opt = document.createElement('option');
+                opt.value = season.id;
+                opt.innerText = season.name;
+                select.appendChild(opt);
+            });
+
+            select.add(new Option("Uploader votre fichier JSON", "custom"));
+            onSeasonChange();
+        }
+    }
+
+    // Helper : Vérifie si un fichier commence par "année" ou "annee"
+    function isYearFile(season) {
+        const idLower = season.id.toLowerCase();
+        const nameLower = season.name.toLowerCase();
+        return idLower.startsWith('annee') || idLower.startsWith('année') || 
+               nameLower.startsWith('annee') || nameLower.startsWith('année');
+    }
+
+    // Remplissage des 2 selecteurs (Zone Gauche & Zone Droite) uniquement avec les JSON "année"
+    function populateYearVsYearSelects() {
+        const leftSelect = document.getElementById('season-select-left');
+        const rightSelect = document.getElementById('season-select-right');
+
+        leftSelect.innerHTML = '';
+        rightSelect.innerHTML = '';
+
+        // FILTRE STRICT : Uniquement les fichiers commençant par "année" / "annee"
+        const yearFiles = presetSeasons.filter(s => isYearFile(s));
+
+        yearFiles.forEach((season, index) => {
+            const optLeft = new Option(season.name, season.id);
+            const optRight = new Option(season.name, season.id);
+            
+            leftSelect.add(optLeft);
+            rightSelect.add(optRight);
         });
 
-        filteredSeasons.forEach(season => {
-            const opt = document.createElement('option');
-            opt.value = season.id;
-            opt.innerText = season.name;
-            select.appendChild(opt);
-        });
-
-        select.add(new Option("Uploader votre fichier JSON", "custom"));
-        onSeasonChange();
+        // Par défaut, sélectionner la 1ère année à gauche et la 2ème à droite si disponible
+        if (yearFiles.length > 1) {
+            rightSelect.selectedIndex = 1;
+        }
     }
 
     function normalizeEntry(e, index) {
@@ -323,6 +433,18 @@
     }
 
     function updateCountLabel() {
+        if (currentMode === 'YEARS') {
+            if (!leftSeasonData || !rightSeasonData) return;
+            const leftEntries = parseEntries(leftSeasonData.entries);
+            const rightEntries = parseEntries(rightSeasonData.entries);
+
+            document.getElementById('available-count').innerText =
+                `⚔️ CONFRONTATION D'ANNÉES ⚔️\n` +
+                `Zone Gauche (${leftSeasonData.seasonName}) : ${leftEntries.length} morceaux\n` +
+                `Zone Droite (${rightSeasonData.seasonName}) : ${rightEntries.length} morceaux`;
+            return;
+        }
+
         if (!selectedSeasonData) return;
         const parsed = getSelectedEntries();
         const total = parsed.length;
@@ -342,22 +464,35 @@
 
     async function loadPresetSeason(id) {
         const season = presetSeasons.find(s => s.id === id);
-        if (!season) return;
+        if (!season) return null;
         try { 
             const response = await fetch(season.path);
             if (!response.ok) throw new Error("Erreur HTTP");
             const data = await response.json();
-            selectedSeasonData = normalizeSeasonData(data, season.name);
-            updateCountLabel(); 
+            return normalizeSeasonData(data, season.name);
         } catch(e) {
-            document.getElementById('available-count').innerText = "⚠️ Impossible de charger le fichier (CORS). Importez-le manuellement avec le bouton Uploader.";
+            console.warn("Erreur de chargement pour", id, e);
+            return null;
         }
     }
 
     async function onSeasonChange() {
         const select = document.getElementById('season-select');
         document.getElementById('json-upload-group').style.display = select.value === "custom" ? "block" : "none";
-        if (select.value !== "custom") await loadPresetSeason(select.value);
+        if (select.value !== "custom") {
+            selectedSeasonData = await loadPresetSeason(select.value);
+            updateCountLabel();
+        }
+    }
+
+    async function onYearVsYearChange() {
+        const leftId = document.getElementById('season-select-left').value;
+        const rightId = document.getElementById('season-select-right').value;
+
+        leftSeasonData = await loadPresetSeason(leftId);
+        rightSeasonData = await loadPresetSeason(rightId);
+
+        updateCountLabel();
     }
 
     function loadCustomJson(e) {
@@ -370,18 +505,43 @@
     }
 
     function initTournament() {
-        if (!selectedSeasonData || !Array.isArray(selectedSeasonData.entries) || selectedSeasonData.entries.length === 0) {
-            return alert("Chargez un fichier de saison valide.");
-        }
-        
-        let parsed = getSelectedEntries();
-        const cat = document.querySelector('input[name="category"]:checked').value;
-        let size = parseInt(document.getElementById('tournament-size-select').value);
         let finalEntries = [];
+        let size = parseInt(document.getElementById('tournament-size-select').value);
 
-        if (cat !== "MIX") parsed = parsed.filter(e => e.type === cat);
+        if (currentMode === "YEARS") {
+    const leftSelect = document.getElementById('season-select-left');
+    const rightSelect = document.getElementById('season-select-right');
 
-        if (currentMode === "GENDER") {
+    if (!leftSelect.value || !rightSelect.value) return alert("Sélectionnez deux années valides.");
+
+    // ON RÉCUPÈRE LE TEXTE EXACT DU MENU DÉROULANT (ex: "Année 2021")
+    const leftName = leftSelect.options[leftSelect.selectedIndex].text;
+    const rightName = rightSelect.options[rightSelect.selectedIndex].text;
+
+    const yearNames = { left: leftName, right: rightName };
+    localStorage.setItem('yearNames', JSON.stringify(yearNames));
+
+    const cat = document.querySelector('input[name="category"]:checked').value;
+    let leftEntries = parseEntries(leftSeasonData ? leftSeasonData.entries : []);
+    let rightEntries = parseEntries(rightSeasonData ? rightSeasonData.entries : []);
+
+    if (cat !== "MIX") {
+        leftEntries = leftEntries.filter(e => e.type === cat);
+        rightEntries = rightEntries.filter(e => e.type === cat);
+    }
+
+    leftEntries.sort(() => Math.random() - 0.5);
+    rightEntries.sort(() => Math.random() - 0.5);
+
+    let pairs = Math.min(leftEntries.length, rightEntries.length, size / 2);
+    if (pairs === 0) return alert("Pas assez de morceaux dans les deux années sélectionnées !");
+
+    for (let i = 0; i < pairs; i++) {
+        if (Math.random() > 0.5) finalEntries.push(leftEntries[i], rightEntries[i]);
+        else finalEntries.push(rightEntries[i], leftEntries[i]);
+    }
+} else if (currentMode === "GENDER") {
+            let parsed = getSelectedEntries();
             const males = parsed.filter(e => e.vocal === "male" || e.vocal === "m").sort(() => Math.random() - 0.5);
             const females = parsed.filter(e => e.vocal === "female" || e.vocal === "f").sort(() => Math.random() - 0.5);
             
@@ -393,6 +553,10 @@
                 else finalEntries.push(females[i], males[i]);
             }
         } else {
+            let parsed = getSelectedEntries();
+            const cat = document.querySelector('input[name="category"]:checked').value;
+            if (cat !== "MIX") parsed = parsed.filter(e => e.type === cat);
+
             if (parsed.length === 0) return alert("Aucun morceau ne correspond aux critères choisis !");
             parsed.sort(() => Math.random() - 0.5);
             const powers = [64, 32, 16, 8, 4, 2];
@@ -406,6 +570,7 @@
         localStorage.setItem('gameMode', currentMode);
         
         if (currentMode === "GENDER") window.location.href = 'gender_match.html';
+        else if (currentMode === "YEARS") window.location.href = 'year_vs_year.html';
         else window.location.href = 'tournament.html';
     }
 
