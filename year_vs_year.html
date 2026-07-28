@@ -26,7 +26,7 @@
             transition: 0.3s; 
         }
         
-        /* Couleurs pour Zone Gauche (Bleu) et Zone Droite (Rouge) */
+        /* Couleurs pour Zone Gauche (Bleu) et Zone Droite (Rouge/Rose) */
         .match-card.year-left-card { border-color: rgba(59, 130, 246, 0.5); box-shadow: 0 0 15px rgba(59, 130, 246, 0.2); }
         .match-card.year-right-card { border-color: rgba(236, 72, 153, 0.5); box-shadow: 0 0 15px rgba(236, 72, 153, 0.2); }
         
@@ -64,6 +64,7 @@
         <span id="score-right-name" style="color: #ec4899;">Année B</span>
     </h1>
     <p id="match-info" style="color: #94a3b8; font-weight: bold;">Duel 1 / X</p>
+    <button id="undo-btn" class="undo-btn" onclick="undo()">↩ Revenir au duel précédent</button>
 </div>
 
 <div class="container" id="tournament-area">
@@ -82,8 +83,6 @@
         <button id="star-1" class="star-btn" onclick="toggleStar(1)">☆ Marquer ?</button>
         <button onclick="vote(1)">CHOISIR</button>
     </div>
-    
-    <button id="undo-btn" class="undo-btn" onclick="undo()">↩ Revenir au duel précédent</button>
 </div>
 
 <!-- Lecteurs de Préchargement Silencieux -->
@@ -107,7 +106,7 @@
         
         currentList = JSON.parse(stored);
         
-        // Lance la résolution silencieuse d'AnimeThemes
+        // Lance la résolution silencieuse de toutes les URLs AnimeThemes
         resolveAllAnimeThemesInBackground();
         
         updateDisplay();
@@ -188,9 +187,9 @@
             return `<div id="video-loader-${index}" style="height:100%; display:flex; align-items:center; justify-content:center; color:#38bdf8; background:#000;">⏳ Résolution...</div>`;
         }
         
-        // CORRIGÉ : Intégration YouTube propre
+        // CORRIGÉ : Syntaxe YouTube rétablie
         return `
-            <iframe src="https://www.youtube.com/embed/${choice.yt}?rel=0" allowfullscreen></iframe>
+            <iframe src="https://www.youtube-nocookie.com/embed/${choice.yt}?rel=0" allowfullscreen></iframe>
             <div style="margin-top: 8px;">
                 <button class="switch-btn" onclick="switchPlayer(${index}, '${choice.yt}')">Lecteur alternatif si bloqué 🔁</button>
             </div>
@@ -204,7 +203,7 @@
         if (iframe.src.includes('youtube')) {
             iframe.src = `https://yewtu.be/embed/${ytId}`;
         } else {
-            iframe.src = `https://www.youtube.com/embed/${ytId}?rel=0`;
+            iframe.src = `https://www.youtube-nocookie.com/embed/${ytId}?rel=0`;
         }
     }
 
@@ -276,7 +275,7 @@
     }
     
     function updateStarButtonState(idx, st) {
-        const btn = document.getElementById(`star-${idx}`);
+        const btn = document.getElementById('star-' + idx);
         btn.classList.toggle('starred', st); 
         btn.innerText = st ? "⭐ Marqué !" : "☆ Marquer ?";
     }
@@ -312,20 +311,20 @@
     }
 
     function endCompte() {
-    document.getElementById('player1').innerHTML = ""; 
-    document.getElementById('player2').innerHTML = "";
-    
-    const yearNames = JSON.parse(localStorage.getItem('yearNames') || '{}');
+        document.getElementById('player1').innerHTML = ""; 
+        document.getElementById('player2').innerHTML = "";
+        
+        const yearNames = JSON.parse(localStorage.getItem('yearNames') || '{}');
 
-    localStorage.setItem('finalResults', JSON.stringify({ 
-        matchHistory: matchHistory, 
-        initialShuffled: currentList, 
-        gameMode: "YEARS",
-        yearNames: yearNames
-    }));
-    
-    window.location.href = 'results.html'; // <-- NOM DU FICHIER CORRIGÉ
-}
+        localStorage.setItem('finalResults', JSON.stringify({ 
+            matchHistory: matchHistory, 
+            initialShuffled: currentList, 
+            gameMode: "YEARS",
+            yearNames: yearNames
+        }));
+        
+        window.location.href = 'results.html';
+    }
 </script>
 </body>
 </html>

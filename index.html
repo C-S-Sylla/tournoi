@@ -509,38 +509,39 @@
         let size = parseInt(document.getElementById('tournament-size-select').value);
 
         if (currentMode === "YEARS") {
-    const leftSelect = document.getElementById('season-select-left');
-    const rightSelect = document.getElementById('season-select-right');
+            const leftSelect = document.getElementById('season-select-left');
+            const rightSelect = document.getElementById('season-select-right');
 
-    if (!leftSelect.value || !rightSelect.value) return alert("Sélectionnez deux années valides.");
+            if (!leftSelect.value || !rightSelect.value) return alert("Sélectionnez deux années valides.");
 
-    // ON RÉCUPÈRE LE TEXTE EXACT DU MENU DÉROULANT (ex: "Année 2021")
-    const leftName = leftSelect.options[leftSelect.selectedIndex].text;
-    const rightName = rightSelect.options[rightSelect.selectedIndex].text;
+            // ON RÉCUPÈRE LE TEXTE EXACT DU MENU DÉROULANT (ex: "Année 2021")
+            const leftName = leftSelect.options[leftSelect.selectedIndex].text;
+            const rightName = rightSelect.options[rightSelect.selectedIndex].text;
 
-    const yearNames = { left: leftName, right: rightName };
-    localStorage.setItem('yearNames', JSON.stringify(yearNames));
+            const yearNames = { left: leftName, right: rightName };
+            localStorage.setItem('yearNames', JSON.stringify(yearNames));
 
-    const cat = document.querySelector('input[name="category"]:checked').value;
-    let leftEntries = parseEntries(leftSeasonData ? leftSeasonData.entries : []);
-    let rightEntries = parseEntries(rightSeasonData ? rightSeasonData.entries : []);
+            const cat = document.querySelector('input[name="category"]:checked').value;
+            let leftEntries = parseEntries(leftSeasonData ? leftSeasonData.entries : []);
+            let rightEntries = parseEntries(rightSeasonData ? rightSeasonData.entries : []);
 
-    if (cat !== "MIX") {
-        leftEntries = leftEntries.filter(e => e.type === cat);
-        rightEntries = rightEntries.filter(e => e.type === cat);
-    }
+            if (cat !== "MIX") {
+                leftEntries = leftEntries.filter(e => e.type === cat);
+                rightEntries = rightEntries.filter(e => e.type === cat);
+            }
 
-    leftEntries.sort(() => Math.random() - 0.5);
-    rightEntries.sort(() => Math.random() - 0.5);
+            leftEntries.sort(() => Math.random() - 0.5);
+            rightEntries.sort(() => Math.random() - 0.5);
 
-    let pairs = Math.min(leftEntries.length, rightEntries.length, size / 2);
-    if (pairs === 0) return alert("Pas assez de morceaux dans les deux années sélectionnées !");
+            let pairs = Math.min(leftEntries.length, rightEntries.length, size / 2);
+            if (pairs === 0) return alert("Pas assez de morceaux dans les deux années sélectionnées !");
 
-    for (let i = 0; i < pairs; i++) {
-        if (Math.random() > 0.5) finalEntries.push(leftEntries[i], rightEntries[i]);
-        else finalEntries.push(rightEntries[i], leftEntries[i]);
-    }
-} else if (currentMode === "GENDER") {
+            // CORRECTIF : L'Année Gauche (leftEntries) est TOUJOURS poussée en premier (à gauche)
+            // et l'Année Droite (rightEntries) est TOUJOURS poussée en deuxième (à droite) pour chaque duel.
+            for (let i = 0; i < pairs; i++) {
+                finalEntries.push(leftEntries[i], rightEntries[i]);
+            }
+        } else if (currentMode === "GENDER") {
             let parsed = getSelectedEntries();
             const males = parsed.filter(e => e.vocal === "male" || e.vocal === "m").sort(() => Math.random() - 0.5);
             const females = parsed.filter(e => e.vocal === "female" || e.vocal === "f").sort(() => Math.random() - 0.5);
@@ -570,7 +571,7 @@
         localStorage.setItem('gameMode', currentMode);
         
         if (currentMode === "GENDER") window.location.href = 'gender_match.html';
-        else if (currentMode === "YEARS") window.location.href = 'year_vs_year.html';
+        else if (currentMode === "YEARS") window.location.href = 'year_vs_year.html'; // Redirige bien vers votre fichier de matchs d'Années
         else window.location.href = 'tournament.html';
     }
 
