@@ -230,6 +230,7 @@
     };
 
     // PRÉCHARGEMENT 100% BLOB IDENTIQUE À ANNEE_VS_ANNEE
+    // PRÉCHARGEMENT 100% BLOB EN TÂCHE DE FOND + CONSERVATION ROUND SUIVANT
     async function startBackgroundPreloadAll() {
         console.log("🚀 [AnisongDB] Téléchargement 100% Blob de tout le tableau...");
 
@@ -237,22 +238,24 @@
             const item = currentRound[i];
             const videoUrl = item.as || item.at || item.link || item.url || item.resolvedUrl;
 
-            // Si un lien vidéo existe et n'est pas encore téléchargé à 100%
-            if (videoUrl && typeof videoUrl === 'string' && videoUrl.trim() !== "" && !item.isDownloaded && !item.isDownloading) {
+            // Télécharge uniquement si ce n'est pas DÉJÀ en cache Blob (Conservé entre les rounds !)
+            if (videoUrl && typeof videoUrl === 'string' && videoUrl.trim() !== "" && !item.blobUrl && !item.isDownloading) {
                 item.isDownloading = true;
 
                 try {
                     const cleanUrl = videoUrl.trim();
                     console.log(`📥 [Aspiration 100%] Téléchargement de : ${item.title}`);
                     
-                    // Télécharge 100% des octets du fichier en mémoire RAM
                     const response = await fetch(cleanUrl);
                     const blob = await response.blob();
 
-                    // Crée une URL Blob locale (Garantit une barre de chargement 100% pleine !)
+                    // Sauvegarde dans l'objet (Persiste pendant tout le tournoi !)
                     item.blobUrl = URL.createObjectURL(blob);
                     item.isDownloaded = true;
-                    console.log(`✅ [Barre 100% Pleine !] : ${item.title}`);
+                    console.log(`✅ [Barre 100% Pleine en RAM !] : ${item.title}`);
+
+                    // TRANSFETS EN DIRECT : Si la vidéo est actuellement jouée à l'écran, on bascule la barre à 100% !
+                    refreshActiveVideoPlayersIfBlobReady();
                 } catch (e) {
                     console.warn(`Passage en flux direct pour ${item.title}`, e);
                 } finally {
@@ -260,6 +263,33 @@
                 }
             }
         }
+    }
+
+    // TRANSFERT EN DIRECT (Hot-Swap) : Met la barre à 100% sans couper la musique
+    function refreshActiveVideoPlayersIfBlobReady() {
+        const checkAndSwap = (item, playerContainerId) => {
+            if (!item || !item.blobUrl) return;
+            const container = document.getElementById(playerContainerId);
+            if (!container) return;
+
+            const video = container.querySelector('video');
+            // Si la vidéo tourne sur l'URL directe (pas encore en Blob)
+            if (video && !video.src.startsWith('blob:')) {
+                const currentTime = video.currentTime; // Retient la seconde exacte
+                const isPaused = video.paused;
+
+                // Bascule sur la version 100% locale
+                video.src = item.blobUrl;
+                video.currentTime = currentTime; // Reprend à la même seconde
+                if (!isPaused) {
+                    video.play().catch(() => {});
+                }
+                console.log(`⚡ [Hot-Swap 100%] Barre de chargement passée à 100% en direct pour : ${item.title}`);
+            }
+        };
+
+        if (currentRound[currentIndex]) checkAndSwap(currentRound[currentIndex], 'player1');
+        if (currentRound[currentIndex + 1]) checkAndSwap(currentRound[currentIndex + 1], 'player2');
     }
 
     // --- 2. AFFICHAGE ET LECTEURS ---
