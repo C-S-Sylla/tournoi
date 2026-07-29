@@ -174,7 +174,7 @@
 </head>
 <body>
 
-<!-- Lecteur invisible pour précharger le tableau en tâche de fond -->
+<!-- Lecteur silencieux de préchargement -->
 <video id="preloader-1" preload="auto" style="display:none;"></video>
 
 <!-- EN-TÊTE DU TOURNOI -->
@@ -229,7 +229,7 @@
         startBackgroundPreloadAll();
     };
 
-    // PRÉCHARGEMENT 100% BLOB DÈS LE DÉBUT (BARRE 100% REMPLIE)
+    // PRÉCHARGEMENT 100% BLOB IDENTIQUE À ANNEE_VS_ANNEE
     async function startBackgroundPreloadAll() {
         console.log("🚀 [AnisongDB] Téléchargement 100% Blob de tout le tableau...");
 
@@ -237,22 +237,24 @@
             const item = currentRound[i];
             const videoUrl = item.as || item.at || item.link || item.url || item.resolvedUrl;
 
+            // Si un lien vidéo existe et n'est pas encore téléchargé à 100%
             if (videoUrl && typeof videoUrl === 'string' && videoUrl.trim() !== "" && !item.isDownloaded && !item.isDownloading) {
                 item.isDownloading = true;
 
                 try {
                     const cleanUrl = videoUrl.trim();
-                    console.log(`📥 [Aspiration 100%] : ${item.title}`);
-
+                    console.log(`📥 [Aspiration 100%] Téléchargement de : ${item.title}`);
+                    
+                    // Télécharge 100% des octets du fichier en mémoire RAM
                     const response = await fetch(cleanUrl);
                     const blob = await response.blob();
 
-                    // URL Blob locale (Garantit une barre de chargement 100% pleine !)
+                    // Crée une URL Blob locale (Garantit une barre de chargement 100% pleine !)
                     item.blobUrl = URL.createObjectURL(blob);
                     item.isDownloaded = true;
-                    console.log(`✅ [100% Rempli en cache RAM !] : ${item.title}`);
+                    console.log(`✅ [Barre 100% Pleine !] : ${item.title}`);
                 } catch (e) {
-                    console.warn(`Fallback URL directe pour ${item.title}`, e);
+                    console.warn(`Passage en flux direct pour ${item.title}`, e);
                 } finally {
                     item.isDownloading = false;
                 }
@@ -288,17 +290,18 @@
         document.getElementById('player2').innerHTML = getPlayerHTML(choice2, 1);
     }
 
+    // LECTEUR HTML IDENTIQUE À ANNEE_VS_ANNEE
     function getPlayerHTML(choice, index) {
         if (!choice) return `<div style="color:#ef4444; padding:20px;">⚠️ Élément vide</div>`;
 
-        // 1. Utilise l'URL Blob (100% remplie) si disponible, sinon l'URL directe (as, at, link)
+        // 1. Utilise l'URL Blob (100% remplie) si disponible, sinon le lien direct (as, at, link)
         const videoSource = choice.blobUrl || choice.as || choice.at || choice.link || choice.url || choice.webm || choice.resolvedUrl;
 
         if (videoSource && typeof videoSource === 'string' && videoSource.trim() !== "") {
             return `<video src="${videoSource.trim()}" controls preload="auto" style="width:100%; height:100%; object-fit:cover; border-radius:10px; background:#000;"></video>`;
         }
         
-        // 2. Si c'est un lien YouTube ("yt")
+        // 2. Si c'est un lien YouTube
         const ytId = choice.yt || choice.youtube || choice.youtubeId;
 
         if (ytId && typeof ytId === 'string' && ytId.trim() !== "") {
@@ -310,7 +313,6 @@
             `;
         }
 
-        // 3. Alerte si aucun lien n'est trouvé
         return `
             <div style="height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#ef4444; background:#000; padding:10px; text-align:center;">
                 <span style="font-weight:bold; font-size:0.9rem;">⚠️ Lien manquant dans le JSON</span>
