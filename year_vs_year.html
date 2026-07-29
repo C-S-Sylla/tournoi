@@ -68,7 +68,6 @@
         <span id="score-right-name" style="color: #48ec4d;">Année B</span>
     </h1>
     <p id="match-info" style="color: #94a3b8; font-weight: bold;">Duel 1 / X</p>
-    <button id="undo-btn" class="undo-btn" onclick="undo()">↩ Revenir au duel précédent</button>
 </div>
 
 <div class="container" id="tournament-area">
@@ -87,6 +86,8 @@
         <button id="star-1" class="star-btn" onclick="toggleStar(1)">☆ Marquer ?</button>
         <button onclick="vote(1)">CHOISIR</button>
     </div>
+        <button id="undo-btn" class="undo-btn" onclick="undo()">↩ Revenir au duel précédent</button>
+
 </div>
 
 <!-- Lecteurs de Préchargement Silencieux -->
@@ -114,7 +115,7 @@
         startBackgroundPreloadAll();
     };
 
-    // PRÉCHARGEMENT 100% BLOB EN TÂCHE DE FOND (BARRE 100% REMPLIE EN AVANCE)
+    // PRÉCHARGEMENT 100% BLOB EN TÂCHE DE FOND
     async function startBackgroundPreloadAll() {
         console.log("🚀 [AnisongDB] Téléchargement 100% Blob de tout le tableau...");
 
@@ -123,21 +124,23 @@
             const videoUrl = item.as || item.at || item.link || item.url || item.resolvedUrl;
 
             // Si un lien vidéo existe et n'est pas encore téléchargé à 100%
-            if (videoUrl && typeof videoUrl === 'string' && videoUrl.trim() !== "" && !item.isDownloaded && !item.isDownloading) {
+            if (videoUrl && typeof videoUrl === 'string' && videoUrl.trim() !== "" && !item.blobUrl && !item.isDownloading) {
                 item.isDownloading = true;
 
                 try {
                     const cleanUrl = videoUrl.trim();
                     console.log(`📥 [Aspiration 100%] Téléchargement de : ${item.title}`);
                     
-                    // Télécharge 100% des octets du fichier en mémoire RAM
                     const response = await fetch(cleanUrl);
                     const blob = await response.blob();
 
-                    // Crée une URL Blob locale (Garantit une barre de chargement 100% pleine !)
+                    // Crée l'URL Blob locale (Garantit une barre de chargement 100% pleine !)
                     item.blobUrl = URL.createObjectURL(blob);
                     item.isDownloaded = true;
                     console.log(`✅ [Barre 100% Pleine !] : ${item.title}`);
+
+                    // HOT-SWAP EN DIRECT : Bascule la barre à 100% si le joueur regarde cette vidéo !
+                    refreshActiveVideoPlayersIfBlobReady();
                 } catch (e) {
                     console.warn(`Passage en flux direct pour ${item.title}`, e);
                 } finally {
@@ -145,6 +148,33 @@
                 }
             }
         }
+    }
+
+    // HOT-SWAP EN DIRECT : Met la barre à 100% sans couper la musique
+    function refreshActiveVideoPlayersIfBlobReady() {
+        const checkAndSwap = (item, playerContainerId) => {
+            if (!item || !item.blobUrl) return;
+            const container = document.getElementById(playerContainerId);
+            if (!container) return;
+
+            const video = container.querySelector('video');
+            // Si la vidéo tourne actuellement sur l'URL directe (pas encore en Blob)
+            if (video && !video.src.startsWith('blob:')) {
+                const currentTime = video.currentTime; // Retient la seconde exacte
+                const isPaused = video.paused;
+
+                // Bascule sur la version 100% locale
+                video.src = item.blobUrl;
+                video.currentTime = currentTime; // Reprend au même endroit
+                if (!isPaused) {
+                    video.play().catch(() => {});
+                }
+                console.log(`⚡ [Hot-Swap 100%] Barre de chargement passée à 100% en direct pour : ${item.title}`);
+            }
+        };
+
+        if (currentList[currentIndex]) checkAndSwap(currentList[currentIndex], 'player1');
+        if (currentList[currentIndex + 1]) checkAndSwap(currentList[currentIndex + 1], 'player2');
     }
 
     // --- 2. AFFICHAGE ET LECTEURS ---
@@ -172,7 +202,7 @@
     function getPlayerHTML(choice, index) {
         if (!choice) return `<div style="color:#ef4444; padding:20px;">⚠️ Élément vide</div>`;
 
-        // 1. Utilise l'URL Blob (100% remplie) si disponible, sinon le lien direct
+        // 1. Utilise l'URL Blob (100% remplie) si disponible, sinon le lien direct (as, at, link)
         const videoSource = choice.blobUrl || choice.as || choice.at || choice.link || choice.url || choice.webm || choice.resolvedUrl;
 
         if (videoSource && typeof videoSource === 'string' && videoSource.trim() !== "") {

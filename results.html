@@ -111,6 +111,60 @@
             width: 100%;
         }
 
+        /* ====================================================
+   CONFINEMENT STRICT DU GRAPHISME DE FIN (TALLY)
+   ==================================================== */
+
+/* 1. CONTENEUR PARENT : Verrouille la largeur et ajoute un scroll propre si ça dépasse */
+.tally-wrapper {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    overflow-x: auto !important; /* Active le défilement horizontal fluide */
+    overflow-y: hidden !important;
+    padding: 20px 10px !important;
+    display: flex !important;
+    gap: 15px !important;
+    justify-content: flex-start !important;
+    align-items: stretch !important;
+    scroll-behavior: smooth;
+}
+
+/* 2. LES CARTES : Interdiction absolue de sortir du cadre */
+.tally-card {
+    flex: 0 0 auto !important; /* Empêche les cartes de s'étirer à l'infini */
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important; /* Coupe tout ce qui dépasse de la carte */
+    word-break: break-word !important; /* Coupe les titres trop longs */
+    border-radius: 12px;
+}
+
+/* 3. IMAGES / VIDÉOS DANS LES CARTES : S'adaptent toujours à la carte */
+.tally-card img, 
+.tally-card video, 
+.tally-card iframe {
+    max-width: 100% !important;
+    height: auto !important;
+    object-fit: cover;
+}
+
+/* 4. DESIGN BARRE DE DÉFILEMENT FLUIDE ET MODERNE (Scrollbar) */
+.tally-wrapper::-webkit-scrollbar {
+    height: 8px;
+}
+.tally-wrapper::-webkit-scrollbar-track {
+    background: rgba(15, 23, 42, 0.6);
+    border-radius: 10px;
+}
+.tally-wrapper::-webkit-scrollbar-thumb {
+    background: var(--primary, #6366f1);
+    border-radius: 10px;
+}
+.tally-wrapper::-webkit-scrollbar-thumb:hover {
+    background: #4f46e5;
+}
+
         /* Mode Years : 2 Colonnes */
         .tally-grid {
             display: grid;
@@ -583,7 +637,16 @@
     }
 
     function generateTableHTML() {
-        const rankWeight = { "🏆 CHAMPION 🏆": 1, "Finaliste (2ème)": 2, "Top 4 (Demi-Finales)": 3, "Top 8 (Quarts)": 4, "Top 16 (8èmes)": 5, "Top 32 (16èmes)": 6, "Top 64 (32èmes)": 7 };
+        const rankWeight = { 
+            "🏆 CHAMPION 🏆": 1, 
+            "Finaliste (2ème)": 2, 
+            "Top 4 (Demi-Finales)": 3, 
+            "Top 8 (Quarts)": 4, 
+            "Top 16 (8èmes)": 5, 
+            "Top 32 (16èmes)": 6, 
+            "Top 64 (32èmes)": 7 
+        };
+        
         const sortedEntries = [...initialShuffled].sort((a, b) => (rankWeight[a.result] || 9) - (rankWeight[b.result] || 9));
 
         let rows = sortedEntries.map(e => {
@@ -591,16 +654,31 @@
             if (e.result === "🏆 CHAMPION 🏆") statusClass = "status-winner";
             else if (e.result === "Finaliste (2ème)") statusClass = "status-finalist";
             
-            const directLink = e.yt ? `https://www.youtube.com/watch?v=${e.yt}` : (e.at || "#");
-            const linkText = e.yt ? "Regarder ↗" : "AnimeThemes ↗";
-            
+            // GESTION INTELLIGENTE : AnisongDB ("as") vs YouTube ("yt") vs AnimeThemes ("at")
+            let directLink = "#";
+            let linkText = "Lien ↗";
+            let customStyle = "";
+
+            if (e.as && typeof e.as === 'string' && e.as.trim() !== "") {
+                directLink = e.as.trim();
+                linkText = "Regarder ↗";
+                customStyle = "background: rgba(16, 185, 129, 0.15); color: #10b981; border-color: rgba(16, 185, 129, 0.3);";
+            } else if (e.yt && typeof e.yt === 'string' && e.yt.trim() !== "") {
+                directLink = `https://www.youtube.com/watch?v=${e.yt.trim()}`;
+                linkText = "YouTube ↗";
+            } else if (e.at && typeof e.at === 'string' && e.at.trim() !== "") {
+                directLink = e.at.trim();
+                linkText = "Regarder ↗";
+                customStyle = "background: rgba(16, 185, 129, 0.15); color: #10b981; border-color: rgba(16, 185, 129, 0.3);";
+            }
+
             return `
                 <tr>
                     <td style="text-align: center; font-size: 1.1rem;">${e.starred ? '⭐' : '☆'}</td>
                     <td style="font-weight: ${e.result === '🏆 CHAMPION 🏆' ? 'bold' : 'normal'}">${e.title}</td>
                     <td class="${statusClass}">${e.result}</td>
                     <td style="text-align: center;">
-                        <a class="yt-link" href="${directLink}" target="_blank" style="padding: 4px 8px; font-size: 0.8rem; margin: 0;">${linkText}</a>
+                        <a class="yt-link" href="${directLink}" target="_blank" style="padding: 4px 8px; font-size: 0.8rem; margin: 0; ${customStyle}">${linkText}</a>
                     </td>
                 </tr>
             `;
@@ -610,7 +688,14 @@
             <div class="recap-section">
                 <h3>📊 CLASSEMENT GÉNÉRAL DES PARTICIPANTS</h3>
                 <table class="recap-table">
-                    <thead><tr><th style="width:80px; text-align:center;">Marqué</th><th>Titre de l'Anime / Musique</th><th>Résultat / Parcours</th><th style="width:140px; text-align:center;">Lien direct</th></tr></thead>
+                    <thead>
+                        <tr>
+                            <th style="width:80px; text-align:center;">Marqué</th>
+                            <th>Titre de l'Anime / Musique</th>
+                            <th>Résultat / Parcours</th>
+                            <th style="width:140px; text-align:center;">Lien direct</th>
+                        </tr>
+                    </thead>
                     <tbody>${rows}</tbody>
                 </table>
             </div>
