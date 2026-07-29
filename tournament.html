@@ -2,9 +2,15 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <!-- NOUVEAU : La balise Viewport indispensable pour l'affichage sur téléphone -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Tournoi Anime OP/ED - Matchs en Cours</title>
+
+    <!-- PRECONNECT ANISONGDB / AMQ / CATBOX (0 latence SSL) -->
+    <link rel="dns-prefetch" href="https://naedist.animemusicquiz.com">
+    <link rel="preconnect" href="https://naedist.animemusicquiz.com" crossorigin>
+    <link rel="dns-prefetch" href="https://files.catbox.moe">
+    <link rel="preconnect" href="https://files.catbox.moe" crossorigin>
+
     <style>
         :root { 
             --primary: #6366f1; 
@@ -33,7 +39,6 @@
             flex-wrap: wrap; 
         }
         
-        /* ADAPTATION MOBILE : Remplacement de la largeur fixe par max-width */
         .match-card { 
             background: var(--card-bg); 
             border-radius: 15px; 
@@ -89,7 +94,6 @@
             display: none !important; 
         }
 
-        /* Boutons interactifs */
         .star-btn { 
             background: #475569; 
             color: #e2e8f0; 
@@ -141,7 +145,6 @@
             border-color: #64748b;
         }
 
-        /* Bouton Retour en arrière */
         .undo-btn {
             background: #ef4444;
             color: white;
@@ -159,7 +162,6 @@
             background: #dc2626;
         }
 
-        /* ======== OPTIMISATIONS POUR TÉLÉPHONE ======== */
         @media (max-width: 768px) {
             .header { padding: 15px 10px; }
             .header h1 { font-size: 1.5rem; margin-top: 0; }
@@ -172,9 +174,8 @@
 </head>
 <body>
 
-<!-- Lecteurs invisibles pour précharger le match suivant en tâche de fond -->
+<!-- Lecteur invisible pour précharger le tableau en tâche de fond -->
 <video id="preloader-1" preload="auto" style="display:none;"></video>
-<video id="preloader-2" preload="auto" style="display:none;"></video>
 
 <!-- EN-TÊTE DU TOURNOI -->
 <div class="header">
@@ -201,20 +202,18 @@
             <button onclick="vote(1)">CHOISIR</button>
         </div>
     </div>
-        <button id="undo-btn" class="undo-btn" onclick="undo()">↩ Revenir en arrière</button>
-
+    <button id="undo-btn" class="undo-btn" onclick="undo()">↩ Revenir en arrière</button>
 </div>
 
 <script>
-    // Variables de contrôle globales
     let currentRound = [];
-    let initialShuffled = []; // Conservé pour la référence de tracé d'arbre et résultats
+    let initialShuffled = [];
     let nextRound = [];
     let currentIndex = 0;
     const matchHistory = [];
     const historyStateStack = [];
 
-    // Chargement initial depuis localStorage
+    // --- 1. DÉMARRAGE ET PRÉCHARGEMENT ---
     window.onload = () => {
         const storedParticipants = localStorage.getItem('tournamentParticipants');
         if (!storedParticipants) {
@@ -223,25 +222,54 @@
             return;
         }
 
-        // initialShuffled contient la distribution originale et sert de référence commune
         initialShuffled = JSON.parse(storedParticipants);
         currentRound = initialShuffled.map(e => ({ ...e }));
 
         updateDisplay();
+        startBackgroundPreloadAll();
     };
 
+    // PRÉCHARGEMENT 100% BLOB DÈS LE DÉBUT (BARRE 100% REMPLIE)
+    async function startBackgroundPreloadAll() {
+        console.log("🚀 [AnisongDB] Téléchargement 100% Blob de tout le tableau...");
+
+        for (let i = 0; i < currentRound.length; i++) {
+            const item = currentRound[i];
+            const videoUrl = item.as || item.at || item.link || item.url || item.resolvedUrl;
+
+            if (videoUrl && typeof videoUrl === 'string' && videoUrl.trim() !== "" && !item.isDownloaded && !item.isDownloading) {
+                item.isDownloading = true;
+
+                try {
+                    const cleanUrl = videoUrl.trim();
+                    console.log(`📥 [Aspiration 100%] : ${item.title}`);
+
+                    const response = await fetch(cleanUrl);
+                    const blob = await response.blob();
+
+                    // URL Blob locale (Garantit une barre de chargement 100% pleine !)
+                    item.blobUrl = URL.createObjectURL(blob);
+                    item.isDownloaded = true;
+                    console.log(`✅ [100% Rempli en cache RAM !] : ${item.title}`);
+                } catch (e) {
+                    console.warn(`Fallback URL directe pour ${item.title}`, e);
+                } finally {
+                    item.isDownloading = false;
+                }
+            }
+        }
+    }
+
+    // --- 2. AFFICHAGE ET LECTEURS ---
     function updateDisplay() {
         if (currentRound.length === 1) {
             showWinner(currentRound[0]);
             return;
         }
 
-        // Afficher/masquer le bouton de retour en arrière
         const undoBtn = document.getElementById('undo-btn');
-        if (historyStateStack.length > 0) {
-            undoBtn.style.display = 'inline-block';
-        } else {
-            undoBtn.style.display = 'none';
+        if (undoBtn) {
+            undoBtn.style.display = historyStateStack.length > 0 ? 'inline-block' : 'none';
         }
 
         document.getElementById('round-name').innerText = getRoundTitle(currentRound.length);
@@ -258,235 +286,54 @@
 
         document.getElementById('player1').innerHTML = getPlayerHTML(choice1, 0);
         document.getElementById('player2').innerHTML = getPlayerHTML(choice2, 1);
-
-        // Lancement asynchrone du chargement d'AnimeThemes
-        loadAnimeThemesPlayer(choice1, 1);
-        loadAnimeThemesPlayer(choice2, 2);
-
-        preloadNextMatches();
-    }
-
-    // Télécharge la vidéo brute en tâche de fond et la convertit en URL Blob locale
-    
-
-    // Anticipe et télécharge silencieusement les vidéos du match suivant en tâche de fond
-// LE HACK ABSOLU : Force 100% de téléchargement (UNIQUEMENT POUR ANIMETHEMES)
-    function force100PercentDownload(url, preloaderId, title) {
-        const preloader = document.getElementById(preloaderId);
-        if (!preloader) return;
-        
-        console.log(`🚀 [Forçage 100%] Aspiration lancée pour : ${title}`);
-        
-        preloader.src = url;
-        preloader.muted = true;        
-        preloader.playsInline = true;
-        preloader.playbackRate = 16.0; // VITESSE MAX : Le navigateur aspire le fichier
-
-        // Lance la lecture fantôme
-        preloader.play().then(() => {
-            console.log(`🚀 [Forçage 100%] Téléchargement à vitesse x16 en cours...`);
-        }).catch(e => console.warn(`Le navigateur attend un clic pour télécharger.`, e));
-
-        // Signal de fin de téléchargement complet
-        preloader.onended = () => {
-            console.log(`✅ [100%] TERMINÉ ! Fichier stocké en cache : ${title}`);
-            preloader.pause();
-        };
-    }
-
-    // Le préchargeur adapté pour tournament.html
-    async function preloadNextMatches() {
-        const nextIdx = currentIndex + 2;
-        if (nextIdx >= currentRound.length) return;
-        
-        const nextChoice1 = currentRound[nextIdx];
-        const nextChoice2 = currentRound[nextIdx + 1];
-
-        // Fonction interne pour gérer chaque vidéo proprement
-        const processPreload = async (choice, preloaderId) => {
-            // Si ce n'est pas du AnimeThemes, ou si c'est DÉJÀ téléchargé, on ignore.
-            if (!choice || !choice.at || choice.isDownloaded) return;
-
-            let url = choice.resolvedUrl;
-            
-            // Si l'URL n'a pas encore été trouvée, on interroge l'API
-            if (!url) {
-                console.log(`[Preload] Recherche de l'URL pour : ${choice.title}`);
-                url = await resolveAnimeThemesVideo(choice.at);
-                if (url) choice.resolvedUrl = url;
-            }
-
-            // Si on a l'URL, on lance le HACK x16 et on verrouille pour ne pas le refaire
-            if (url) {
-                choice.isDownloaded = true; 
-                force100PercentDownload(url, preloaderId, choice.title);
-            }
-        };
-
-        // Lance le processus d'aspiration pour le joueur Gauche et le joueur Droit
-        processPreload(nextChoice1, 'preloader-1');
-        processPreload(nextChoice2, 'preloader-2');
     }
 
     function getPlayerHTML(choice, index) {
-        if (choice.at) {
-            // Si l'URL a déjà été résolue par le préchargeur, on l'affiche directement sans loader
-            if (choice.resolvedUrl) {
-                console.log(`[Lecteur] Le concurrent ${index + 1} (${choice.title}) est déjà résolu. Affichage direct.`);
-                return `
-                    <video src="${choice.resolvedUrl}" controls preload="auto" style="width:100%; height:100%; object-fit:cover; border-radius:10px; background:#000;"></video>
-                `;
-            }
+        if (!choice) return `<div style="color:#ef4444; padding:20px;">⚠️ Élément vide</div>`;
 
-            console.log(`[Lecteur] Le concurrent ${index + 1} (${choice.title}) n'est pas encore résolu. Affichage du loader.`);
+        // 1. Utilise l'URL Blob (100% remplie) si disponible, sinon l'URL directe (as, at, link)
+        const videoSource = choice.blobUrl || choice.as || choice.at || choice.link || choice.url || choice.webm || choice.resolvedUrl;
+
+        if (videoSource && typeof videoSource === 'string' && videoSource.trim() !== "") {
+            return `<video src="${videoSource.trim()}" controls preload="auto" style="width:100%; height:100%; object-fit:cover; border-radius:10px; background:#000;"></video>`;
+        }
+        
+        // 2. Si c'est un lien YouTube ("yt")
+        const ytId = choice.yt || choice.youtube || choice.youtubeId;
+
+        if (ytId && typeof ytId === 'string' && ytId.trim() !== "") {
             return `
-                <div class="video-box-content" style="width:100%; height:100%;">
-                    <div class="video-loader" id="video-loader-${index}" style="width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; background:#000; color:#38bdf8; border-radius:10px;">
-                        <span style="font-size:0.9rem; font-weight:bold;">Interrogation d'AnimeThemes... ⏳</span>
-                    </div>
-                </div>
-                <div style="margin-top: 8px; display: flex; flex-direction: column; gap: 5px; align-items: center;">
-                    <a class="yt-link" href="${choice.at}" target="_blank" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border-color: rgba(16, 185, 129, 0.3);">
-                        Ouvrir sur AnimeThemes ↗
-                    </a>
+                <iframe src="https://www.youtube.com/embed/${ytId.trim()}?rel=0" allowfullscreen></iframe>
+                <div style="margin-top: 8px;">
+                    <button class="switch-btn" onclick="switchPlayer(${index}, '${ytId.trim()}')">Lecteur alternatif si bloqué 🔁</button>
                 </div>
             `;
         }
 
-        console.log(`[Lecteur] Rendu YouTube standard pour le concurrent ${index + 1} (${choice.title}).`);
+        // 3. Alerte si aucun lien n'est trouvé
         return `
-            <iframe src="https://www.youtube-nocookie.com/embed/${choice.yt}?rel=0" allowfullscreen></iframe>
-            <div style="margin-top: 8px; display: flex; flex-direction: column; gap: 5px; align-items: center;">
-                <a class="yt-link" href="https://www.youtube.com/watch?v=${choice.yt}" target="_blank">
-                    Ouvrir sur YouTube ↗ (si vidéo bloquée)
-                </a>
-                <button class="switch-btn" onclick="switchPlayer(${index}, '${choice.yt}')">
-                    <span id="switch-text-${index}">Lecteur alternatif si bloqué 🔁</span>
-                </button>
+            <div style="height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#ef4444; background:#000; padding:10px; text-align:center;">
+                <span style="font-weight:bold; font-size:0.9rem;">⚠️ Lien manquant dans le JSON</span>
             </div>
         `;
     }
 
-    // Interroge l'API AnimeThemes pour trouver le fichier .webm brut
-    // Convertit l'URL de la page en lien vidéo direct via l'API d'AnimeThemes (avec tri de résolution ascendante)
-    async function resolveAnimeThemesVideo(animethemesUrl) {
-        try {
-            const urlObj = new URL(animethemesUrl);
-            const pathParts = urlObj.pathname.split('/').filter(p => p);
-            const animeSlug = pathParts[1]; // ex: "boruto"
-            
-            // Extraction du code du thème (ex: "ED19-NCBD1080" -> "ED19")
-            const targetThemeSlug = pathParts[2].split('-')[0].toUpperCase();
-            
-            const response = await fetch(`https://api.animethemes.moe/anime/${animeSlug}?include=animethemes.animethemeentries.videos`);
-            if (!response.ok) throw new Error("HTTP " + response.status);
-            const json = await response.json();
-            
-            const themes = (json.anime && json.anime.animethemes) || [];
-            
-            // 1. Recherche du thème exact (ex: "ED19")
-            const matchedTheme = themes.find(theme => theme.slug.toUpperCase() === targetThemeSlug);
-            
-            if (matchedTheme && matchedTheme.animethemeentries) {
-                const allVideos = [];
-                // Regroupe toutes les vidéos alternatives disponibles pour ce morceau
-                for (const entry of matchedTheme.animethemeentries) {
-                    if (entry.videos) {
-                        allVideos.push(...entry.videos);
-                    }
-                }
-
-                if (allVideos.length > 0) {
-                    // TRI PHYSIQUE : Trie les vidéos par résolution croissante pour charger la plus légère d'abord (fast loading)
-                    allVideos.sort((a, b) => {
-                        const resA = a.resolution || 1080;
-                        const resB = b.resolution || 1080;
-                        return resA - resB;
-                    });
-                    return allVideos[0].link; // Renvoie l'URL du fichier .webm direct
-                }
-            }
-            
-            // 2. Recherche de secours en cas d'absence du thème structuré
-            for (const theme of themes) {
-                for (const entry of theme.animethemeentries || []) {
-                    for (const video of entry.videos || []) {
-                        const videoLink = video.link || "";
-                        const videoBasename = video.basename || "";
-                        if (videoLink.toLowerCase().includes(pathParts[2].toLowerCase()) || 
-                            videoBasename.toLowerCase().includes(pathParts[2].toLowerCase())) {
-                            return videoLink;
-                        }
-                    }
-                }
-            }
-        } catch (e) {
-            console.error("Erreur de récupération AnimeThemes API :", e);
-        }
-        return null;
-    }
-
-    // Gère le chargement asynchrone du lecteur natif
-    async function loadAnimeThemesPlayer(choice, playerNum) {
-        if (!choice.at) return;
-
-        const loader = document.getElementById(`video-loader-${playerNum - 1}`);
-        if (!loader) return;
-
-        console.log(`[API AnimeThemes] Résolution de l'URL pour le joueur ${playerNum} : ${choice.title}`);
-        
-        // On récupère l'URL préchargée en tâche de fond, sinon on la cherche en direct
-        let videoLink = choice.resolvedUrl;
-        if (!videoLink) {
-            videoLink = await resolveAnimeThemesVideo(choice.at);
-            if (videoLink) {
-                choice.resolvedUrl = videoLink;
-            }
-        }
-
-        if (videoLink) {
-            console.log(`[Lecteur] Chargement du flux vidéo natif pour : ${choice.title}`);
-            const parent = loader.parentElement;
-            if (parent) {
-                // Plus de Blob ici, juste la balise <video> classique.
-                // Le navigateur utilisera automatiquement ce qu'il a déjà préchargé.
-                parent.innerHTML = `
-                    <video src="${videoLink}" controls preload style="width:100%; height:100%; object-fit:cover; border-radius:10px; background:#000;"></video>
-                `;
-            }
-        } else {
-            console.error(`[API AnimeThemes] Impossible de résoudre l'adresse d'AnimeThemes pour : ${choice.title}`);
-            loader.innerHTML = `
-                <div style="padding: 10px; color: #ef4444; font-size: 0.85rem; font-weight:bold; text-align:center;">
-                    ⚠️ Résolution automatique impossible.<br>
-                    <a href="${choice.at}" target="_blank" style="display:inline-block; margin-top:8px; background:#ef4444; color:white; text-decoration:none; padding:6px 12px; border-radius:5px; font-size:0.8rem; box-shadow: 0 4px 6px rgba(0,0,0,0.2);">
-                        Écouter sur AnimeThemes ↗
-                    </a>
-                </div>
-            `;
-        }
-    }
-
     function switchPlayer(index, ytId) {
         const iframe = document.querySelector(`#player${index + 1} iframe`);
-        const textSpan = document.getElementById(`switch-text-${index}`);
-        if (!iframe || !textSpan) return;
-
-        if (iframe.src.includes('youtube')) {
+        if (!iframe) return;
+        if (iframe.src.includes('youtube.com')) {
             iframe.src = `https://yewtu.be/embed/${ytId}`;
-            textSpan.innerText = "Retourner au lecteur YouTube 🔁";
         } else {
-            iframe.src = `https://www.youtube-nocookie.com/embed/${ytId}?rel=0`;
-            textSpan.innerText = "Lecteur alternatif si bloqué 🔁";
+            iframe.src = `https://www.youtube.com/embed/${ytId}?rel=0`;
         }
     }
 
+    // --- 3. BOUTONS ET LOGIQUE DE TOURNOI ---
     function toggleStar(indexOffset) {
         const entry = currentRound[currentIndex + indexOffset];
         entry.starred = !entry.starred;
         
-        // Synchronise l'état marqué directement avec l'élément original de initialShuffled
-        const initialEntry = initialShuffled.find(e => e.yt === entry.yt);
+        const initialEntry = initialShuffled.find(e => (e.yt && e.yt === entry.yt) || (e.as && e.as === entry.as) || (e.at && e.at === entry.at));
         if (initialEntry) {
             initialEntry.starred = entry.starred;
         }
@@ -496,6 +343,7 @@
 
     function updateStarButtonState(indexOffset, isStarred) {
         const btn = document.getElementById(`star-${indexOffset}`);
+        if (!btn) return;
         if (isStarred) {
             btn.classList.add('starred');
             btn.innerText = "⭐ Marqué !";
@@ -516,7 +364,7 @@
                 p2: { ...m.p2 },
                 winnerTitle: m.winnerTitle
             })),
-            initialShuffledState: initialShuffled.map(e => ({ yt: e.yt, starred: e.starred, result: e.result }))
+            initialShuffledState: initialShuffled.map(e => ({ yt: e.yt, as: e.as, at: e.at, starred: e.starred, result: e.result }))
         });
     }
 
@@ -532,10 +380,9 @@
         matchHistory.length = 0;
         matchHistory.push(...prevState.matchHistory);
 
-        // Restauration asynchrone des états de initialShuffled
         if (prevState.initialShuffledState) {
             prevState.initialShuffledState.forEach(state => {
-                const target = initialShuffled.find(e => e.yt === state.yt);
+                const target = initialShuffled.find(e => (e.yt && e.yt === state.yt) || (e.as && e.as === state.as) || (e.at && e.at === state.at));
                 if (target) {
                     target.starred = state.starred;
                     target.result = state.result;
@@ -562,11 +409,10 @@
             winnerTitle: winner.title
         });
 
-        // Met à jour la valeur locale et celle synchronisée dans initialShuffled
         const stageName = getEliminationStageName(currentRound.length);
         loser.result = stageName;
         
-        const initialLoser = initialShuffled.find(e => e.yt === loser.yt);
+        const initialLoser = initialShuffled.find(e => (e.yt && e.yt === loser.yt) || (e.as && e.as === loser.as) || (e.at && e.at === loser.at));
         if (initialLoser) {
             initialLoser.result = stageName;
         }
@@ -579,6 +425,7 @@
             nextRound = [];
             currentIndex = 0;
         }
+
         updateDisplay();
     }
 
@@ -605,23 +452,20 @@
     function showWinner(winner) {
         winner.result = "🏆 CHAMPION 🏆";
 
-        const initialWinner = initialShuffled.find(e => e.yt === winner.yt);
+        const initialWinner = initialShuffled.find(e => (e.yt && e.yt === winner.yt) || (e.as && e.as === winner.as) || (e.at && e.at === winner.at));
         if (initialWinner) {
             initialWinner.result = "🏆 CHAMPION 🏆";
         }
 
-        // COUPE L'AUDIO DES LECTEURS ACTIFS immédiatement
         document.getElementById('player1').innerHTML = "";
         document.getElementById('player2').innerHTML = "";
 
-        // Enregistre les résultats dans le localStorage avant de rediriger
         localStorage.setItem('finalResults', JSON.stringify({
             winner: winner,
             matchHistory: matchHistory,
             initialShuffled: initialShuffled
         }));
 
-        // Redirection directe vers la page de résultats
         window.location.href = 'results.html';
     }
 </script>

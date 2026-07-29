@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test AMQ - Vitesse Ultra Boostée</title>
+    
+    <!-- BOOSTER 1 : Preconnect au serveur AMQ (Négocie le SSL/DNS à l'avance) -->
+    <link rel="dns-prefetch" href="https://naedist.animemusicquiz.com">
+    <link rel="preconnect" href="https://naedist.animemusicquiz.com" crossorigin>
+
+    <style>
+        :root { --primary: #6366f1; --bg: #0f172a; --card-bg: #1e293b; --text: #f8fafc; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); margin: 0; text-align: center; }
+        .header { padding: 20px; background: #1e293b; margin-bottom: 20px; }
+        .container { display: flex; justify-content: center; gap: 20px; padding: 20px; flex-wrap: wrap; }
+        .match-card { background: var(--card-bg); border-radius: 15px; padding: 15px; width: 100%; max-width: 450px; box-sizing: border-box; }
+        .video-box { width: 100%; aspect-ratio: 16/9; background: #000; border-radius: 10px; overflow: hidden; margin-bottom: 10px; position: relative; }
+        
+        /* Style des lecteurs recyclés */
+        video, iframe { width: 100%; height: 100%; border: none; object-fit: cover; position: absolute; top:0; left:0; }
+        button { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 8px; cursor: pointer; font-size: 1.2rem; font-weight: bold; width: 100%; margin-top: 10px; }
+        .vs { font-size: 3rem; align-self: center; color: #ef4444; font-weight: bold; }
+        
+        .badge { display: inline-block; padding: 5px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: bold; margin-bottom: 10px; }
+        .badge-amq { background: #10b981; color: white; }
+        .badge-yt { background: #ef4444; color: white; }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+<!-- BOOSTER 3 : Double préchargeur invisible (Gauche + Droite simultanés) -->
+<video id="preloader-left" preload="auto" style="display:none;"></video>
+<video id="preloader-right" preload="auto" style="display:none;"></video>
+
+<div class="header">
+    <h1>🚀 Test AMQ - Vitesse Max (Zéro Latence)</h1>
+    <p id="match-info" style="color: #38bdf8; font-weight: bold;">Duel 1 / 2</p>
+</div>
+
+<div class="container">
+    <!-- CARTE GAUCHE -->
+    <div class="match-card">
+        <span id="badge1" class="badge">AMQ Direct</span>
+        <div class="video-box">
+            <video id="video-player-1" controls preload="auto"></video>
+            <iframe id="yt-player-1" class="hidden" allowfullscreen></iframe>
+        </div>
+        <h3 id="title1">Chanson 1</h3>
+        <button onclick="vote(0)">CHOISIR</button>
+    </div>
+
+    <div class="vs">VS</div>
+
+    <!-- CARTE DROITE -->
+    <div class="match-card">
+        <span id="badge2" class="badge">AMQ Direct</span>
+        <div class="video-box">
+            <video id="video-player-2" controls preload="auto"></video>
+            <iframe id="yt-player-2" class="hidden" allowfullscreen></iframe>
+        </div>
+        <h3 id="title2">Chanson 2</h3>
+        <button onclick="vote(1)">CHOISIR</button>
+    </div>
+</div>
+
+<script>
+    // DONNÉES DE TEST AMQ + YOUTUBE
+    const testList = [
+        { title: "Test AMQ 1 (WebM Direct)", amq: "https://naedist.animemusicquiz.com/slwpxw.webm" },
+        { title: "Test AMQ 2 (WebM Direct)", amq: "https://naedist.animemusicquiz.com/ldbm8e.webm" },
+        { title: "Test YouTube (Solo Leveling)", yt: "u9H38O7-q_w" },
+        { title: "Test AMQ 3 (WebM Direct)", amq: "https://naedist.animemusicquiz.com/zptefi.webm" }
+    ];
+
+    let currentIndex = 0;
+
+    // BOOSTER 4 : Aspiration en arrière-plan dans le cache HTTP
+    function prefetchToCache(url) {
+        if (!url) return;
+        fetch(url, { cache: "force-cache" }).catch(() => {});
+    }
+
+    function updateDisplay() {
+        if (currentIndex >= testList.length) {
+            alert("🏆 Test terminé ! Rechargement du test...");
+            currentIndex = 0;
+        }
+
+        document.getElementById('match-info').innerText = `Duel ${(currentIndex/2)+1} / ${testList.length/2}`;
+
+        const c1 = testList[currentIndex];
+        const c2 = testList[currentIndex + 1];
+
+        document.getElementById('title1').innerText = c1.title;
+        document.getElementById('title2').innerText = c2.title;
+
+        // Mise à jour des badges
+        document.getElementById('badge1').innerText = c1.amq ? "AnisongDB Direct ⚡" : "YouTube 🔴";
+        document.getElementById('badge1').className = "badge " + (c1.amq ? "badge-amq" : "badge-yt");
+
+        document.getElementById('badge2').innerText = c2.amq ? "AnisongDB Direct ⚡" : "YouTube 🔴";
+        document.getElementById('badge2').className = "badge " + (c2.amq ? "badge-amq" : "badge-yt");
+
+        // BOOSTER 2 : Recyclage du lecteur sans toucher au DOM (Changement instantané)
+        setupPlayer(1, c1);
+        setupPlayer(2, c2);
+
+        // Déclenche le double préchargement pour le duel suivant
+        preloadNextMatchBoth();
+    }
+
+    function setupPlayer(playerNum, choice) {
+        const v = document.getElementById(`video-player-${playerNum}`);
+        const yt = document.getElementById(`yt-player-${playerNum}`);
+
+        if (choice.amq) {
+            yt.classList.add('hidden');
+            yt.src = ""; // Libère YouTube
+            v.classList.remove('hidden');
+
+            if (v.src !== choice.amq) {
+                v.src = choice.amq;
+                v.load(); // Recharge le décodeur GPU instantanément
+            }
+        } else {
+            v.classList.add('hidden');
+            v.src = "";
+            v.pause();
+            yt.classList.remove('hidden');
+            yt.src = `https://www.youtube.com/embed/${choice.yt}?rel=0`;
+        }
+    }
+
+    // BOOSTER 3 : Préchargement des DEUX vidéos du match suivant en même temps
+    function preloadNextMatchBoth() {
+        const nextIdx = currentIndex + 2;
+        if (nextIdx < testList.length) {
+            const next1 = testList[nextIdx];
+            const next2 = testList[nextIdx + 1];
+
+            if (next1 && next1.amq) {
+                const pLeft = document.getElementById('preloader-left');
+                pLeft.src = next1.amq;
+                prefetchToCache(next1.amq); // Aspiration mémoire cache
+            }
+
+            if (next2 && next2.amq) {
+                const pRight = document.getElementById('preloader-right');
+                pRight.src = next2.amq;
+                prefetchToCache(next2.amq); // Aspiration mémoire cache
+            }
+        }
+    }
+
+    function vote(idx) {
+        currentIndex += 2;
+        updateDisplay();
+    }
+
+    // Lancement au démarrage
+    updateDisplay();
+</script>
+
+</body>
+</html>

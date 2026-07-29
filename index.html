@@ -391,6 +391,7 @@
     function normalizeEntry(e, index) {
         let title = e.title || e.name || e.song || e.label || `Entrée ${index + 1}`;
         const yt = e.yt || e.youtube || e.youtubeId || e.videoId || e.id || e.url || "";
+        const as = e.as || ""; // <-- AJOUTÉ : Récupère la clé AnisongDB
         const at = e.at || ""; 
         const thumb = e.thumb || ""; 
         const vocal = (e.vocal || e.gender || "").toLowerCase();
@@ -408,7 +409,8 @@
         if (type === "OP" && !title.toUpperCase().includes("(OP)")) title = `${title} (OP)`;
         else if (type === "ED" && !title.toUpperCase().includes("(ED)")) title = `${title} (ED)`;
 
-        return { title, yt, at, thumb, type, vocal, starred: false, result: "" };
+        // AJOUTÉ : 'as' est maintenant bien renvoyé dans le résultat !
+        return { title, yt, as, at, thumb, type, vocal, starred: false, result: "" };
     }
 
     function normalizeSeasonData(raw, fallbackName) {

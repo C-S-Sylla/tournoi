@@ -4,6 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Battle d'Années - Matchs</title>
+
+    <!-- PRECONNECT ANISONGDB / AMQ / CATBOX -->
+    <link rel="dns-prefetch" href="https://naedist.animemusicquiz.com">
+    <link rel="preconnect" href="https://naedist.animemusicquiz.com" crossorigin>
+    <link rel="dns-prefetch" href="https://files.catbox.moe">
+    <link rel="preconnect" href="https://files.catbox.moe" crossorigin>
+
     <style>
         :root { --primary: #6366f1; --bg: #0f172a; --card-bg: #1e293b; --text: #f8fafc; }
         body { font-family: sans-serif; background: var(--bg); color: var(--text); margin: 0; text-align: center; }
@@ -11,7 +18,6 @@
         
         .container { display: flex; justify-content: center; gap: 20px; padding: 20px; flex-wrap: wrap; }
         
-        /* ADAPTATION MOBILE */
         .match-card { 
             background: var(--card-bg); 
             border-radius: 15px; 
@@ -26,7 +32,6 @@
             transition: 0.3s; 
         }
         
-        /* Couleurs pour Zone Gauche (Bleu) et Zone Droite (Rouge/Rose) */
         .match-card.year-left-card { border-color: rgba(59, 130, 246, 0.5); box-shadow: 0 0 15px rgba(59, 130, 246, 0.2); }
         .match-card.year-right-card { border-color: rgba(72, 236, 75, 0.5); box-shadow: 0 0 15px rgba(72, 236, 94, 0.2); }
         
@@ -40,7 +45,6 @@
         .star-btn { background: #475569; padding: 8px; margin-bottom: 12px; font-size: 1rem; width: 100%; transition: 0.2s;}
         .star-btn.starred { background: #eab308; color: #0f172a; }
         
-        .yt-link { color: #38bdf8; font-size: 0.85rem; padding: 6px; background: rgba(56,189,248,0.15); border-radius: 6px; text-decoration: none; display: inline-block; font-weight: bold; }
         .switch-btn { background: #1e293b; font-size: 0.8rem; padding: 8px; color: #94a3b8; border: 1px solid #475569; border-radius: 5px; cursor: pointer; margin-top: 5px; transition: 0.2s;}
         .switch-btn:hover { background: #334155; color: white;}
         .undo-btn { background: #ef4444; margin-top: 10px; display: none; padding: 10px 20px; font-size: 1rem; color: white; border-radius: 8px; border: none; cursor: pointer; font-weight: bold; }
@@ -95,64 +99,55 @@
     const matchHistory = [];
     const historyStateStack = [];
 
+    // --- 1. DÉMARRAGE ET PRÉCHARGEMENT ---
     window.onload = () => {
         const stored = localStorage.getItem('tournamentParticipants');
         if (!stored) return window.location.href = 'index.html';
         
-        // Récupération des vrais noms des années sélectionnées
         const yearNames = JSON.parse(localStorage.getItem('yearNames') || '{}');
         if (yearNames.left) document.getElementById('score-left-name').innerText = yearNames.left;
         if (yearNames.right) document.getElementById('score-right-name').innerText = yearNames.right;
         
         currentList = JSON.parse(stored);
         
-        // Lance la résolution silencieuse de toutes les URLs AnimeThemes
-        resolveAllAnimeThemesInBackground();
-        
         updateDisplay();
+        startBackgroundPreloadAll();
     };
 
-    async function resolveAllAnimeThemesInBackground() {
-        console.log("🤖 [Background] Lancement de la résolution d'API pour toutes les musiques...");
+    // PRÉCHARGEMENT 100% BLOB EN TÂCHE DE FOND (BARRE 100% REMPLIE EN AVANCE)
+    async function startBackgroundPreloadAll() {
+        console.log("🚀 [AnisongDB] Téléchargement 100% Blob de tout le tableau...");
+
         for (let i = 0; i < currentList.length; i++) {
-            const entry = currentList[i];
-            if (entry.at && !entry.resolvedUrl) {
-                const url = await resolveAnimeThemesVideo(entry.at);
-                if (url) {
-                    entry.resolvedUrl = url;
+            const item = currentList[i];
+            const videoUrl = item.as || item.at || item.link || item.url || item.resolvedUrl;
+
+            // Si un lien vidéo existe et n'est pas encore téléchargé à 100%
+            if (videoUrl && typeof videoUrl === 'string' && videoUrl.trim() !== "" && !item.isDownloaded && !item.isDownloading) {
+                item.isDownloading = true;
+
+                try {
+                    const cleanUrl = videoUrl.trim();
+                    console.log(`📥 [Aspiration 100%] Téléchargement de : ${item.title}`);
+                    
+                    // Télécharge 100% des octets du fichier en mémoire RAM
+                    const response = await fetch(cleanUrl);
+                    const blob = await response.blob();
+
+                    // Crée une URL Blob locale (Garantit une barre de chargement 100% pleine !)
+                    item.blobUrl = URL.createObjectURL(blob);
+                    item.isDownloaded = true;
+                    console.log(`✅ [Barre 100% Pleine !] : ${item.title}`);
+                } catch (e) {
+                    console.warn(`Passage en flux direct pour ${item.title}`, e);
+                } finally {
+                    item.isDownloading = false;
                 }
-                await new Promise(resolve => setTimeout(resolve, 200));
             }
         }
-        console.log("🤖 [Background] Toutes les musiques ont été résolues !");
     }
 
-    async function resolveAnimeThemesVideo(atUrl) {
-        try {
-            const parts = atUrl.replace(/\/$/, "").split('/');
-            const resp = await fetch(`https://api.animethemes.moe/anime/${parts[parts.length-2]}?include=animethemes.animethemeentries.videos`);
-            const json = await resp.json();
-            const themes = json.anime?.animethemes || [];
-            const targetTheme = parts[parts.length-1].split('-')[0].toUpperCase();
-            
-            const match = themes.find(t => t.slug.toUpperCase() === targetTheme);
-            if (match && match.animethemeentries) {
-                let videos = [];
-                match.animethemeentries.forEach(e => { if(e.videos) videos.push(...e.videos) });
-                if (videos.length > 0) return videos.sort((a,b) => (a.resolution||1080) - (b.resolution||1080))[0].link;
-            }
-            
-            for (const t of themes) {
-                for (const e of t.animethemeentries || []) {
-                    for (const v of e.videos || []) {
-                        if ((v.link||"").toLowerCase().includes(parts[parts.length-1].toLowerCase())) return v.link;
-                    }
-                }
-            }
-        } catch(e) {}
-        return null;
-    }
-
+    // --- 2. AFFICHAGE ET LECTEURS ---
     function updateDisplay() {
         if (currentIndex >= currentList.length) {
             return endCompte();
@@ -172,102 +167,48 @@
 
         document.getElementById('player1').innerHTML = getPlayerHTML(c1, 0);
         document.getElementById('player2').innerHTML = getPlayerHTML(c2, 1);
-
-        if (c1.at && !c1.resolvedUrl) loadAnimeThemesPlayer(c1, 1);
-        if (c2.at && !c2.resolvedUrl) loadAnimeThemesPlayer(c2, 2);
-
-        setTimeout(preloadNextMatches, 2500);
     }
 
     function getPlayerHTML(choice, index) {
-        if (choice.at) {
-            if (choice.resolvedUrl) {
-                return `<video src="${choice.resolvedUrl}" controls preload="auto"></video>`;
-            }
-            return `<div id="video-loader-${index}" style="height:100%; display:flex; align-items:center; justify-content:center; color:#38bdf8; background:#000;">⏳ Résolution...</div>`;
+        if (!choice) return `<div style="color:#ef4444; padding:20px;">⚠️ Élément vide</div>`;
+
+        // 1. Utilise l'URL Blob (100% remplie) si disponible, sinon le lien direct
+        const videoSource = choice.blobUrl || choice.as || choice.at || choice.link || choice.url || choice.webm || choice.resolvedUrl;
+
+        if (videoSource && typeof videoSource === 'string' && videoSource.trim() !== "") {
+            return `<video src="${videoSource.trim()}" controls preload="auto" style="width:100%; height:100%; object-fit:cover; border-radius:10px; background:#000;"></video>`;
         }
         
-        // CORRIGÉ : Syntaxe YouTube rétablie
+        // 2. Si c'est un lien YouTube
+        const ytId = choice.yt || choice.youtube || choice.youtubeId;
+
+        if (ytId && typeof ytId === 'string' && ytId.trim() !== "") {
+            return `
+                <iframe src="https://www.youtube.com/embed/${ytId.trim()}?rel=0" allowfullscreen></iframe>
+                <div style="margin-top: 8px;">
+                    <button class="switch-btn" onclick="switchPlayer(${index}, '${ytId.trim()}')">Lecteur alternatif si bloqué 🔁</button>
+                </div>
+            `;
+        }
+
         return `
-            <iframe src="https://www.youtube-nocookie.com/embed/${choice.yt}?rel=0" allowfullscreen></iframe>
-            <div style="margin-top: 8px;">
-                <button class="switch-btn" onclick="switchPlayer(${index}, '${choice.yt}')">Lecteur alternatif si bloqué 🔁</button>
+            <div style="height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#ef4444; background:#000; padding:10px; text-align:center;">
+                <span style="font-weight:bold; font-size:0.9rem;">⚠️ Lien manquant dans le JSON</span>
             </div>
         `;
     }
 
-    // CORRIGÉ : Switch de lecteur alternatif
     function switchPlayer(i, ytId) {
         const iframe = document.querySelector(`#player${i + 1} iframe`);
         if (!iframe) return;
-        if (iframe.src.includes('youtube')) {
+        if (iframe.src.includes('youtube.com')) {
             iframe.src = `https://yewtu.be/embed/${ytId}`;
         } else {
-            iframe.src = `https://www.youtube-nocookie.com/embed/${ytId}?rel=0`;
+            iframe.src = `https://www.youtube.com/embed/${ytId}?rel=0`;
         }
     }
 
-    async function loadAnimeThemesPlayer(choice, playerNum) {
-        let url = await resolveAnimeThemesVideo(choice.at);
-        if (url) {
-            choice.resolvedUrl = url;
-            const loader = document.getElementById(`video-loader-${playerNum - 1}`);
-            if (loader && loader.parentElement) {
-                loader.parentElement.innerHTML = `<video src="${url}" controls preload="auto"></video>`;
-            }
-        }
-    }
-
-    function force100PercentDownload(url, preloaderId, title) {
-        const preloader = document.getElementById(preloaderId);
-        if (!preloader) return;
-        
-        console.log(`🚀 [Forçage 100%] Aspiration lancée pour : ${title}`);
-        
-        preloader.src = url;
-        preloader.muted = true;        
-        preloader.playsInline = true;
-        preloader.playbackRate = 16.0;
-
-        preloader.play().then(() => {
-            console.log(`🚀 [Forçage 100%] Téléchargement en cours...`);
-        }).catch(e => console.warn(`Attente interaction utilisateur.`, e));
-
-        preloader.onended = () => {
-            console.log(`✅ [100%] TERMINÉ : ${title}`);
-            preloader.pause();
-        };
-    }
-
-    async function preloadNextMatches() {
-        const listToUse = typeof currentList !== 'undefined' ? currentList : currentRound; 
-        
-        const nextIdx = currentIndex + 2;
-        if (nextIdx >= listToUse.length) return;
-        
-        const c1 = listToUse[nextIdx];
-        const c2 = listToUse[nextIdx + 1];
-
-        const processPreload = async (choice, preloaderId) => {
-            if (!choice || !choice.at || choice.isDownloaded) return;
-
-            let url = choice.resolvedUrl;
-            
-            if (!url) {
-                url = await resolveAnimeThemesVideo(choice.at);
-                if (url) choice.resolvedUrl = url;
-            }
-
-            if (url) {
-                choice.isDownloaded = true; 
-                force100PercentDownload(url, preloaderId, choice.title);
-            }
-        };
-
-        processPreload(c1, 'preloader-1');
-        processPreload(c2, 'preloader-2');
-    }
-
+    // --- 3. BOUTONS ET NAVIGATION ---
     function toggleStar(idx) {
         const entry = currentList[currentIndex + idx];
         entry.starred = !entry.starred;
@@ -276,6 +217,7 @@
     
     function updateStarButtonState(idx, st) {
         const btn = document.getElementById('star-' + idx);
+        if (!btn) return;
         btn.classList.toggle('starred', st); 
         btn.innerText = st ? "⭐ Marqué !" : "☆ Marquer ?";
     }
