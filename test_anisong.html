@@ -3,11 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Test AMQ - Vitesse Ultra Boostée</title>
+    <title>Test AMQ - Vitesse Ultra Boostée + Hot-Swap</title>
     
     <!-- BOOSTER 1 : Preconnect au serveur AMQ (Négocie le SSL/DNS à l'avance) -->
     <link rel="dns-prefetch" href="https://naedist.animemusicquiz.com">
     <link rel="preconnect" href="https://naedist.animemusicquiz.com" crossorigin>
+    <link rel="dns-prefetch" href="https://files.catbox.moe">
+    <link rel="preconnect" href="https://files.catbox.moe" crossorigin>
 
     <style>
         :root { --primary: #6366f1; --bg: #0f172a; --card-bg: #1e293b; --text: #f8fafc; }
@@ -30,12 +32,8 @@
 </head>
 <body>
 
-<!-- BOOSTER 3 : Double préchargeur invisible (Gauche + Droite simultanés) -->
-<video id="preloader-left" preload="auto" style="display:none;"></video>
-<video id="preloader-right" preload="auto" style="display:none;"></video>
-
 <div class="header">
-    <h1>🚀 Test AMQ - Vitesse Max (Zéro Latence)</h1>
+    <h1>🚀 Test AMQ - Vitesse Max + Hot-Swap 100%</h1>
     <p id="match-info" style="color: #38bdf8; font-weight: bold;">Duel 1 / 2</p>
 </div>
 
@@ -76,12 +74,63 @@
 
     let currentIndex = 0;
 
-    // BOOSTER 4 : Aspiration en arrière-plan dans le cache HTTP
-    function prefetchToCache(url) {
-        if (!url) return;
-        fetch(url, { cache: "force-cache" }).catch(() => {});
+    // 1. ASPIRATION 100% BLOB EN TÂCHE DE FOND
+    async function startBackgroundPreloadAll() {
+        console.log("🚀 [AMQ Blob] Démarrage de l'aspiration 100%...");
+
+        for (let i = 0; i < testList.length; i++) {
+            const item = testList[i];
+            const videoUrl = item.amq || item.as || item.url;
+
+            if (videoUrl && !item.blobUrl && !item.isDownloading) {
+                item.isDownloading = true;
+
+                try {
+                    console.log(`📥 [Aspiration 100%] : ${item.title}`);
+                    const response = await fetch(videoUrl);
+                    const blob = await response.blob();
+
+                    // Conversion en URL Blob locale
+                    item.blobUrl = URL.createObjectURL(blob);
+                    item.isDownloaded = true;
+                    console.log(`✅ [Barre 100% Pleine !] : ${item.title}`);
+
+                    // HOT-SWAP : Bascule en direct si le joueur regarde cette vidéo !
+                    refreshActiveVideoPlayersIfBlobReady();
+                } catch (e) {
+                    console.warn(`Fallback direct pour ${item.title}`, e);
+                } finally {
+                    item.isDownloading = false;
+                }
+            }
+        }
     }
 
+    // 2. HOT-SWAP EN DIRECT (Bascule la barre à 100% sans couper la musique)
+    function refreshActiveVideoPlayersIfBlobReady() {
+        const checkAndSwap = (item, playerNum) => {
+            if (!item || !item.blobUrl) return;
+            const v = document.getElementById(`video-player-${playerNum}`);
+            
+            // Si la vidéo tourne actuellement sur l'URL directe (pas encore en Blob)
+            if (v && !v.classList.contains('hidden') && !v.src.startsWith('blob:')) {
+                const currentTime = v.currentTime; // Retient la seconde
+                const isPaused = v.paused;
+
+                v.src = item.blobUrl;
+                v.currentTime = currentTime; // Reprend au même endroit
+                if (!isPaused) {
+                    v.play().catch(() => {});
+                }
+                console.log(`⚡ [Hot-Swap AMQ] Barre mise à 100% en direct pour Joueur ${playerNum} : ${item.title}`);
+            }
+        };
+
+        if (testList[currentIndex]) checkAndSwap(testList[currentIndex], 1);
+        if (testList[currentIndex + 1]) checkAndSwap(testList[currentIndex + 1], 2);
+    }
+
+    // 3. AFFICHAGE ET RECYCLAGE DU LECTEUR
     function updateDisplay() {
         if (currentIndex >= testList.length) {
             alert("🏆 Test terminé ! Rechargement du test...");
@@ -97,60 +146,41 @@
         document.getElementById('title2').innerText = c2.title;
 
         // Mise à jour des badges
-        document.getElementById('badge1').innerText = c1.amq ? "AnisongDB Direct ⚡" : "YouTube 🔴";
-        document.getElementById('badge1').className = "badge " + (c1.amq ? "badge-amq" : "badge-yt");
+        document.getElementById('badge1').innerText = (c1.amq || c1.as) ? "AnisongDB Direct ⚡" : "YouTube 🔴";
+        document.getElementById('badge1').className = "badge " + ((c1.amq || c1.as) ? "badge-amq" : "badge-yt");
 
-        document.getElementById('badge2').innerText = c2.amq ? "AnisongDB Direct ⚡" : "YouTube 🔴";
-        document.getElementById('badge2').className = "badge " + (c2.amq ? "badge-amq" : "badge-yt");
+        document.getElementById('badge2').innerText = (c2.amq || c2.as) ? "AnisongDB Direct ⚡" : "YouTube 🔴";
+        document.getElementById('badge2').className = "badge " + ((c2.amq || c2.as) ? "badge-amq" : "badge-yt");
 
-        // BOOSTER 2 : Recyclage du lecteur sans toucher au DOM (Changement instantané)
+        // Configuration instantanée des lecteurs
         setupPlayer(1, c1);
         setupPlayer(2, c2);
-
-        // Déclenche le double préchargement pour le duel suivant
-        preloadNextMatchBoth();
     }
 
     function setupPlayer(playerNum, choice) {
         const v = document.getElementById(`video-player-${playerNum}`);
         const yt = document.getElementById(`yt-player-${playerNum}`);
 
-        if (choice.amq) {
+        if (!choice) return;
+
+        // Utilise le Blob (100% plein) en priorité si prêt
+        const videoSource = choice.blobUrl || choice.amq || choice.as || choice.url;
+
+        if (videoSource) {
             yt.classList.add('hidden');
-            yt.src = ""; // Libère YouTube
+            yt.src = "";
             v.classList.remove('hidden');
 
-            if (v.src !== choice.amq) {
-                v.src = choice.amq;
-                v.load(); // Recharge le décodeur GPU instantanément
+            if (v.src !== videoSource) {
+                v.src = videoSource;
+                v.load();
             }
-        } else {
+        } else if (choice.yt) {
             v.classList.add('hidden');
             v.src = "";
             v.pause();
             yt.classList.remove('hidden');
             yt.src = `https://www.youtube.com/embed/${choice.yt}?rel=0`;
-        }
-    }
-
-    // BOOSTER 3 : Préchargement des DEUX vidéos du match suivant en même temps
-    function preloadNextMatchBoth() {
-        const nextIdx = currentIndex + 2;
-        if (nextIdx < testList.length) {
-            const next1 = testList[nextIdx];
-            const next2 = testList[nextIdx + 1];
-
-            if (next1 && next1.amq) {
-                const pLeft = document.getElementById('preloader-left');
-                pLeft.src = next1.amq;
-                prefetchToCache(next1.amq); // Aspiration mémoire cache
-            }
-
-            if (next2 && next2.amq) {
-                const pRight = document.getElementById('preloader-right');
-                pRight.src = next2.amq;
-                prefetchToCache(next2.amq); // Aspiration mémoire cache
-            }
         }
     }
 
@@ -161,6 +191,7 @@
 
     // Lancement au démarrage
     updateDisplay();
+    startBackgroundPreloadAll();
 </script>
 
 </body>
