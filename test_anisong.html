@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Test AMQ - Vitesse Ultra Boostée + Hot-Swap</title>
+    <title>Test AMQ - Vitesse Max + Export HTML</title>
     
-    <!-- BOOSTER 1 : Preconnect au serveur AMQ (Négocie le SSL/DNS à l'avance) -->
+    <!-- PRECONNECT SERVEURS AMQ & CATBOX -->
     <link rel="dns-prefetch" href="https://naedist.animemusicquiz.com">
     <link rel="preconnect" href="https://naedist.animemusicquiz.com" crossorigin>
     <link rel="dns-prefetch" href="https://files.catbox.moe">
@@ -19,7 +19,6 @@
         .match-card { background: var(--card-bg); border-radius: 15px; padding: 15px; width: 100%; max-width: 450px; box-sizing: border-box; }
         .video-box { width: 100%; aspect-ratio: 16/9; background: #000; border-radius: 10px; overflow: hidden; margin-bottom: 10px; position: relative; }
         
-        /* Style des lecteurs recyclés */
         video, iframe { width: 100%; height: 100%; border: none; object-fit: cover; position: absolute; top:0; left:0; }
         button { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 8px; cursor: pointer; font-size: 1.2rem; font-weight: bold; width: 100%; margin-top: 10px; }
         .vs { font-size: 3rem; align-self: center; color: #ef4444; font-weight: bold; }
@@ -28,13 +27,31 @@
         .badge-amq { background: #10b981; color: white; }
         .badge-yt { background: #ef4444; color: white; }
         .hidden { display: none !important; }
+
+        .export-btn {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 15px auto;
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+            transition: 0.2s;
+        }
+        .export-btn:hover { background: #059669; transform: scale(1.02); }
     </style>
 </head>
 <body>
 
 <div class="header">
-    <h1>🚀 Test AMQ - Vitesse Max + Hot-Swap 100%</h1>
+    <h1>🚀 Test AMQ - Vitesse Max + Export HTML</h1>
     <p id="match-info" style="color: #38bdf8; font-weight: bold;">Duel 1 / 2</p>
+    
+    <!-- BOUTON D'EXPORTATION -->
+    <button class="export-btn" onclick="exportTestAsStandaloneHTML()">🎮 Exporter cette Partie en HTML Autonome (.html)</button>
 </div>
 
 <div class="container">
@@ -64,7 +81,6 @@
 </div>
 
 <script>
-    // DONNÉES DE TEST AMQ + YOUTUBE
     const testList = [
         { title: "Test AMQ 1 (WebM Direct)", amq: "https://naedist.animemusicquiz.com/slwpxw.webm" },
         { title: "Test AMQ 2 (WebM Direct)", amq: "https://naedist.animemusicquiz.com/ldbm8e.webm" },
@@ -74,7 +90,82 @@
 
     let currentIndex = 0;
 
-    // 1. ASPIRATION 100% BLOB EN TÂCHE DE FOND
+    // 1. EXPORTATION TOTALEMENT ÉTANCHE (ZÉRO TEXTE SUR L'ÉCRAN)
+    function exportTestAsStandaloneHTML() {
+        const dataJSON = JSON.stringify(testList);
+
+        const templateLines = [
+            '<!DOCTYPE html>',
+            '<html lang="fr">',
+            '<head>',
+            '    <meta charset="UTF-8">',
+            '    <meta name="viewport" content="width=device-width, initial-scale=1.0">',
+            '    <title>Partie Standalone - Test AMQ</title>',
+            '    <link rel="preconnect" href="https://naedist.animemusicquiz.com" crossorigin>',
+            '    <style>',
+            '        body { font-family: sans-serif; background: #0f172a; color: #f8fafc; margin: 0; text-align: center; }',
+            '        .header { padding: 20px; background: #1e293b; margin-bottom: 20px; }',
+            '        .container { display: flex; justify-content: center; gap: 20px; padding: 20px; flex-wrap: wrap; }',
+            '        .match-card { background: #1e293b; border-radius: 15px; padding: 15px; width: 100%; max-width: 450px; box-sizing: border-box; }',
+            '        .video-box { width: 100%; aspect-ratio: 16/9; background: #000; border-radius: 10px; overflow: hidden; margin-bottom: 10px; }',
+            '        video, iframe { width: 100%; height: 100%; border: none; object-fit: cover; }',
+            '        button { background: #6366f1; color: white; border: none; padding: 15px; border-radius: 8px; cursor: pointer; font-size: 1.2rem; font-weight: bold; width: 100%; margin-top: 10px; }',
+            '        .vs { font-size: 3rem; align-self: center; color: #ef4444; font-weight: bold; }',
+            '    </style>',
+            '</head>',
+            '<body>',
+            '    <div class="header">',
+            '        <h1>🎮 Partie Interactive Exportée</h1>',
+            '        <p id="match-info" style="color: #38bdf8; font-weight: bold;">Duel 1 / X</p>',
+            '    </div>',
+            '    <div class="container" id="game-area">',
+            '        <div class="match-card">',
+            '            <div class="video-box"><video id="v1" controls preload="auto"></video></div>',
+            '            <h3 id="t1">Anime 1</h3>',
+            '            <button onclick="vote(0)">CHOISIR</button>',
+            '        </div>',
+            '        <div class="vs">VS</div>',
+            '        <div class="match-card">',
+            '            <div class="video-box"><video id="v2" controls preload="auto"></video></div>',
+            '            <h3 id="t2">Anime 2</h3>',
+            '            <button onclick="vote(1)">CHOISIR</button>',
+            '        </div>',
+            '    </div>',
+            '    ' + String.fromCharCode(60) + 'script' + String.fromCharCode(62),
+            '        const list = ' + dataJSON + ';',
+            '        let idx = 0;',
+            '        function render() {',
+            '            if (idx >= list.length) {',
+            '                document.getElementById("game-area").innerHTML = "<h2 style=\'color:#10b981; font-size:2rem;\'>🏆 PARTIE TERMINÉE ! BRAVO ! 🏆</h2>";',
+            '                return;',
+            '            }',
+            '            document.getElementById("match-info").innerText = "Duel " + ((idx/2)+1) + " / " + (list.length/2);',
+            '            const c1 = list[idx];',
+            '            const c2 = list[idx+1];',
+            '            document.getElementById("t1").innerText = c1.title;',
+            '            document.getElementById("t2").innerText = c2.title;',
+            '            document.getElementById("v1").src = c1.amq || c1.as || "";',
+            '            document.getElementById("v2").src = c2.amq || c2.as || "";',
+            '        }',
+            '        function vote(off) { idx += 2; render(); }',
+            '        render();',
+            '    ' + String.fromCharCode(60) + '/script' + String.fromCharCode(62),
+            '</body>',
+            '</html>'
+        ].join('\n');
+
+        const blob = new Blob([templateLines], { type: "text/html;charset=utf-8" });
+        const downloadAnchor = document.createElement('a');
+        downloadAnchor.setAttribute("href", URL.createObjectURL(blob));
+        downloadAnchor.setAttribute("download", "partie_exportee_test.html");
+        document.body.appendChild(downloadAnchor);
+        downloadAnchor.click();
+        downloadAnchor.remove();
+
+        alert("✅ Fichier Web Autonome téléchargé avec succès !");
+    }
+
+    // 2. ASPIRATION 100% BLOB EN TÂCHE DE FOND
     async function startBackgroundPreloadAll() {
         console.log("🚀 [AMQ Blob] Démarrage de l'aspiration 100%...");
 
@@ -86,19 +177,17 @@
                 item.isDownloading = true;
 
                 try {
-                    console.log(`📥 [Aspiration 100%] : ${item.title}`);
+                    console.log("📥 [Aspiration 100%] : " + item.title);
                     const response = await fetch(videoUrl);
                     const blob = await response.blob();
 
-                    // Conversion en URL Blob locale
                     item.blobUrl = URL.createObjectURL(blob);
                     item.isDownloaded = true;
-                    console.log(`✅ [Barre 100% Pleine !] : ${item.title}`);
+                    console.log("✅ [Barre 100% Pleine !] : " + item.title);
 
-                    // HOT-SWAP : Bascule en direct si le joueur regarde cette vidéo !
                     refreshActiveVideoPlayersIfBlobReady();
                 } catch (e) {
-                    console.warn(`Fallback direct pour ${item.title}`, e);
+                    console.warn("Fallback direct pour " + item.title, e);
                 } finally {
                     item.isDownloading = false;
                 }
@@ -106,23 +195,22 @@
         }
     }
 
-    // 2. HOT-SWAP EN DIRECT (Bascule la barre à 100% sans couper la musique)
+    // 3. HOT-SWAP EN DIRECT
     function refreshActiveVideoPlayersIfBlobReady() {
         const checkAndSwap = (item, playerNum) => {
             if (!item || !item.blobUrl) return;
-            const v = document.getElementById(`video-player-${playerNum}`);
+            const v = document.getElementById("video-player-" + playerNum);
             
-            // Si la vidéo tourne actuellement sur l'URL directe (pas encore en Blob)
             if (v && !v.classList.contains('hidden') && !v.src.startsWith('blob:')) {
-                const currentTime = v.currentTime; // Retient la seconde
+                const currentTime = v.currentTime;
                 const isPaused = v.paused;
 
                 v.src = item.blobUrl;
-                v.currentTime = currentTime; // Reprend au même endroit
+                v.currentTime = currentTime;
                 if (!isPaused) {
                     v.play().catch(() => {});
                 }
-                console.log(`⚡ [Hot-Swap AMQ] Barre mise à 100% en direct pour Joueur ${playerNum} : ${item.title}`);
+                console.log("⚡ [Hot-Swap AMQ] Barre mise à 100% en direct pour Joueur " + playerNum + " : " + item.title);
             }
         };
 
@@ -130,14 +218,14 @@
         if (testList[currentIndex + 1]) checkAndSwap(testList[currentIndex + 1], 2);
     }
 
-    // 3. AFFICHAGE ET RECYCLAGE DU LECTEUR
+    // 4. AFFICHAGE ET LECTEURS (SANS ERREUR YOUTUBE)
     function updateDisplay() {
         if (currentIndex >= testList.length) {
             alert("🏆 Test terminé ! Rechargement du test...");
             currentIndex = 0;
         }
 
-        document.getElementById('match-info').innerText = `Duel ${(currentIndex/2)+1} / ${testList.length/2}`;
+        document.getElementById('match-info').innerText = "Duel " + ((currentIndex/2)+1) + " / " + (testList.length/2);
 
         const c1 = testList[currentIndex];
         const c2 = testList[currentIndex + 1];
@@ -145,25 +233,22 @@
         document.getElementById('title1').innerText = c1.title;
         document.getElementById('title2').innerText = c2.title;
 
-        // Mise à jour des badges
         document.getElementById('badge1').innerText = (c1.amq || c1.as) ? "AnisongDB Direct ⚡" : "YouTube 🔴";
         document.getElementById('badge1').className = "badge " + ((c1.amq || c1.as) ? "badge-amq" : "badge-yt");
 
         document.getElementById('badge2').innerText = (c2.amq || c2.as) ? "AnisongDB Direct ⚡" : "YouTube 🔴";
         document.getElementById('badge2').className = "badge " + ((c2.amq || c2.as) ? "badge-amq" : "badge-yt");
 
-        // Configuration instantanée des lecteurs
         setupPlayer(1, c1);
         setupPlayer(2, c2);
     }
 
     function setupPlayer(playerNum, choice) {
-        const v = document.getElementById(`video-player-${playerNum}`);
-        const yt = document.getElementById(`yt-player-${playerNum}`);
+        const v = document.getElementById("video-player-" + playerNum);
+        const yt = document.getElementById("yt-player-" + playerNum);
 
         if (!choice) return;
 
-        // Utilise le Blob (100% plein) en priorité si prêt
         const videoSource = choice.blobUrl || choice.amq || choice.as || choice.url;
 
         if (videoSource) {
@@ -180,7 +265,7 @@
             v.src = "";
             v.pause();
             yt.classList.remove('hidden');
-            yt.src = `https://www.youtube.com/embed/${choice.yt}?rel=0`;
+            yt.src = "https://www.youtube.com/embed/" + choice.yt + "?rel=0";
         }
     }
 
@@ -189,7 +274,6 @@
         updateDisplay();
     }
 
-    // Lancement au démarrage
     updateDisplay();
     startBackgroundPreloadAll();
 </script>

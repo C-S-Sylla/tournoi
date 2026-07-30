@@ -86,13 +86,11 @@
         <button id="star-1" class="star-btn" onclick="toggleStar(1)">☆ Marquer ?</button>
         <button onclick="vote(1)">CHOISIR</button>
     </div>
-        <button id="undo-btn" class="undo-btn" onclick="undo()">↩ Revenir au duel précédent</button>
-
 </div>
+<button id="undo-btn" class="undo-btn" onclick="undo()">↩ Revenir au duel précédent</button>
 
 <!-- Lecteurs de Préchargement Silencieux -->
 <video id="preloader-1" preload="auto" style="display:none;"></video>
-<video id="preloader-2" preload="auto" style="display:none;"></video>
 
 <script>
     let currentList = [];
@@ -183,7 +181,11 @@
             return endCompte();
         }
 
-        document.getElementById('undo-btn').style.display = historyStateStack.length > 0 ? 'inline-block' : 'none';
+        const undoBtn = document.getElementById('undo-btn');
+        if (undoBtn) {
+            undoBtn.style.display = historyStateStack.length > 0 ? 'inline-block' : 'none';
+        }
+
         document.getElementById('match-info').innerText = `Duel ${(currentIndex/2)+1} / ${currentList.length/2}`;
 
         const c1 = currentList[currentIndex];
@@ -272,9 +274,12 @@
         });
 
         const winner = currentList[currentIndex + idx];
+
+        // Enregistre le gagnant par son UID unique (zéro confusion)
         matchHistory.push({ 
             p1: currentList[currentIndex], 
             p2: currentList[currentIndex+1], 
+            winnerUid: winner.uid,
             winnerTitle: winner.title 
         });
 

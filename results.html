@@ -364,12 +364,29 @@
             }
         }
 
-        const leftWon = (m.winnerTitle === leftP.title);
-        const rightWon = (m.winnerTitle === rightP.title);
+        // CORRECTION ANTI-BUG : Détermination du vainqueur par CÔTÉ (winnerSide) ou par UID
+        let leftWon = false;
+        let rightWon = false;
+
+        if (m.winnerSide !== undefined) {
+            leftWon = (m.winnerSide === 0);
+            rightWon = (m.winnerSide === 1);
+        } else if (m.winnerUid) {
+            leftWon = (m.winnerUid === leftP.uid);
+            rightWon = (m.winnerUid === rightP.uid);
+        } else {
+            // Secours pour anciens fichiers (Le else if empêche que les deux gagnent !)
+            if (m.winnerTitle === leftP.title) {
+                leftWon = true;
+            } else if (m.winnerTitle === rightP.title) {
+                rightWon = true;
+            }
+        }
 
         if (leftWon) leftWins++;
         if (rightWon) rightWins++;
 
+        // Miniature réparée
         const lThumb = leftP.yt ? `https://img.youtube.com/vi/${leftP.yt}/mqdefault.jpg` : (leftP.thumb ? `https://images.weserv.nl/?url=${encodeURIComponent(leftP.thumb)}` : "");
         const rThumb = rightP.yt ? `https://img.youtube.com/vi/${rightP.yt}/mqdefault.jpg` : (rightP.thumb ? `https://images.weserv.nl/?url=${encodeURIComponent(rightP.thumb)}` : "");
 

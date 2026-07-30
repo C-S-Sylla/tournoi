@@ -391,10 +391,13 @@
     function normalizeEntry(e, index) {
         let title = e.title || e.name || e.song || e.label || `Entrée ${index + 1}`;
         const yt = e.yt || e.youtube || e.youtubeId || e.videoId || e.id || e.url || "";
-        const as = e.as || ""; // <-- AJOUTÉ : Récupère la clé AnisongDB
+        const as = e.as || "";
         const at = e.at || ""; 
         const thumb = e.thumb || ""; 
         const vocal = (e.vocal || e.gender || "").toLowerCase();
+
+        // IDENTIFIANT UNIQUE INDÉPENDANT DU NOM :
+        const uid = e.uid || `uid_${index}_${Math.random().toString(36).substr(2, 9)}`;
 
         const rawType = e.type || e.category || e.kind || "";
         const titleText = `${title} ${rawType}`.toUpperCase();
@@ -409,8 +412,7 @@
         if (type === "OP" && !title.toUpperCase().includes("(OP)")) title = `${title} (OP)`;
         else if (type === "ED" && !title.toUpperCase().includes("(ED)")) title = `${title} (ED)`;
 
-        // AJOUTÉ : 'as' est maintenant bien renvoyé dans le résultat !
-        return { title, yt, as, at, thumb, type, vocal, starred: false, result: "" };
+        return { uid, title, yt, as, at, thumb, type, vocal, starred: false, result: "" };
     }
 
     function normalizeSeasonData(raw, fallbackName) {
@@ -517,7 +519,6 @@
 
             if (!leftSelect.value || !rightSelect.value) return alert("Sélectionnez deux années valides.");
 
-            // ON RÉCUPÈRE LE TEXTE EXACT DU MENU DÉROULANT (ex: "Année 2021")
             const leftName = leftSelect.options[leftSelect.selectedIndex].text;
             const rightName = rightSelect.options[rightSelect.selectedIndex].text;
 
@@ -539,8 +540,7 @@
             let pairs = Math.min(leftEntries.length, rightEntries.length, size / 2);
             if (pairs === 0) return alert("Pas assez de morceaux dans les deux années sélectionnées !");
 
-            // CORRECTIF : L'Année Gauche (leftEntries) est TOUJOURS poussée en premier (à gauche)
-            // et l'Année Droite (rightEntries) est TOUJOURS poussée en deuxième (à droite) pour chaque duel.
+            // TIRAGE 100% PUR ET NATUREL
             for (let i = 0; i < pairs; i++) {
                 finalEntries.push(leftEntries[i], rightEntries[i]);
             }
@@ -562,10 +562,31 @@
             if (cat !== "MIX") parsed = parsed.filter(e => e.type === cat);
 
             if (parsed.length === 0) return alert("Aucun morceau ne correspond aux critères choisis !");
-            parsed.sort(() => Math.random() - 0.5);
-            const powers = [64, 32, 16, 8, 4, 2];
-            size = powers.find(p => p <= parsed.length) || 2;
-            finalEntries = parsed.slice(0, size);
+
+            // DETECTE SI C'EST UNE SEED IMPORTÉE :
+            if (selectedSeasonData && selectedSeasonData.isPreShuffledSeed) {
+                console.log("🔒 [Seed Détectée] Verrouillage du mélange ! Ordre exact conservé.");
+                finalEntries = parsed;
+                size = finalEntries.length;
+
+                if (selectedSeasonData.gameMode) currentMode = selectedSeasonData.gameMode;
+                if (selectedSeasonData.yearNames) localStorage.setItem('yearNames', JSON.stringify(selectedSeasonData.yearNames));
+            } else {
+                // Saison classique : RESPECTE LE CHOIX DE TAILLE DU JOUEUR (16, 32, 64)
+                parsed.sort(() => Math.random() - 0.5);
+
+                const userChosenSize = parseInt(document.getElementById('tournament-size-select').value);
+                const powers = [64, 32, 16, 8, 4, 2];
+
+                // Trouve la taille maximale possible selon le nombre de musiques disponibles
+                const maxPossiblePower = powers.find(p => p <= parsed.length) || 2;
+
+                // Prend le MINIMUM entre le choix du joueur et le max disponible
+                size = Math.min(userChosenSize, maxPossiblePower);
+
+                // Découpe exactement à la taille demandée !
+                finalEntries = parsed.slice(0, size);
+            }
         }
 
         finalEntries.forEach(entry => { entry.starred = false; entry.result = `Top ${size}`; });
@@ -574,7 +595,7 @@
         localStorage.setItem('gameMode', currentMode);
         
         if (currentMode === "GENDER") window.location.href = 'gender_match.html';
-        else if (currentMode === "YEARS") window.location.href = 'year_vs_year.html'; // Redirige bien vers votre fichier de matchs d'Années
+        else if (currentMode === "YEARS") window.location.href = 'year_vs_year.html';
         else window.location.href = 'tournament.html';
     }
 
