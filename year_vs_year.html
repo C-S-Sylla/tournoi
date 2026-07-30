@@ -58,6 +58,8 @@
             .match-card h3 { font-size: 1.1rem; margin: 10px 0; }
         }
     </style>
+    <link rel="icon" type="image/png" href="favicon.png">
+
 </head>
 <body>
 
@@ -275,10 +277,11 @@
 
         const winner = currentList[currentIndex + idx];
 
-        // Enregistre le gagnant par son UID unique (zéro confusion)
+        // Enregistre winnerSide: 0 (Gauche) ou winnerSide: 1 (Droite)
         matchHistory.push({ 
             p1: currentList[currentIndex], 
             p2: currentList[currentIndex+1], 
+            winnerSide: idx,                 // <-- 0 = GAUCHE / 1 = DROITE
             winnerUid: winner.uid,
             winnerTitle: winner.title 
         });
