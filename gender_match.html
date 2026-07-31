@@ -271,12 +271,12 @@
 
         const winner = currentList[currentIndex + idx];
 
-        // Enregistre le gagnant par son UID et par son Côté (0 = Gauche / 1 = Droite)
         matchHistory.push({ 
             p1: currentList[currentIndex], 
             p2: currentList[currentIndex+1], 
             winnerSide: idx,
             winnerUid: winner.uid,
+            winnerVocal: winner.vocal,
             winnerTitle: winner.title 
         });
 

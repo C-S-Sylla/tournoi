@@ -340,7 +340,7 @@
     function renderTallyMode(starredHtml) {
     const isYearsMode = (gameMode === "YEARS");
 
-    // RÉCUPÉRATION DES VRAIS NOMS (ex: "Année 2021" / "Année 2022")
+    // RÉCUPÉRATION DES VRAIS NOMS
     const storedYears = yearNames || JSON.parse(localStorage.getItem('yearNames') || '{}');
     const leftLabel = isYearsMode ? (storedYears.left || "Année 1") : "♀ ÉQUIPE FÉMININE";
     const rightLabel = isYearsMode ? (storedYears.right || "Année 2") : "♂ ÉQUIPE MASCULINE";
@@ -358,6 +358,7 @@
             leftP = m.p1;
             rightP = m.p2;
         } else {
+            // MODE GENDER : Left = Toujours la Femme, Right = Toujours l'Homme
             const v1 = (m.p1.vocal || "").toLowerCase();
             if (v1 === "female" || v1 === "f") {
                 leftP = m.p1; rightP = m.p2;
@@ -366,34 +367,38 @@
             }
         }
 
-        // CORRECTION ANTI-BUG : Détermination du vainqueur par CÔTÉ (winnerSide) ou par UID
         let leftWon = false;
         let rightWon = false;
 
-        if (m.winnerSide !== undefined) {
+        if (isYearsMode) {
+            // ANNÉE VS ANNÉE : Comptage par CÔTÉ (0 = Gauche, 1 = Droite)
             leftWon = (m.winnerSide === 0);
             rightWon = (m.winnerSide === 1);
-        } else if (m.winnerUid) {
-            leftWon = (m.winnerUid === leftP.uid);
-            rightWon = (m.winnerUid === rightP.uid);
         } else {
-            // Secours pour anciens fichiers (Le else if empêche que les deux gagnent !)
-            if (m.winnerTitle === leftP.title) {
-                leftWon = true;
-            } else if (m.winnerTitle === rightP.title) {
-                rightWon = true;
+            // GUERRE DES SEXES : Comptage par GENRE (UID de la Femme vs UID de l'Homme)
+            if (m.winnerUid) {
+                leftWon = (m.winnerUid === leftP.uid);
+                rightWon = (m.winnerUid === rightP.uid);
+            } else {
+                // Secours par tag vocal
+                const wVocal = (m.winnerVocal || "").toLowerCase();
+                if (wVocal === "female" || wVocal === "f") leftWon = true;
+                else if (wVocal === "male" || wVocal === "m") rightWon = true;
+                else {
+                    leftWon = (m.winnerTitle === leftP.title);
+                    rightWon = (m.winnerTitle === rightP.title);
+                }
             }
         }
 
         if (leftWon) leftWins++;
         if (rightWon) rightWins++;
 
-        // Miniature réparée
+        // Miniatures
         const lThumb = leftP.yt ? `https://img.youtube.com/vi/${leftP.yt}/mqdefault.jpg` : (leftP.thumb ? `https://images.weserv.nl/?url=${encodeURIComponent(leftP.thumb)}` : "");
         const rThumb = rightP.yt ? `https://img.youtube.com/vi/${rightP.yt}/mqdefault.jpg` : (rightP.thumb ? `https://images.weserv.nl/?url=${encodeURIComponent(rightP.thumb)}` : "");
 
         if (isYearsMode) {
-            // GRAPHIQUE A 2 COLONNES POUR LE MODE YEARS
             graphRowsHtml += `
                 <div class="tally-card">
                     <div class="bracket-node bracket-node-tall ${leftWon ? 'node-winner' : 'node-loser'} ${leftP.starred ? 'node-starred' : ''}" style="flex: 1; margin:0;">
@@ -410,7 +415,6 @@
                 </div>
             `;
         } else {
-            // GRAPHIQUE A 1 COLONNE UNIQUE POUR LE MODE GENDER
             graphRowsHtml += `
                 <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; border-bottom: 1px solid #1e293b; padding-bottom: 15px;">
                     <div class="bracket-node bracket-node-tall ${leftWon ? 'node-winner' : 'node-loser'} ${leftP.starred ? 'node-starred' : ''}" style="width: 42%; margin:0;">
