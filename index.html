@@ -311,6 +311,35 @@
     let rightSeasonData = null;
     let currentMode = 'STANDARD';
 
+    // AFFICHE / MASQUE L'OPTION 128 DYNAMIQUEMENT
+    // AFFICHE ET SÉLECTIONNE AUTOMATIQUEMENT L'OPTION 128
+    function updateTournamentSizeOptions() {
+        const sizeSelect = document.getElementById('tournament-size-select');
+        const catInput = document.querySelector('input[name="category"]:checked');
+        const cat = catInput ? catInput.value : "MIX";
+
+        // Condition : Uniquement en mode YEARS ET catégorie MIX
+        const allow128 = (currentMode === 'YEARS' && cat === 'MIX');
+
+        let opt128 = sizeSelect.querySelector('option[value="128"]');
+
+        if (allow128) {
+            if (!opt128) {
+                opt128 = new Option("128 Participants (64 vs 64)", "128");
+                sizeSelect.add(opt128, 0); // Ajoute 128 tout en haut
+            }
+            // SÉLECTION AUTOMATIQUE DE 128 !
+            sizeSelect.value = "128"; 
+        } else {
+            if (opt128) {
+                if (sizeSelect.value === "128") {
+                    sizeSelect.value = "64"; // Repasse automatiquement à 64 si 128 n'est plus disponible
+                }
+                opt128.remove(); // Masque l'option 128
+            }
+        }
+    }
+
     // --- GESTION DU MODE DE JEU ---
     function selectMode(mode) {
         currentMode = mode;
@@ -359,6 +388,8 @@
             select.add(new Option("Uploader votre fichier JSON", "custom"));
             onSeasonChange();
         }
+                updateTournamentSizeOptions();
+
     }
 
     // Helper : Vérifie si un fichier commence par "année" ou "annee"
@@ -444,6 +475,9 @@
     }
 
     function updateCountLabel() {
+        // MET A JOUR LA TAILLE MAX (128) SI CATEGORIE CHANGE
+        updateTournamentSizeOptions();
+
         if (currentMode === 'YEARS') {
             if (!leftSeasonData || !rightSeasonData) return;
             const leftEntries = parseEntries(leftSeasonData.entries);
