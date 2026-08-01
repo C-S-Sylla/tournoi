@@ -469,8 +469,12 @@
         title = isYearsMode ? `🏆 ${rightLabel.toUpperCase()} L'EMPORTE` : "🏆 LES HOMMES L'EMPORTENT";
     }
 
+    // DÉTECTION : Si plus de 32 duels (64 participants), on active la grille à 5 colonnes pour 128 !
+    const is128 = (initialShuffled && initialShuffled.length >= 128) || (matchHistory && matchHistory.length >= 64);
+    const gridClass = is128 ? "tally-grid tally-grid-5cols" : "tally-grid";
+
     const graphContainerHtml = isYearsMode 
-        ? `<div class="tally-grid">${graphRowsHtml}</div>` 
+        ? `<div class="${gridClass}">${graphRowsHtml}</div>` 
         : `<div class="tally-single-column">${graphRowsHtml}</div>`;
 
     document.getElementById('results-container').innerHTML = `
