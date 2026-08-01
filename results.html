@@ -88,7 +88,31 @@
         /* ======== SCOREBOARD ======== */
         .scoreboard { display: flex; justify-content: center; gap: 30px; margin-bottom: 30px; font-size: 2rem; font-weight: bold; flex-wrap: wrap; }
         .score-box { background: var(--card-bg); padding: 25px 40px; border-radius: 15px; border: 2px solid #334155; box-shadow: 0 10px 20px rgba(0,0,0,0.5); min-width: 180px; }
-        .winner-glow { border-color: #eab308; box-shadow: 0 0 20px rgba(234, 179, 8, 0.4); }
+        .winner-glow { border-color: hsl(45, 93%, 47%); box-shadow: 0 0 20px rgba(234, 179, 8, 0.4); }
+
+.tally-grid {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(210px, 1fr)) !important; /* 4 Colonnes fixes */
+    gap: 12px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    padding: 10px 0 !important;
+}
+
+/* Adaptation automatique pour écrans moyens (3 colonnes) */
+@media (max-width: 1200px) {
+    .tally-grid {
+        grid-template-columns: repeat(3, minmax(200px, 1fr)) !important;
+    }
+}
+
+/* Adaptation automatique pour téléphones (2 colonnes) */
+@media (max-width: 768px) {
+    .tally-grid {
+        grid-template-columns: repeat(2, minmax(150px, 1fr)) !important;
+        gap: 8px !important;
+    }
+}
 
         /* ======== GRAPHIQUES ======== */
         .tally-wrapper {
