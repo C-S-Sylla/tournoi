@@ -272,69 +272,25 @@
     let startX = 0;
     let startY = 0;
 
-    // --- FONCTIONS ANIMETHEMES ---
-    async function resolveAnimeThemesVideo(animethemesUrl) {
-        try {
-            const urlObj = new URL(animethemesUrl);
-            const pathParts = urlObj.pathname.split('/').filter(p => p);
-            const animeSlug = pathParts[1];
-            const targetThemeSlug = pathParts[2].split('-')[0].toUpperCase();
-            
-            const response = await fetch(`https://api.animethemes.moe/anime/${animeSlug}?include=animethemes.animethemeentries.videos`);
-            if (!response.ok) throw new Error("HTTP " + response.status);
-            const json = await response.json();
-            
-            const themes = (json.anime && json.anime.animethemes) || [];
-            const matchedTheme = themes.find(theme => theme.slug.toUpperCase() === targetThemeSlug);
-            
-            if (matchedTheme && matchedTheme.animethemeentries) {
-                const allVideos = [];
-                for (const entry of matchedTheme.animethemeentries) {
-                    if (entry.videos) allVideos.push(...entry.videos);
-                }
-                if (allVideos.length > 0) {
-                    allVideos.sort((a, b) => (a.resolution || 1080) - (b.resolution || 1080));
-                    return allVideos[0].link;
-                }
-            }
-            
-            for (const theme of themes) {
-                for (const entry of theme.animethemeentries || []) {
-                    for (const video of entry.videos || []) {
-                        if ((video.link||"").toLowerCase().includes(pathParts[2].toLowerCase()) || 
-                            (video.basename||"").toLowerCase().includes(pathParts[2].toLowerCase())) {
-                            return video.link;
-                        }
-                    }
-                }
-            }
-        } catch (e) { console.error("Erreur API AnimeThemes :", e); }
-        return null;
-    }
+    // --- FONCTION DE MINIATURES UNIVERSELLE ---
+    function getItemThumbnail(item) {
+        if (!item) return "";
 
-    async function loadWinnerAnimeThemesPlayer(winnerEntry) {
-        const loader = document.getElementById('video-loader-winner');
-        if (!loader) return;
-
-        const videoLink = await resolveAnimeThemesVideo(winnerEntry.at);
-
-        if (videoLink) {
-            const parent = loader.parentElement;
-            if (parent) {
-                parent.innerHTML = `
-                    <video src="${videoLink}" controls autoplay style="width:100%; height:100%; object-fit:cover; border-radius:10px; background:#000;"></video>
-                `;
+        // 1. Miniature 'thumb' dans le JSON (pour 'as')
+        if (item.thumb && typeof item.thumb === 'string' && item.thumb.trim() !== "") {
+            const cleanUrl = item.thumb.trim();
+            if (cleanUrl.startsWith("http")) {
+                return `https://images.weserv.nl/?url=${encodeURIComponent(cleanUrl)}`;
             }
-        } else {
-            loader.innerHTML = `
-                <div style="padding: 10px; color: #ef4444; font-size: 0.85rem; font-weight:bold; text-align:center;">
-                    ⚠️ Résolution du Champion impossible.<br>
-                    <a href="${winnerEntry.at}" target="_blank" style="display:inline-block; margin-top:8px; background:#ef4444; color:white; text-decoration:none; padding:6px 12px; border-radius:5px; font-size:0.8rem;">
-                        Écouter sur AnimeThemes ↗
-                    </a>
-                </div>
-            `;
+            return cleanUrl;
         }
+
+        // 2. Miniature YouTube 'yt'
+        if (item.yt && typeof item.yt === 'string' && item.yt.trim() !== "") {
+            return `https://img.youtube.com/vi/${item.yt.trim()}/mqdefault.jpg`;
+        }
+
+        return "";
     }
 
     // --- INITIALISATION ---
@@ -365,148 +321,141 @@
     // RENDU DES MODES DUEL (GENDER & YEARS)
     // =========================================================
     function renderTallyMode(starredHtml) {
-    const isYearsMode = (gameMode === "YEARS");
+        const isYearsMode = (gameMode === "YEARS");
 
-    // RÉCUPÉRATION DES VRAIS NOMS
-    const storedYears = yearNames || JSON.parse(localStorage.getItem('yearNames') || '{}');
-    const leftLabel = isYearsMode ? (storedYears.left || "Année 1") : "♀ ÉQUIPE FÉMININE";
-    const rightLabel = isYearsMode ? (storedYears.right || "Année 2") : "♂ ÉQUIPE MASCULINE";
+        const storedYears = yearNames || JSON.parse(localStorage.getItem('yearNames') || '{}');
+        const leftLabel = isYearsMode ? (storedYears.left || "Année 1") : "♀ ÉQUIPE FÉMININE";
+        const rightLabel = isYearsMode ? (storedYears.right || "Année 2") : "♂ ÉQUIPE MASCULINE";
 
-    const leftColor = isYearsMode ? "#00d2ff" : "#f472b6";
-    const rightColor = isYearsMode ? "#ff0055" : "#60a5fa";
+        const leftColor = isYearsMode ? "#00d2ff" : "#f472b6";
+        const rightColor = isYearsMode ? "#ff0055" : "#60a5fa";
 
-    let leftWins = 0, rightWins = 0;
-    let graphRowsHtml = "";
+        let leftWins = 0, rightWins = 0;
+        let graphRowsHtml = "";
 
-    matchHistory.forEach(m => {
-        let leftP, rightP;
+        matchHistory.forEach(m => {
+            let leftP, rightP;
 
-        if (isYearsMode) {
-            leftP = m.p1;
-            rightP = m.p2;
-        } else {
-            // MODE GENDER : Left = Toujours la Femme, Right = Toujours l'Homme
-            const v1 = (m.p1.vocal || "").toLowerCase();
-            if (v1 === "female" || v1 === "f") {
-                leftP = m.p1; rightP = m.p2;
+            if (isYearsMode) {
+                leftP = m.p1;
+                rightP = m.p2;
             } else {
-                leftP = m.p2; rightP = m.p1;
-            }
-        }
-
-        let leftWon = false;
-        let rightWon = false;
-
-        if (isYearsMode) {
-            // ANNÉE VS ANNÉE : Comptage par CÔTÉ (0 = Gauche, 1 = Droite)
-            leftWon = (m.winnerSide === 0);
-            rightWon = (m.winnerSide === 1);
-        } else {
-            // GUERRE DES SEXES : Comptage par GENRE (UID de la Femme vs UID de l'Homme)
-            if (m.winnerUid) {
-                leftWon = (m.winnerUid === leftP.uid);
-                rightWon = (m.winnerUid === rightP.uid);
-            } else {
-                // Secours par tag vocal
-                const wVocal = (m.winnerVocal || "").toLowerCase();
-                if (wVocal === "female" || wVocal === "f") leftWon = true;
-                else if (wVocal === "male" || wVocal === "m") rightWon = true;
-                else {
-                    leftWon = (m.winnerTitle === leftP.title);
-                    rightWon = (m.winnerTitle === rightP.title);
+                const v1 = (m.p1.vocal || "").toLowerCase();
+                if (v1 === "female" || v1 === "f") {
+                    leftP = m.p1; rightP = m.p2;
+                } else {
+                    leftP = m.p2; rightP = m.p1;
                 }
             }
-        }
 
-        if (leftWon) leftWins++;
-        if (rightWon) rightWins++;
+            let leftWon = false;
+            let rightWon = false;
 
-        // Miniatures
-        const lThumb = leftP.yt ? `https://img.youtube.com/vi/${leftP.yt}/mqdefault.jpg` : (leftP.thumb ? `https://images.weserv.nl/?url=${encodeURIComponent(leftP.thumb)}` : "");
-        const rThumb = rightP.yt ? `https://img.youtube.com/vi/${rightP.yt}/mqdefault.jpg` : (rightP.thumb ? `https://images.weserv.nl/?url=${encodeURIComponent(rightP.thumb)}` : "");
+            if (isYearsMode) {
+                leftWon = (m.winnerSide === 0);
+                rightWon = (m.winnerSide === 1);
+            } else {
+                if (m.winnerUid) {
+                    leftWon = (m.winnerUid === leftP.uid);
+                    rightWon = (m.winnerUid === rightP.uid);
+                } else {
+                    const wVocal = (m.winnerVocal || "").toLowerCase();
+                    if (wVocal === "female" || wVocal === "f") leftWon = true;
+                    else if (wVocal === "male" || wVocal === "m") rightWon = true;
+                    else {
+                        leftWon = (m.winnerTitle === leftP.title);
+                        rightWon = (m.winnerTitle === rightP.title);
+                    }
+                }
+            }
 
-        if (isYearsMode) {
-            graphRowsHtml += `
-                <div class="tally-card">
-                    <div class="bracket-node bracket-node-tall ${leftWon ? 'node-winner' : 'node-loser'} ${leftP.starred ? 'node-starred' : ''}" style="flex: 1; margin:0;">
-                        ${lThumb ? `<img src="${lThumb}" crossorigin="anonymous" alt="" />` : `<div style="background:#1e293b;width:100%;height:80px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;">🎵</div>`}
-                        <div class="node-title">${leftP.starred ? '⭐ ' : ''}${leftP.title}</div>
+            if (leftWon) leftWins++;
+            if (rightWon) rightWins++;
+
+            const lThumb = getItemThumbnail(leftP);
+            const rThumb = getItemThumbnail(rightP);
+
+            if (isYearsMode) {
+                graphRowsHtml += `
+                    <div class="tally-card">
+                        <div class="bracket-node bracket-node-tall ${leftWon ? 'node-winner' : 'node-loser'} ${leftP.starred ? 'node-starred' : ''}" style="flex: 1; margin:0;">
+                            ${lThumb ? `<img src="${lThumb}" crossorigin="anonymous" alt="" />` : `<div style="background:#1e293b;width:100%;height:80px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;">🎵</div>`}
+                            <div class="node-title">${leftP.starred ? '⭐ ' : ''}${leftP.title}</div>
+                        </div>
+
+                        <div style="font-size: 1.1rem; font-weight: 900; color: #ef4444; padding: 0 4px;">VS</div>
+
+                        <div class="bracket-node bracket-node-tall ${rightWon ? 'node-winner' : 'node-loser'} ${rightP.starred ? 'node-starred' : ''}" style="flex: 1; margin:0;">
+                            ${rThumb ? `<img src="${rThumb}" crossorigin="anonymous" alt="" />` : `<div style="background:#1e293b;width:100%;height:80px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;">🎵</div>`}
+                            <div class="node-title">${rightP.starred ? '⭐ ' : ''}${rightP.title}</div>
+                        </div>
                     </div>
+                `;
+            } else {
+                graphRowsHtml += `
+                    <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; border-bottom: 1px solid #1e293b; padding-bottom: 15px;">
+                        <div class="bracket-node bracket-node-tall ${leftWon ? 'node-winner' : 'node-loser'} ${leftP.starred ? 'node-starred' : ''}" style="width: 42%; margin:0;">
+                            ${lThumb ? `<img src="${lThumb}" crossorigin="anonymous" alt="" />` : `<div style="background:#1e293b;width:100%;height:80px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;">🎵</div>`}
+                            <div class="node-title">${leftP.starred ? '⭐ ' : ''}${leftP.title}</div>
+                        </div>
 
-                    <div style="font-size: 1.1rem; font-weight: 900; color: #ef4444; padding: 0 4px;">VS</div>
+                        <div style="font-size: 1.5rem; font-weight: bold; color: #ef4444; width: 10%; text-align: center;">VS</div>
 
-                    <div class="bracket-node bracket-node-tall ${rightWon ? 'node-winner' : 'node-loser'} ${rightP.starred ? 'node-starred' : ''}" style="flex: 1; margin:0;">
-                        ${rThumb ? `<img src="${rThumb}" crossorigin="anonymous" alt="" />` : `<div style="background:#1e293b;width:100%;height:80px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;">🎵</div>`}
-                        <div class="node-title">${rightP.starred ? '⭐ ' : ''}${rightP.title}</div>
+                        <div class="bracket-node bracket-node-tall ${rightWon ? 'node-winner' : 'node-loser'} ${rightP.starred ? 'node-starred' : ''}" style="width: 42%; margin:0;">
+                            ${rThumb ? `<img src="${rThumb}" crossorigin="anonymous" alt="" />` : `<div style="background:#1e293b;width:100%;height:80px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;">🎵</div>`}
+                            <div class="node-title">${rightP.starred ? '⭐ ' : ''}${rightP.title}</div>
+                        </div>
                     </div>
-                </div>
-            `;
+                `;
+            }
+        });
+
+        const leftGlow = leftWins > rightWins ? 'winner-glow' : '';
+        const rightGlow = rightWins > leftWins ? 'winner-glow' : '';
+        
+        let title = "";
+        if (leftWins === rightWins) {
+            title = "⚖️ ÉGALITÉ PARFAITE ⚖️";
+        } else if (leftWins > rightWins) {
+            title = isYearsMode ? `🏆 ${leftLabel.toUpperCase()} L'EMPORTE` : "🏆 LES FEMMES L'EMPORTENT";
         } else {
-            graphRowsHtml += `
-                <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; border-bottom: 1px solid #1e293b; padding-bottom: 15px;">
-                    <div class="bracket-node bracket-node-tall ${leftWon ? 'node-winner' : 'node-loser'} ${leftP.starred ? 'node-starred' : ''}" style="width: 42%; margin:0;">
-                        ${lThumb ? `<img src="${lThumb}" crossorigin="anonymous" alt="" />` : `<div style="background:#1e293b;width:100%;height:80px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;">🎵</div>`}
-                        <div class="node-title">${leftP.starred ? '⭐ ' : ''}${leftP.title}</div>
-                    </div>
-
-                    <div style="font-size: 1.5rem; font-weight: bold; color: #ef4444; width: 10%; text-align: center;">VS</div>
-
-                    <div class="bracket-node bracket-node-tall ${rightWon ? 'node-winner' : 'node-loser'} ${rightP.starred ? 'node-starred' : ''}" style="width: 42%; margin:0;">
-                        ${rThumb ? `<img src="${rThumb}" crossorigin="anonymous" alt="" />` : `<div style="background:#1e293b;width:100%;height:80px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;">🎵</div>`}
-                        <div class="node-title">${rightP.starred ? '⭐ ' : ''}${rightP.title}</div>
-                    </div>
-                </div>
-            `;
+            title = isYearsMode ? `🏆 ${rightLabel.toUpperCase()} L'EMPORTE` : "🏆 LES HOMMES L'EMPORTENT";
         }
-    });
 
-    const leftGlow = leftWins > rightWins ? 'winner-glow' : '';
-    const rightGlow = rightWins > leftWins ? 'winner-glow' : '';
-    
-    let title = "";
-    if (leftWins === rightWins) {
-        title = "⚖️ ÉGALITÉ PARFAITE ⚖️";
-    } else if (leftWins > rightWins) {
-        title = isYearsMode ? `🏆 ${leftLabel.toUpperCase()} L'EMPORTE` : "🏆 LES FEMMES L'EMPORTENT";
-    } else {
-        title = isYearsMode ? `🏆 ${rightLabel.toUpperCase()} L'EMPORTE` : "🏆 LES HOMMES L'EMPORTENT";
-    }
+        const is128 = (initialShuffled && initialShuffled.length >= 128) || (matchHistory && matchHistory.length >= 64);
+        const gridClass = is128 ? "tally-grid tally-grid-5cols" : "tally-grid";
 
-    // DÉTECTION : Si plus de 32 duels (64 participants), on active la grille à 5 colonnes pour 128 !
-    const is128 = (initialShuffled && initialShuffled.length >= 128) || (matchHistory && matchHistory.length >= 64);
-    const gridClass = is128 ? "tally-grid tally-grid-5cols" : "tally-grid";
+        const graphContainerHtml = isYearsMode 
+            ? `<div class="${gridClass}">${graphRowsHtml}</div>` 
+            : `<div class="tally-single-column">${graphRowsHtml}</div>`;
 
-    const graphContainerHtml = isYearsMode 
-        ? `<div class="${gridClass}">${graphRowsHtml}</div>` 
-        : `<div class="tally-single-column">${graphRowsHtml}</div>`;
-
-    document.getElementById('results-container').innerHTML = `
-        <h1 style="color:#f8fafc; font-size:2.5rem; margin-top:20px;">${title}</h1>
-        
-        <div class="scoreboard">
-            <div class="score-box ${leftGlow}" style="color: ${leftColor};">${leftLabel}<br>${leftWins}</div>
-            <div class="score-box ${rightGlow}" style="color: ${rightColor};">${rightLabel}<br>${rightWins}</div>
-        </div>
-        
-        ${starredHtml}
-
-        <div class="recap-section">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap:10px;">
-                <h3>📊 GRAPHIQUE DES MATCHS</h3>
-                <button class="download-btn" id="download-tally-btn" onclick="downloadTallyGraph()">📸 Télécharger le Graphique (PNG)</button>
+        document.getElementById('results-container').innerHTML = `
+            <h1 style="color:#f8fafc; font-size:2.5rem; margin-top:20px;">${title}</h1>
+            
+            <div class="scoreboard">
+                <div class="score-box ${leftGlow}" style="color: ${leftColor};">${leftLabel}<br>${leftWins}</div>
+                <div class="score-box ${rightGlow}" style="color: ${rightColor};">${rightLabel}<br>${rightWins}</div>
             </div>
             
-            <div class="tally-wrapper" id="tally-graph-wrapper">
-                <div style="display: flex; justify-content: space-between; color: #94a3b8; font-weight: bold; font-size: 1.1rem; padding: 0 10px; margin-bottom: 10px;">
-                    <span style="color: ${leftColor};">${leftLabel}</span>
-                    <span style="color: ${rightColor};">${rightLabel}</span>
-                </div>
+            ${starredHtml}
 
-                ${graphContainerHtml}
+            <div class="recap-section">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap:10px;">
+                    <h3>📊 GRAPHIQUE DES MATCHS</h3>
+                    <button class="download-btn" id="download-tally-btn" onclick="downloadTallyGraph()">📸 Télécharger le Graphique (PNG)</button>
+                </div>
+                
+                <div class="tally-wrapper" id="tally-graph-wrapper">
+                    <div style="display: flex; justify-content: space-between; color: #94a3b8; font-weight: bold; font-size: 1.1rem; padding: 0 10px; margin-bottom: 10px;">
+                        <span style="color: ${leftColor};">${leftLabel}</span>
+                        <span style="color: ${rightColor};">${rightLabel}</span>
+                    </div>
+
+                    ${graphContainerHtml}
+                </div>
             </div>
-        </div>
-    `;
-}
+        `;
+    }
 
     function downloadTallyGraph() {
         const container = document.getElementById('tally-graph-wrapper');
@@ -533,32 +482,33 @@
         let playerHTML = "";
         
         if (winner) {
-            if (winner.at) {
+            const videoSource = winner.as || winner.at || winner.link || winner.url || winner.resolvedUrl;
+
+            if (videoSource && typeof videoSource === 'string' && videoSource.trim() !== "") {
+                const cleanUrl = videoSource.trim();
                 playerHTML = `
-                    <div class="video-box-content" style="width:100%; height:100%;">
-                        <div id="video-loader-winner" style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; color:#38bdf8; background:#000; border-radius:10px;">
-                            <span style="font-weight:bold;">Chargement de la vidéo du Champion... ⏳</span>
-                        </div>
-                    </div>
+                    <video src="${cleanUrl}" controls autoplay style="width:100%; height:100%; object-fit:cover; border-radius:10px; background:#000;"></video>
                     <div style="margin-top: 8px;">
-                        <a class="yt-link" href="${winner.at}" target="_blank" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border-color: rgba(16, 185, 129, 0.3);">
-                            Ouvrir sur AnimeThemes ↗
+                        <a class="yt-link" href="${cleanUrl}" target="_blank" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border-color: rgba(16, 185, 129, 0.3);">
+                            Ouvrir sur AnisongDB ↗
                         </a>
                     </div>
                 `;
-                loadWinnerAnimeThemesPlayer(winner);
-            } else {
+            } else if (winner.yt && typeof winner.yt === 'string' && winner.yt.trim() !== "") {
+                const cleanYt = winner.yt.trim();
                 playerHTML = `
-                    <iframe src="https://www.youtube-nocookie.com/embed/${winner.yt}?autoplay=1" allowfullscreen></iframe>
+                    <iframe src="https://www.youtube.com/embed/${cleanYt}?autoplay=1" allowfullscreen></iframe>
                     <div style="margin-top: 8px; display: flex; flex-direction: column; gap: 5px; align-items: center;">
-                        <a class="yt-link" href="https://www.youtube.com/watch?v=${winner.yt}" target="_blank">
+                        <a class="yt-link" href="https://www.youtube.com/watch?v=${cleanYt}" target="_blank">
                             Ouvrir sur YouTube ↗
                         </a>
-                        <button class="switch-btn" onclick="switchWinnerPlayer('${winner.yt}')">
+                        <button class="switch-btn" onclick="switchWinnerPlayer('${cleanYt}')">
                             <span id="switch-text-winner">Lecteur alternatif si bloqué 🔁</span>
                         </button>
                     </div>
                 `;
+            } else {
+                playerHTML = `<div style="padding:20px; color:#ef4444; font-weight:bold;">⚠️ Aucun lien vidéo disponible pour le champion</div>`;
             }
         }
 
@@ -566,9 +516,9 @@
 
         document.getElementById('results-container').innerHTML = `
             <h1>🏆 VAINQUEUR FINAL 🏆</h1>
-            <div class="match-card" style="width: 600px; max-width: 100%;">
+            <div class="match-card" style="width: 600px; max-width: 100%; margin: 0 auto;">
                 <div class="video-box" id="player-winner">${playerHTML}</div>
-                <h2>${winner?.title || ""}</h2>
+                <h2 style="margin-top: 10px;">${winner?.title || ""}</h2>
             </div>
             ${starredHtml}
             <div class="recap-section" id="bracket-section-container">
@@ -585,9 +535,9 @@
         `;
 
         setTimeout(() => {
-            initZoomPan();
-            autoFitBracket();
-            drawBracketLines();
+            if (typeof initZoomPan === "function") initZoomPan();
+            if (typeof autoFitBracket === "function") autoFitBracket();
+            if (typeof drawBracketLines === "function") drawBracketLines();
         }, 150);
     }
 
@@ -604,6 +554,7 @@
         }
     }
 
+    // --- CORRECTION CLÉ : GÉNÉRATION DU SCHÉMA DU TOURNOI (as + yt + thumb) ---
     function generateBracketVisual() {
         const tree = []; tree[0] = initialShuffled.map(e => ({ ...e }));
         const N = initialShuffled.length; const k = Math.log2(N);
@@ -613,8 +564,12 @@
             for (let i = 0; i < tree[lvl - 1].length; i += 2) {
                 const p1 = tree[lvl - 1][i], p2 = tree[lvl - 1][i + 1];
                 if (!p2) { tree[lvl].push({ ...p1 }); continue; }
-                const match = matchHistory.find(m => (m.p1.title === p1.title && m.p2.title === p2.title) || (m.p1.title === p2.title && m.p2.title === p1.title));
-                tree[lvl].push(match ? { ...(initialShuffled.find(e => e.title === match.winnerTitle) || p1) } : { placeholder: true });
+                const match = matchHistory.find(m => 
+                    (m.p1.uid && p1.uid && m.p1.uid === p1.uid && m.p2.uid === p2.uid) ||
+                    (m.p1.title === p1.title && m.p2.title === p2.title) || 
+                    (m.p1.title === p2.title && m.p2.title === p1.title)
+                );
+                tree[lvl].push(match ? { ...(initialShuffled.find(e => (e.uid && e.uid === match.winnerUid) || e.title === match.winnerTitle) || p1) } : { placeholder: true });
             }
         }
         
@@ -635,11 +590,11 @@
             const lvl = parseInt(lvlStr);
 
             list.forEach((node, idx) => {
-                const isPlaceholder = node.placeholder || (!node.yt && !node.at);
+                // CORRECTION : Une case n'est vide que si elle n'a NI yt NI as NI at NI url
+                const isPlaceholder = node.placeholder || (!node.yt && !node.as && !node.at && !node.link && !node.url);
                 
-                let thumbUrl = "";
-                if (node.yt) thumbUrl = `https://img.youtube.com/vi/${node.yt}/mqdefault.jpg`;
-                else if (node.thumb) thumbUrl = `https://images.weserv.nl/?url=${encodeURIComponent(node.thumb)}`;
+                // Récupération de la vraie miniature (support 'as' + 'thumb' + 'yt')
+                const thumbUrl = getItemThumbnail(node);
                 
                 const isStarred = node.starred;
                 const isTall = lvl !== 0;
@@ -708,9 +663,8 @@
             if (e.result === "🏆 CHAMPION 🏆") statusClass = "status-winner";
             else if (e.result === "Finaliste (2ème)") statusClass = "status-finalist";
             
-            // GESTION INTELLIGENTE : AnisongDB ("as") vs YouTube ("yt") vs AnimeThemes ("at")
             let directLink = "#";
-            let linkText = "Lien ↗";
+            let linkText = "Regarder ↗";
             let customStyle = "";
 
             if (e.as && typeof e.as === 'string' && e.as.trim() !== "") {
