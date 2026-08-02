@@ -317,6 +317,15 @@
     // --- INITIALISATION ---
     window.onload = () => {
         if (!matchHistory) return window.location.href = 'index.html';
+
+        // SÉCURITÉ : Donne un identifiant unique basé sur l'index + le lien vidéo
+        if (initialShuffled && Array.isArray(initialShuffled)) {
+            initialShuffled.forEach((item, idx) => {
+                if (!item.uid) {
+                    item.uid = `id_${idx}_${item.as || item.yt || item.title}`;
+                }
+            });
+        }
         
         const starredEntries = (initialShuffled || []).filter(e => e.starred);
         let starredHtml = "";
@@ -601,16 +610,42 @@
     }
 
     function generateBracketVisual() {
-        const tree = []; tree[0] = initialShuffled.map(e => ({ ...e }));
-        const N = initialShuffled.length; const k = Math.log2(N);
+        if (!initialShuffled || !initialShuffled.length) return "";
+        
+        // Niveau 0 : On conserve chaque participant avec SA PROPRE image d'origine !
+        const tree = []; 
+        tree[0] = initialShuffled.map(e => ({ ...e }));
+        const N = initialShuffled.length; 
+        const k = Math.log2(N);
 
         for (let lvl = 1; lvl <= k; lvl++) {
             tree[lvl] = [];
             for (let i = 0; i < tree[lvl - 1].length; i += 2) {
-                const p1 = tree[lvl - 1][i], p2 = tree[lvl - 1][i + 1];
-                if (!p2) { tree[lvl].push({ ...p1 }); continue; }
-                const match = matchHistory.find(m => (m.p1.title === p1.title && m.p2.title === p2.title) || (m.p1.title === p2.title && m.p2.title === p1.title));
-                tree[lvl].push(match ? { ...(initialShuffled.find(e => e.title === match.winnerTitle) || p1) } : { placeholder: true });
+                const p1 = tree[lvl - 1][i];
+                const p2 = tree[lvl - 1][i + 1];
+
+                if (!p2) { 
+                    tree[lvl].push({ ...p1 }); 
+                    continue; 
+                }
+
+                // Recherche du match dans l'historique
+                const match = matchHistory.find(m => 
+                    (m.p1 && p1 && (m.p1.uid === p1.uid || (m.p1.as === p1.as && m.p1.as !== "") || (m.p1.yt === p1.yt && m.p1.yt !== ""))) ||
+                    (m.p1 && p1 && m.p1.title === p1.title && m.p2 && p2 && m.p2.title === p2.title)
+                );
+
+                if (match) {
+                    // Si p1 est le gagnant, on monte p1 (qui A DÉJÀ sa bonne image !)
+                    // Si p2 est le gagnant, on monte p2 (qui A DÉJÀ sa bonne image !)
+                    const p1Won = (match.winnerUid && p1.uid && match.winnerUid === p1.uid) ||
+                                  (match.winnerTitle === p1.title && ((match.p1 && match.p1.as === p1.as) || (match.p1 && match.p1.yt === p1.yt)));
+
+                    const winnerNode = p1Won ? p1 : p2;
+                    tree[lvl].push({ ...winnerNode });
+                } else {
+                    tree[lvl].push({ placeholder: true });
+                }
             }
         }
         
@@ -626,13 +661,14 @@
 
         colOrder.forEach(colKey => {
             html += `<div class="bracket-column">`;
-            const list = columns[colKey];
+            const list = columns[colKey] || [];
             const [side, lvlStr] = colKey.split('-');
             const lvl = parseInt(lvlStr);
 
             list.forEach((node, idx) => {
                 const isPlaceholder = !node || node.placeholder || (!node.yt && !node.as && !node.at && !node.link && !node.url);
                 
+                // Récupère l'image exacte conservée dans le nœud
                 const thumbUrl = getItemThumbnail(node);
                 
                 const isStarred = node.starred;
