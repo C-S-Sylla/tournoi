@@ -375,7 +375,7 @@
             const filteredSeasons = presetSeasons.filter(s => {
                 if (mode === 'GENDER') return s.id.startsWith('male_vs_female');
                 // En mode standard, on masque les fichiers de duel spécifique
-                return !s.id.startsWith('male_vs_female') && !isYearFile(s);
+                return !s.id.startsWith('male_vs_female');
             });
 
             filteredSeasons.forEach(season => {
