@@ -619,7 +619,6 @@
 
         for (let lvl = 1; lvl <= k; lvl++) {
             tree[lvl] = [];
-            // Taille exacte du tour en cours (ex: 64 -> 32 -> 16 -> 8 -> 4 -> 2)
             const expectedRoundSize = N / Math.pow(2, lvl - 1);
 
             for (let i = 0; i < tree[lvl - 1].length; i += 2) {
@@ -631,25 +630,44 @@
                     continue; 
                 }
 
-                // RECHERCHE DU MATCH EXACT POUR CE TOUR PRÉCIS (roundSize)
+                // RECHERCHE DU MATCH EXACT DANS CE TOUR
                 const match = matchHistory.find(m => {
-                    // Filtre d'abord par la taille du tour pour ne pas mélanger les tours !
                     if (m.roundSize && m.roundSize !== expectedRoundSize) return false;
 
-                    const matchP1 = (m.p1 && p1 && m.p1.uid && p1.uid && m.p1.uid === p1.uid) || (m.p1 && p1 && m.p1.as && p1.as && m.p1.as === p1.as) || (m.p1 && p1 && m.p1.title === p1.title);
-                    const matchP2 = (m.p2 && p2 && m.p2.uid && p2.uid && m.p2.uid === p2.uid) || (m.p2 && p2 && m.p2.as && p2.as && m.p2.as === p2.as) || (m.p2 && p2 && m.p2.title === p2.title);
+                    const matchP1 = (m.p1 && p1 && m.p1.uid && p1.uid && m.p1.uid === p1.uid) || 
+                                    (m.p1 && p1 && m.p1.as && p1.as && m.p1.as === p1.as) || 
+                                    (m.p1 && p1 && m.p1.yt && p1.yt && m.p1.yt === p1.yt);
 
-                    const matchP1Rev = (m.p1 && p2 && m.p1.uid && p2.uid && m.p1.uid === p2.uid) || (m.p1 && p2 && m.p1.as && p2.as && m.p1.as === p2.as) || (m.p1 && p2 && m.p1.title === p2.title);
-                    const matchP2Rev = (m.p2 && p1 && m.p2.uid && p1.uid && m.p2.uid === p1.uid) || (m.p2 && p1 && m.p2.as && p1.as && m.p2.as === p1.as) || (m.p2 && p1 && m.p2.title === p1.title);
+                    const matchP2 = (m.p2 && p2 && m.p2.uid && p2.uid && m.p2.uid === p2.uid) || 
+                                    (m.p2 && p2 && m.p2.as && p2.as && m.p2.as === p2.as) || 
+                                    (m.p2 && p2 && m.p2.yt && p2.yt && m.p2.yt === p2.yt);
 
-                    return (matchP1 && matchP2) || (matchP1Rev && matchP2Rev);
+                    return matchP1 && matchP2;
+                }) || matchHistory.find(m => {
+                    if (m.roundSize && m.roundSize !== expectedRoundSize) return false;
+                    return m.p1 && p1 && m.p1.title === p1.title && m.p2 && p2 && m.p2.title === p2.title;
                 });
 
                 if (match) {
-                    // Qui a gagné CE match précis ?
-                    const isP1Winner = (match.winnerUid && p1.uid && match.winnerUid === p1.uid) ||
-                                       (match.winnerTitle === p1.title && ((match.p1 && match.p1.as === p1.as) || (match.p1 && match.p1.yt === p1.yt))) ||
-                                       (match.winnerTitle === p1.title);
+                    // DÉTERMINATION INFAILLIBLE DU GAGNANT PAR LIEN VIDÉO / UID :
+                    let isP1Winner = false;
+
+                    if (match.winnerUid && p1.uid) {
+                        isP1Winner = (match.winnerUid === p1.uid);
+                    } else if (match.winnerAs && p1.as) {
+                        isP1Winner = (match.winnerAs === p1.as);
+                    } else if (match.winnerYt && p1.yt) {
+                        isP1Winner = (match.winnerYt === p1.yt);
+                    } else if (p1.as && p2.as && p1.as !== p2.as) {
+                        // Compare le lien AnisongDB direct
+                        isP1Winner = (match.winnerTitle === p1.title && match.p1 && match.p1.as === p1.as);
+                    } else if (p1.yt && p2.yt && p1.yt !== p2.yt) {
+                        // Compare le lien YouTube direct
+                        isP1Winner = (match.winnerTitle === p1.title && match.p1 && match.p1.yt === p1.yt);
+                    } else {
+                        // Seulement si les titres sont physiquement différents !
+                        isP1Winner = (match.winnerTitle === p1.title && p1.title !== p2.title);
+                    }
 
                     const winnerNode = isP1Winner ? p1 : p2;
                     tree[lvl].push({ ...winnerNode });

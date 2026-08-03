@@ -436,17 +436,26 @@
         const winner = indexOffset === 0 ? p1 : p2;
         const loser = indexOffset === 0 ? p2 : p1;
 
+        // AJOUT DES IDENTIFIANTS UNIQUES DU GAGNANT DANS L'HISTORIQUE :
         matchHistory.push({
             roundSize: currentRound.length,
             p1: { ...p1 },
             p2: { ...p2 },
+            winnerUid: winner.uid || "",
+            winnerAs: winner.as || "",
+            winnerYt: winner.yt || "",
             winnerTitle: winner.title
         });
 
         const stageName = getEliminationStageName(currentRound.length);
         loser.result = stageName;
         
-        const initialLoser = initialShuffled.find(e => (e.yt && e.yt === loser.yt) || (e.as && e.as === loser.as) || (e.at && e.at === loser.at));
+        // Marque le perdant exact par son lien vidéo ou UID
+        const initialLoser = initialShuffled.find(e => 
+            (e.uid && loser.uid && e.uid === loser.uid) || 
+            (e.as && loser.as && e.as === loser.as && e.as !== "") || 
+            (e.yt && loser.yt && e.yt === loser.yt && e.yt !== "")
+        );
         if (initialLoser) {
             initialLoser.result = stageName;
         }
