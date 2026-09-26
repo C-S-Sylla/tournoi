@@ -1,10 +1,197 @@
- [  {
+ [  
+    {
       "title": "Inuyasha (Every Heart - BoA)",
       "yt": "HMNQBG6nydM",
       "type": "ED",
       "vocal": "female"
     },
     {
-        "title": "seraph of the end"
+        "title": "seraph of the end",
+        "yt": "aNgT6MxOURQ",
+      "type": "OP",
+      "vocal": "female"
+    },
+        {
+      "title": "VINLAND SAGA (Paradox - Survive Said The Prophet)",
+      "yt": "AcJUYGD8zjk",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "From Old Country Bumpkin to Master Swordsman (Kurenai no Ha - UNICORN)",
+      "yt": "ZZDqa5ltP8A",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "That Time I Got Reincarnated as a Slime (TACTIC - Daoko)",
+      "yt": "oJtO4qiRYUY",
+      "type": "OP",
+      "vocal": "female"
+    },
+    {
+      "title": "JoJo's Bizarre Adventure (I Want You - Savage Garden)",
+      "yt": "34McNneyJkk",
+      "type": "ED",
+      "vocal": "male"
+    },
+    {
+      "title": "Gundam 00 (Namidano Mukou Gundam Version - Stereopony)",
+      "yt": "v6L63CWay9M",
+      "type": "OP",
+      "vocal": "female"
+    },
+    {
+      "title": "LINK CLICK (Zero - Fan Ka)",
+      "yt": "qtrRkpPDpbI",
+      "type": "ED",
+      "vocal": "male"
+    },
+    {
+      "title": "Beyond the Boundary (Kyoukai no Kanata - Minori Chihara)",
+      "yt": "w1_XSFqfR74",
+      "type": "OP",
+      "vocal": "female"
+    },
+    {
+      "title": "Gundam Build Divers Re:Rise (HATENA - PENGUIN RESEARCH)",
+      "yt": "acbnAwPdF7k",
+      "type": "ED",
+      "vocal": "male"
+    },
+    {
+      "title": "Umamusume: Cinderella Gray (∞ - Oguri Cap)",
+      "yt": "RDnJs0rcVwaqw",
+      "type": "ED",
+      "vocal": "female"
+    },
+    {
+      "title": "Wistoria: Wand and Sword (BELIEVERS - ASH DA HERO)",
+      "yt": "I5u5gNcKVfk",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Kill Blue (ATTITUDE - aespa)",
+      "yt": "1zgsM9fC61M",
+      "type": "OP",
+      "vocal": "female"
+    },
+    {
+      "title": "The Water Magician (Blue Motion - Meiyo Densetsu)",
+      "yt": "wxdHpj7r6Rc",
+      "type": "OP",
+      "vocal": "female"
+    },
+    {
+      "title": "Secrets of the Silent Witch (Feel - Hitsujibungaku)",
+      "yt": "8dky0A7Gx1c",
+      "type": "OP",
+      "vocal": "female"
+    },
+    {
+      "title": "Hunter X Hunter (If You And I Can't Come Into This World - Sunflower's Garden)",
+      "yt": "M9d4TPo1JqE",
+      "type": "ED",
+      "vocal": "male"
+    },
+    {
+      "title": "Agents of the Four Seasons (Petals - Orangestar feat. 夏背)",
+      "yt": "7k4VN-XmgLs",
+      "type": "ED",
+      "vocal": "female"
+    },
+    {
+      "title": "Gods' Games We Play (NewGame - AliA)",
+      "yt": "Ok0Qslq_tbY",
+      "type": "OP",
+      "vocal": "female"
+    },
+    {
+      "title": "Hunter X Hunter (E-Jan - Do You Feel Like I Feel - Masato Nagai)",
+      "yt": "BxsYyLhDblk",
+      "type": "ED",
+      "vocal": "male"
+    },
+    {
+      "title": "Twin Star Exorcists (Re:Call - i☆Ris)",
+      "yt": "HHmn4quN7Zc",
+      "type": "OP",
+      "vocal": "female"
+    },
+    {
+      "title": "The Case Book of Arne (Q.E.D. - Sou)",
+      "yt": "IZNfAETIaEc",
+      "type": "op",
+      "vocal": "male"
+    },
+    {
+      "title": "Yu Gi Oh GX (Get Your Game On - Jean-Marc Anthony Kabeya)",
+      "yt": "LTQeZikmLp8",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Rurouni Kenshin (Hiten - Ayase & R-Shitei)",
+      "yt": "vAKBZeQklQw",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Chainsmoker Cat (Nannmonee - Wasureranneyo)",
+      "yt": "mJICDZoKgao",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Food for the Soul (Misoshiru to Butter - Reira Ushio)",
+      "yt": "8oGdZZ9y3Uw",
+      "type": "ED",
+      "vocal": "female"
+    },
+    {
+      "title": "I Want to Eat Your Pancreas (Every Heart - BoA)",
+      "as": "https://naedist.animemusicquiz.com/9nnwuv.webm",
+      "thumb": "https://i.ytimg.com/vi/DA_LZFaksSw/hq720.jpg?sqp=-oaymwEnCNAFEJQDSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLDhml88E84TvS-0qcx8zDDpq9DjTw",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "The Ramparts of Ice (SAKASAMA - POLKADOT STINGRAY)",
+      "yt": "YX6MibSUaYA",
+      "type": "ED",
+      "vocal": "female"
+    },
+    {
+      "title": "Blue Orchestra (Cantabile - Novelbright)",
+      "yt": "1BkadFixBX4",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Hisone to Masotan (Le temps de la rentrée - Hisone × Nao)",
+      "yt": "hG-ahxkDPCA",
+      "type": "ED",
+      "vocal": "female"
+    },
+    {
+      "title": "Mobile Suit Gundam 00 the Movie: A Wakening of the Trailblazer (Tozasareta Sekai - THE BACK HORN)",
+      "as": "https://naedist.animemusicquiz.com/87ucx5.webm",
+      "thumb": "https://i.ytimg.com/vi/rnsGR6mIh7Y/hq720.jpg?sqp=-oaymwFBCNAFEJQDSFryq4qpAzMIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB8AEB-AH-CYAC0AWKAgwIABABGBQgJyh_MA8=&rs=AOn4CLBl8Isnn4FihGhaPkKg1l0nmWme9g",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Shadowverse Flame: Arc-hen (Do or Die - nano)",
+      "yt": "PuTiDfhlftQ",
+      "type": "OP",
+      "vocal": "female"
+    },
+    {
+      "title": "Marriage Toxin (Shake Na Baby - AKASAKI)",
+      "yt": "QVKQCbzLW0k",
+      "type": "ED",
+      "vocal": "male"
     }
+
 ] 
