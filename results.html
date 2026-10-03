@@ -627,6 +627,57 @@
         }, 150);
     }
 
+    // COPIE DU LIEN UNIVERSELLE (FONCTIONNE EN LOCAL FILE:/// ET SUR GITHUB)
+    function copySeedLink() {
+        const seedNumber = localStorage.getItem('currentSeed') || Math.floor(10000 + Math.random() * 90000);
+        const seasonId = localStorage.getItem('currentSeasonId') || "tournoi_gigarandom";
+        const mode = localStorage.getItem('gameMode') || "STANDARD";
+        const size = (initialShuffled && initialShuffled.length) ? initialShuffled.length : 64;
+
+        let pageName = "tournament.html";
+        if (mode === "YEARS") pageName = "year_vs_year.html";
+        else if (mode === "GENDER") pageName = "gender_match.html";
+
+        // Si tu es sur ton PC en file:///, on génère le lien GitHub officiel par défaut
+        let baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
+        if (window.location.protocol === "file:") {
+            baseUrl = "https://c-s-sylla.github.io/tournoi";
+        }
+
+        const shareUrl = `${baseUrl}/${pageName}?seed=${seedNumber}&season=${seasonId}&size=${size}`;
+
+        // 1. MÉTHODE DE COPIE UNIVERSELLE
+        let isCopied = false;
+        try {
+            const textArea = document.createElement("textarea");
+            textArea.value = shareUrl;
+            textArea.style.position = "fixed";
+            textArea.style.top = "-9999px";
+            textArea.style.left = "-9999px";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            isCopied = document.execCommand('copy');
+            document.body.removeChild(textArea);
+        } catch (e) {
+            isCopied = false;
+        }
+
+        // 2. RETOUR VISUEL SUR LE BOUTON
+        const btn = document.getElementById('share-link-btn');
+        if (btn) {
+            btn.innerText = "✅ Lien Copié dans le Presse-Papier !";
+            btn.style.background = "#10b981";
+            setTimeout(() => {
+                btn.innerText = "🔗 Copier le Lien de la Seed pour un Pote";
+                btn.style.background = "#3b82f6";
+            }, 3000);
+        }
+
+        // 3. FENÊTRE DE CONFIRMATION
+        prompt("✅ Voici le lien direct de ta Seed pour ton pote (déjà copié) :", shareUrl);
+    }
+
     function switchWinnerPlayer(ytId) {
         const iframe = document.querySelector(`#player-winner iframe`);
         const textSpan = document.getElementById(`switch-text-winner`);
