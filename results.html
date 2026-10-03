@@ -176,6 +176,29 @@
     object-fit: cover;
 }
 
+/* GRILLE MULTI-COLONNES POUR LA GUERRE DES SEXES */
+.tally-gender-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(260px, 1fr)) !important; /* 2 colonnes par défaut */
+    gap: 15px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+/* 3 colonnes sur grand écran pour 64 participants */
+@media (min-width: 1100px) {
+    .tally-gender-grid {
+        grid-template-columns: repeat(3, minmax(240px, 1fr)) !important;
+    }
+}
+
+/* 1 colonne sur petit écran de téléphone */
+@media (max-width: 768px) {
+    .tally-gender-grid {
+        grid-template-columns: 1fr !important;
+    }
+}
+
 /* 4. DESIGN BARRE DE DÉFILEMENT FLUIDE ET MODERNE (Scrollbar) */
 .tally-wrapper::-webkit-scrollbar {
     height: 8px;
@@ -412,21 +435,22 @@
         const rThumb = rightP.yt ? `https://img.youtube.com/vi/${rightP.yt}/mqdefault.jpg` : (rightP.thumb ? `https://images.weserv.nl/?url=${encodeURIComponent(rightP.thumb)}` : "");
 
         if (isYearsMode) {
-            graphRowsHtml += `
-                <div class="tally-card">
-                    <div class="bracket-node bracket-node-tall ${leftWon ? 'node-winner' : 'node-loser'} ${leftP.starred ? 'node-starred' : ''}" style="flex: 1; margin:0;">
-                        ${lThumb ? `<img src="${lThumb}" crossorigin="anonymous" alt="" />` : `<div style="background:#1e293b;width:100%;height:80px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;">🎵</div>`}
-                        <div class="node-title">${leftP.starred ? '⭐ ' : ''}${leftP.title}</div>
-                    </div>
-
-                    <div style="font-size: 1.1rem; font-weight: 900; color: #ef4444; padding: 0 4px;">VS</div>
-
-                    <div class="bracket-node bracket-node-tall ${rightWon ? 'node-winner' : 'node-loser'} ${rightP.starred ? 'node-starred' : ''}" style="flex: 1; margin:0;">
-                        ${rThumb ? `<img src="${rThumb}" crossorigin="anonymous" alt="" />` : `<div style="background:#1e293b;width:100%;height:80px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;">🎵</div>`}
-                        <div class="node-title">${rightP.starred ? '⭐ ' : ''}${rightP.title}</div>
-                    </div>
+            // FORMAT UNIFIÉ COMPACT EN 2 OU 3 COLONNES (Pour Années ET Guerre des Sexes)
+        graphRowsHtml += `
+            <div class="tally-card">
+                <div class="bracket-node bracket-node-tall ${leftWon ? 'node-winner' : 'node-loser'} ${leftP.starred ? 'node-starred' : ''}" style="flex: 1; margin:0;">
+                    ${lThumb ? `<img src="${lThumb}" crossorigin="anonymous" alt="" />` : `<div style="background:#1e293b;width:100%;height:80px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;">🎵</div>`}
+                    <div class="node-title">${leftP.starred ? '⭐ ' : ''}${leftP.title}</div>
                 </div>
-            `;
+
+                <div style="font-size: 1.1rem; font-weight: 900; color: #ef4444; padding: 0 4px;">VS</div>
+
+                <div class="bracket-node bracket-node-tall ${rightWon ? 'node-winner' : 'node-loser'} ${rightP.starred ? 'node-starred' : ''}" style="flex: 1; margin:0;">
+                    ${rThumb ? `<img src="${rThumb}" crossorigin="anonymous" alt="" />` : `<div style="background:#1e293b;width:100%;height:80px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;">🎵</div>`}
+                    <div class="node-title">${rightP.starred ? '⭐ ' : ''}${rightP.title}</div>
+                </div>
+            </div>
+        `;
         } else {
             graphRowsHtml += `
                 <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; border-bottom: 1px solid #1e293b; padding-bottom: 15px;">
@@ -464,7 +488,7 @@
 
     const graphContainerHtml = isYearsMode 
         ? `<div class="${gridClass}">${graphRowsHtml}</div>` 
-        : `<div class="tally-single-column">${graphRowsHtml}</div>`;
+        : `<div class="tally-gender-grid">${graphRowsHtml}</div>`;
 
     document.getElementById('results-container').innerHTML = `
         <h1 style="color:#f8fafc; font-size:2.5rem; margin-top:20px;">${title}</h1>
