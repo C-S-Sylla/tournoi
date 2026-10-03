@@ -1,0 +1,950 @@
+{
+  "seasonName": "Saison Mixte",
+  "entries": [
+    {
+      "title": "Naruto Shippuden (Sign - FLOW)",
+      "yt": "2upuBiEiXDk",
+      "type": "OP",
+      "vocal": "female"
+    },
+    {
+      "title": "Jujutsu kaisen (kaikai kitan - Eve)",
+      "yt": "GwaRztMaoY0",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Re:ZERO (Long shot - Mayu Maeshima)",
+      "yt": "9tQT1tUCXOw",
+      "type": "OP",
+      "vocal": "female"
+    },
+    {
+      "title": "Twin Star Exorcists (Kanadeai - Itowokoashi)",
+      "yt": "dYwiCgdwBd8",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Sword Art Online: Alicization (forget-me-not - ReoNa)",
+      "yt": "_wGb7lrypS8",
+      "type": "ED",
+      "vocal": "female"
+    },
+    {
+      "title": "Mobile Suit Gundam: Iron-Blooded Orphans (Raise your flag - MAN WITH A MISSION)",
+      "yt": "FIHyfZC09oM",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Kabaneri of the Iron Fortress (ninelie - Aimer with Chelly)",
+      "yt": "qYS2VD3VTv8",
+      "type": "ED",
+      "vocal": "female"
+    },
+    {
+      "title": "Naruto Shippuden (Sign - FLOW)",
+      "yt": "xjIdGcrInpY",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Oshi No Ko (Idol - YOASOBI)",
+      "yt": "PgBvV9ofjmA",
+      "type": "OP",
+      "vocal": "female"
+    },
+    {
+      "title": "Tokyo Ghoul (Unravel - TK from Ling Toshite Sigure)",
+      "yt": "7aMOurgDB-o",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Fullmetal Alchemist: Brotherhood (again - YUI)",
+      "yt": "elyXcwunIYA",
+      "type": "OP",
+      "vocal": "female"
+    },
+    {
+      "title": "Vinland Saga (MUKANJYO - Survive Said The Prophet)",
+      "yt": "xEVcTStgA4A",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Fate/stay night (Brave Shine - Aimer)",
+      "yt": "7vZp3yGxZXE",
+      "type": "OP",
+      "vocal": "female"
+    },
+    {
+      "title": "Noragami (Kyōran Hey Kids!! - The Oral Cigarettes)",
+      "yt": "aZenmeRytEM",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Guilty Crown (My Dearest - supercell)",
+      "yt": "W10RXr9c44Y",
+      "type": "OP",
+      "vocal": "female"
+    },
+    {
+      "title": "Shingeki no Bahamut: Genesis (EXiSTENCE - SIM)",
+      "yt": "nsi_gBdRdt4",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Frieren (Haru - Yorushika)",
+      "yt": "AequpWIt-gQ",
+      "type": "OP",
+      "vocal": "female"
+    },
+    {
+      "title": "Ranking of Kings (Naked Hero - Vaundy)",
+      "yt": "dWZAH5w8jkQ",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "NANA (rose - ANNA inspi' NANA(BLACK STONES))",
+      "yt": "SB1NGyWxvlA",
+      "type": "OP",
+      "vocal": "female"
+    },
+    {
+      "title": "Zom 100: Bucket List of the Dead (Song of the Dead - KANA-BOON)",
+      "yt": "Tt4_enX63K0",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Heavenly Delusion (innocent arrogance - BiSH)",
+      "yt": "RKME_MRYKLg",
+      "type": "OP",
+      "vocal": "female"
+    },
+    {
+      "title": "BLEACH (Ranbu no Melody - SID)",
+      "yt": "5emM3JGI5JA",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "ERASED (Sore wa Chiisana Hikari no Youna - Sayuri)",
+      "yt": "Od9NQbyNpwE",
+      "type": "OP",
+      "vocal": "female"
+    },
+    {
+      "title": "Attack On Titans (Shinzou wo Sasageyo - Linked Horizon)",
+      "yt": "CID-sYQNCew",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Sword Art Online (Ignite - Eir Aoi)",
+      "yt": "UgQeSizFJ3A",
+      "type": "OP",
+      "vocal": "female"
+    },
+    {
+      "title": "Bungo Stray Dogs (Tetsu No Ori - GRANRODEO)",
+      "yt": "QvxSHPKXg94",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Mushoku Tensei (Only - Yuiko Ōhara)",
+      "yt": "qVqoohYxQOU",
+      "type": "ED",
+      "vocal": "female"
+    },
+    {
+      "title": "BASTARD!! (BLOODY POWER FAME - coldrain)",
+      "yt": "IpcFgCCuBRc",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Gurren Lagann (Sorairo Days - Shoko Nakagawa)",
+      "yt": "jUQwZaArVqw",
+      "type": "OP",
+      "vocal": "female"
+    },
+    {
+      "title": "My Hero Academia (ODD FUTURE - UVERworld)",
+      "yt": "IpI3CV4QvjY",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Black Butler (MAISIE - Cö shu Nie feat. HYDE)",
+      "yt": "KmAT3soCBFQ",
+      "type": "OP",
+      "vocal": "female"
+    },
+    {
+      "title": "CHAINSAW MAN (KICK BACK - Kenshi Yonezu)",
+      "yt": "dFlDRhvM4L0",
+      "type": "OP",
+      "vocal": "male"
+    },
+{
+      "title": "Arifureta (FLARE - Void_Chords feat. LIO)",
+      "yt": "eZN3afhTyGY",
+      "type": "OP",
+      "vocal": "female"
+    },
+    {
+      "title": "Tower of God (TOP - Stray Kids)",
+      "yt": "Q8o_cn6UIZM",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Sword art Online (crossing field - LiSA)",
+      "yt": "Y4kfe8R1Iqs",
+      "type": "OP",
+      "vocal": "female"
+    },
+    {
+      "title": "Blue Box (Same Blue - Official HIGE DANdism)",
+      "yt": "UXclUH-r9ag",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Domestic Girlfriend (Kawaki wo Ameku - Minami)",
+      "yt": "Ua5UARWRYLA",
+      "type": "OP",
+      "vocal": "female"
+    },
+    {
+      "title": "Hunter X Hunter (Hyori Ittai - Yuzu)",
+      "yt": "MCYm453CE6Y",
+      "type": "ED",
+      "vocal": "male"
+    },
+    {
+      "title": "Fairy Tail ZERØ (Ashita o Orase - Kavka Shishido)",
+      "yt": "e-7uuV7B7mo",
+      "type": "OP",
+      "vocal": "female"
+    },
+    {
+      "title": "86 EIGHTY-SIX (Kyoukaisen - amazarashi)",
+      "yt": "BDq6qMAaSEA",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Puella Magi Madoka Magica (Magia - Kalafina)",
+      "yt": "XF-Rf3hBvFY",
+      "type": "ED",
+      "vocal": "female"
+    },
+    {
+      "title": "Gachiakuta (HUGs - Paledusk)",
+      "yt": "JxX7WU5DQug",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Rurouni Kenshin (2023) (Edge - Reol)",
+      "yt": "6JR3ZpW24iM",
+      "type": "ED",
+      "vocal": "female"
+    },
+    {
+      "title": "Magi the Labyrinth of Magic (Matataku Hoshi no Shita de - Porno Graffitti)",
+      "yt": "asvAL1RAgnU",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Fate/Zero (to the beginning - Kalafina)",
+      "as": "https://naedist.animemusicquiz.com/k6enn9.webm",
+      "type": "OP",
+      "vocal": "female",
+      "thumb" : "https://64.media.tumblr.com/tumblr_obyuvz7Ssg1vx9qx8_smart1.jpg"
+    },
+    {
+      "title": "Yu-Gi-Oh! (Overlap - KIMERU)",
+      "yt": "AXOA3VKqVWU",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Soul Eater (Papermoon - Tommy heavenly6)",
+      "yt": "-eYK3YP524A",
+      "type": "OP",
+      "vocal": "female"
+    },
+    {
+      "title": "Kuroko's Basketball (The Other self - GRANRODEO)",
+      "yt": "aiwgCaFkYZI",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Shinsekai Yori (Taneda Risa - Wareta Ringo)",
+      "yt": "mz1ypuGJ3VM",
+      "type": "OP",
+      "vocal": "female"
+    },
+    {
+      "title": "Haiykuu!! (Hikari Are - BURNOUT SYNDROMES)",
+      "yt": "oRAF2-Exzx4",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Btooom! (No pain, No game - Nano)",
+      "yt": "cGncS_CzUDs",
+      "type": "OP",
+      "vocal": "female"
+    },
+    {
+      "title": "Fate/strange Fake (PROVANT - SawanoHiroyuki[nZk]:Jean-Ken Johnny & TAKUMA)",
+      "yt": "tcC9g9dlv58",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Neon Genesis Evangelion (Zankoku na Tenshi no Thesis - Yoko Takahashi)",
+      "yt": "WWWTWgyYYAk",
+      "type": "OP",
+      "vocal": "female"
+    },
+    {
+      "title": "ERASED (KICK - Asian Kung-Fu Generation)",
+      "yt": "fodAJ-1dN3I",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Darling in the FranXX (KISS OF DEATH - Mika Nakashima x Hyde)",
+      "yt": "b6eaBqI7YrI",
+      "type": "OP",
+      "vocal": "female"
+    },
+    {
+      "title": "Blood Blockade Battlefront (Sugar Song to Bitter Step - UNISON SQUARE GARDEN)",
+      "yt": "j3SlUmr_T4g",
+      "type": "ED",
+      "vocal": "male"
+    },
+    {
+      "title": "Darker than Black (Tsukiakari no Michishirube - STEREOPONY)",
+      "yt": "JXTNhHfcHpU",
+      "type": "OP",
+      "vocal": "female"
+    },
+    {
+      "title": "Code Geass (COLORS - FLOW)",
+      "yt": "G8CFuZ9MseQ",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "3-Gatsu no Lion (Flag Wo Tatero - YUKI)",
+      "yt": "LvHdsXJOAmA",
+      "type": "OP",
+      "vocal": "female"
+    },
+    {
+      "title": "Saint Seiya (Pegasus Fantasy - MAKE-UP)",
+      "yt": "CsCcPHRPnBo",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Black Clover (PAiNT it BLACK - BiSH)",
+      "yt": "R3HPu50tb1A",
+      "type": "OP",
+      "vocal": "female"
+    },
+    {
+      "title": "BLEACH (ALONES - Aqua Timez)",
+      "yt": "-qOIwxWYdX4",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Vinland Saga (Torches - Aimer)",
+      "yt": "1cYE0Bm5VKI",
+      "type": "OP",
+      "vocal": "female"
+    },
+    {
+      "title": "Log Horizon (database feat. TAKUMA - MAN WITH A MISSION)",
+      "yt": "SXTLVPt2GD4",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Naruto Shippuden (Diver - NICO Touches the Walls)",
+      "yt": "Vli10X4EQGU",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Overlord (Clattanoia - OxT)",
+      "yt": "1IATT73T2BQ",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Mobile Suit Gundam the Witch from Mercury (slash - yama)",
+      "yt": "DVsTObmkotY",
+      "type": "OP",
+      "vocal": "female"
+    },
+        {
+      "title": "Black Clover (Black Rover - Vickeblanka)",
+      "yt": "-GWuZ247ais",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Mobile Suit Gundam the Witch from Mercury (Kimiyo Kedakakuare - Shiyui)",
+      "yt": "YXC_9IQkajs",
+      "type": "ED",
+      "vocal": "female"
+    },    {
+      "title": "Gantz (Super Shooter - RIP SLYME)",
+      "yt": "KcDWXo8M8fQ",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Ao Ashi (Presence - Superfly)",
+      "yt": "sQtPHnun_9A",
+      "type": "OP",
+      "vocal": "female"
+    },    {
+      "title": "Delicious in Dungeon (Unmei - Sumika)",
+      "yt": "asyT-N1Ip70",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Classroom of the Elite (Minor Piece - ZAQ)",
+      "yt": "4_Gw_EqRBPw",
+      "type": "OP",
+      "vocal": "female"
+    },    {
+      "title": "Akane-banashi (Hitotarashi - Keisuke Kuwata)",
+      "yt": "33pSxvDNnIQ",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Ya Boy Kongming! (Chitty Chitty Bang Bang - QUEENDOM)",
+      "yt": "gNn9NxZH2Vo",
+      "type": "OP",
+      "vocal": "female"
+    },    {
+      "title": "Darker than Black (Howling - Abingdon Boys School)",
+      "yt": "Wv-SLk1OIkI",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "To Your Eternity (Pink Blood - Hikaru Utada)",
+      "yt": "JvVIq36OXAg",
+      "type": "OP",
+      "vocal": "female"
+    },    {
+      "title": "Death Parade (Flyers - BRADIO)",
+      "yt": "L90XoAtwMic",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Rascal Does Not Dream of Bunny Girl Senpai (Kimi no Sei - the peggies)",
+      "yt": "HIoeEngUiKU",
+      "type": "OP",
+      "vocal": "female"
+    },    {
+      "title": "One Punch Man (The Hero!! Set Fire to the Furious Fist - JAM Project)",
+      "yt": "erQURy_Ys5Y",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Botan Kamiina Fully Blossoms When Drunk (Mebuku Toki - yonige)",
+      "yt": "fUU_VKLXzRQ",
+      "type": "OP",
+      "vocal": "female"
+    },
+    {
+      "title": "JoJo's Bizarre Adventure (Fighting Gold - Daisuke Hasegawa)",
+      "yt": "i1N2cclJVys",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "BLEACH (Hitohira no Hanabira - Stereopony)",
+      "yt": "lLEqAvVRMi4",
+      "type": "ED",
+      "vocal": "female"
+    },    {
+      "title": "Katekyo Hitman Reborn! (BOYS & GIRLS - LM.C)",
+      "as": "https://naedist.animemusicquiz.com/2yffen.webm",
+      "type": "OP",
+      "vocal": "male",
+        "thumb" : "https://tse4.mm.bing.net/th/id/OIP.KNRH23wafNn9KP_P5z6qPgHaD4?r=0&rs=1&pid=ImgDetMain&o=7&rm=3"
+    },
+    {
+      "title": "To Be Hero X (KONTINUUM - SennaRin)",
+      "yt": "gQ940ZInrTY",
+      "type": "ED",
+      "vocal": "female"
+    },    {
+      "title": "Boruto: Naruto Next Generations (Bibouroku - Lenny code fiction)",
+      "as": "https://naedist.animemusicquiz.com/8bhj6n.webm",
+      "type": "ED",
+      "vocal": "male",
+        "thumb" : "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEj_nwaMMdDCcKDhDElPEuWP35sFDR8Epaf_rYkCBIEHj_s2nt80n1LxmwiA9d6EwmVo154Xh4A1BWfwO3Xn65L_on4KRZSNDlJlT4jA8FPPjWXvOo-dp4TCWidxyuNzyVZoZVui4dEIrANe9bSVOpChuT8P4YeGjx34pg5DmEd1MiDy_MqpWq_HvGrD/s1230/CYMERA_20220704_081642.jpg"
+    },
+    {
+      "title": "Puella Magi Madoka Magica (Claris - Connect)",
+      "yt": "VifUij53XXU",
+      "type": "OP",
+      "vocal": "female"
+    },    {
+      "title": "Fairy Tail (STRIKE BACK - BACK-ON)",
+      "as": "https://naedist.animemusicquiz.com/cmbyuk.webm",
+      "type": "OP",
+      "vocal": "male",
+        "thumb" : "https://i.ytimg.com/vi/aAdCro4WuLU/maxresdefault.jpg"
+    },
+    {
+      "title": "Plastic Memories (Ring of Fortune - Eri Sasaki)",
+      "yt": "1CFxCe5apY4",
+      "type": "OP",
+      "vocal": "female"
+    },    {
+      "title": "Fairy Tail (Believe In Myself - EDGE of LIFE)",
+      "as": "https://naedist.animemusicquiz.com/858pri.webm",
+      "type": "OP",
+      "vocal": "male",
+        "thumb" : "https://static.wikitide.net/fairytailwiki/thumb/6/6b/Opening_21.png/300px-Opening_21.png"
+    },
+    {
+      "title": "One Piece (Hope - Namie Amuro)",
+      "yt": "Oo52vQyAR6w",
+      "type": "OP",
+      "vocal": "female"
+    },    {
+      "title": "DANDADAN (Otonoke - Creepy Nuts)",
+      "yt": "Xikv3UPvy0U",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Fire Force (SPARK-AGAIN - Aimer)",
+      "yt": "iBzkMZ2ca6s",
+      "type": "OP",
+      "vocal": "female"
+    },    {
+      "title": "Dragon Ball GT (DAN DAN Kokoro Hikarete ku - Field of View)",
+      "yt": "qfUbqI_q0Ho",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Sword Art Online: Alicization (ADAMAS - LiSA)",
+      "yt": "3hdJ8PKNXrc",
+      "type": "OP",
+      "vocal": "female"
+    },
+    {
+      "title": "Oshi no Ko (TEST ME - CHANMINA)",
+      "yt": "QgIQbeRzkkc",
+      "type": "OP",
+      "vocal": "female"
+    },
+    {
+      "title": "Boruto: Naruto Next Generations (Mata ne - Humbreaders)",
+      "as": "https://naedist.animemusicquiz.com/zptefi.webm",
+      "type": "OP",
+      "vocal": "male",
+      "thumb" : "https://th.bing.com/th/id/OIP.Qsp80fISHo-QLaJJzM2QtQHaEK?w=202&h=113&c=7&r=0&o=7&dpr=1.5&pid=1.7&rm=3"
+    },
+    {
+      "title": "Kokkoku (Flashback - MIYAVI vs KenKen)",
+      "yt": "fhBA6ynorvc",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Blue Exorcist (Kono Te de - Rin Akatsuki)",
+      "yt": "QYdxxc5-QYU",
+      "type": "ED",
+      "vocal": "female"
+    },
+        {
+      "title": "Heion Sedai no Idaten-tachi (Seija no Koushin - Tatsuya Kitani)",
+      "yt": "x59-Lr9nnho",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "SANDA (Childlike Adults - yama)",
+      "yt": "U1qcMPqzYN4",
+      "type": "OP",
+      "vocal": "female"
+    },    {
+      "title": "Soul Eater (Resonance - T.M. Revolution)",
+      "yt": "kjHsIeJi_pM",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Witch Watch (Watch me! - YOASOBI)",
+      "yt": "J9umgYNmmEc",
+      "type": "OP",
+      "vocal": "female"
+    },    {
+      "title": "JoJo's Bizarre Adventure (BLOODY STREAM - Coda)",
+      "yt": "e0yrZXSXTSg",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "The Fragrant Flower Blooms With Dignity (Harenohini - Reira Ushio)",
+      "yt": "mfL53Lt_hVI",
+      "type": "ED",
+      "vocal": "female"
+    },    {
+      "title": "BLEACH (After Dark - ASIAN KUNG-FU GENERATION)",
+      "yt": "jyPKus_6i1Q",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Mushoku Tensei (Tabibito no Uta - Yuiko Ohara)",
+      "yt": "xZ-h-YSBaqc",
+      "type": "OP",
+      "vocal": "female"
+    },    {
+      "title": "Mushoku Tensei (spiral - LONGMAN)",
+      "yt": "hkcdLR_tdtA",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "BLEACH (Re:pray - Aimer)",
+      "yt": "O63cbh6EyQ8",
+      "type": "OP",
+      "vocal": "female"
+    },    {
+      "title": "Link Click (The Eye - Bai Sha JAWS)",
+      "yt": "qFHvA-sK-Ek",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Takopi's Original Sin (Happy Lucky Chappy - ano)",
+      "yt": "-HsCG289KWc",
+      "type": "OP",
+      "vocal": "female"
+    },    {
+      "title": "Deadman Wonderland (One Reason (feat. fade) - DWB)",
+      "yt": "_5WvUPHF5f8",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Shoshimin: How to become Ordinary (Martian - Yorushika)",
+      "yt": "Tvusi5PSzo0",
+      "type": "OP",
+      "vocal": "female"
+    },
+    {
+      "title": "Attack on Titan (Red Swan - YOSHIKI feat. HYDE)",
+      "yt": "MWSR17vEVBw",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Naruto Shippuden (Empty Heart - Anly)",
+      "yt": "fLAIzhpValA",
+      "type": "OP",
+      "vocal": "female"
+    },    {
+      "title": "Tokyo Ghoul (Saints - People in the Box)",
+      "yt": "kSkSvK6Zx_I",
+      "type": "ED",
+      "vocal": "male"
+    },
+    {
+      "title": "Re:Creators (sh0ut - SawanoHiroyuki[nZk]:Tielle & Gemie)",
+      "yt": "aztEuKZEuZA",
+      "type": "OP",
+      "vocal": "female"
+    },    {
+      "title": "3 Gatsu no Lion (Fighter - Bump of Chicken)",
+      "yt": "RYHZuMuyzb0",
+      "type": "ED",
+      "vocal": "male"
+    },
+    {
+      "title": "Fairy Tail (Masayume Chasing - BoA)",
+      "yt": "aqRuzjIBkxY",
+      "type": "OP",
+      "vocal": "female"
+    },    {
+      "title": "Welcome to Demon School! Iruma-kun Season (Ichi Ni no San - Penthouse)",
+      "yt": "WTUKtsDHljs",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Magi: The Labyrinth of Magic (Yubi Boenkyo - Nogizaka46)",
+      "yt": "rwLgMWZ_k3I",
+      "type": "ED",
+      "vocal": "female"
+    },    {
+      "title": "Gundam Breaker Battlogue (Breaking Blazing - Mr.FanTastiC)",
+      "yt": "CGRS3gYVeAQ",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "DAN DA DAN (On The Way - AiNA THE END)",
+      "yt": "DCCRNzKvWRg",
+      "type": "OP",
+      "vocal": "female"
+    },    {
+      "title": "Assassination Classroom (Last Look - Keina Suda)",
+      "yt": "LG0IXZfp_Ew",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Shangri-La Frontier (Frontiers - Awich)",
+      "yt": "MSDygYZWP2E",
+      "type": "OP",
+      "vocal": "female"
+    },    {
+      "title": "Banana Fish (RED - Survive Said The Prophet)",
+      "yt": "_rU86Gl7bP8",
+      "type": "ED",
+      "vocal": "male"
+    },
+    {
+      "title": "Sword Art Online: Alicization (Shangri-la Fafner in The Azure Dead Aggressor - angela)",
+      "yt": "EXil8hmTM-Y",
+      "type": "OP",
+      "vocal": "female"
+    },
+    {
+      "title": "Fullmetal Alchemist Brotherhood (Let It Out - Miho Fukuhara)",
+      "yt": "4wB-D84VyZc",
+      "type": "ED",
+      "vocal": "female"
+    },
+    {
+      "title": "Inuyasha (Every Heart - BoA)",
+      "yt": "jjVELKkTx1U",
+      "type": "ED",
+      "vocal": "female"
+    },
+    {
+        "title": "seraph of the end",
+        "yt": "aNgT6MxOURQ",
+      "type": "OP",
+      "vocal": "female"
+    },
+        {
+      "title": "VINLAND SAGA (Paradox - Survive Said The Prophet)",
+      "yt": "68BrU7qs7mY",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "From Old Country Bumpkin to Master Swordsman (Kurenai no Ha - UNICORN)",
+      "yt": "ZZDqa5ltP8A",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "That Time I Got Reincarnated as a Slime (TACTIC - Daoko)",
+      "yt": "oJtO4qiRYUY",
+      "type": "OP",
+      "vocal": "female"
+    },
+    {
+      "title": "JoJo's Bizarre Adventure (I Want You - Savage Garden)",
+      "yt": "34McNneyJkk",
+      "type": "ED",
+      "vocal": "male"
+    },
+    {
+      "title": "Gundam 00 (Namidano Mukou Gundam Version - Stereopony)",
+      "yt": "v6L63CWay9M",
+      "type": "OP",
+      "vocal": "female"
+    },
+    {
+      "title": "LINK CLICK (Zero - Fan Ka)",
+      "yt": "qtrRkpPDpbI",
+      "type": "ED",
+      "vocal": "male"
+    },
+    {
+      "title": "Beyond the Boundary (Kyoukai no Kanata - Minori Chihara)",
+      "yt": "w1_XSFqfR74",
+      "type": "OP",
+      "vocal": "female"
+    },
+    {
+      "title": "Gundam Build Divers Re:Rise (HATENA - PENGUIN RESEARCH)",
+      "yt": "acbnAwPdF7k",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Umamusume: Cinderella Gray (∞ - Oguri Cap)",
+      "yt": "nJs0rcVwaqw",
+      "type": "ED",
+      "vocal": "female"
+    },
+    {
+      "title": "Wistoria: Wand and Sword (BELIEVERS - ASH DA HERO)",
+      "yt": "I5u5gNcKVfk",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Kill Blue (ATTITUDE - aespa)",
+      "yt": "1zgsM9fC61M",
+      "type": "OP",
+      "vocal": "female"
+    },
+    {
+      "title": "The Water Magician (Blue Motion - Meiyo Densetsu)",
+      "yt": "wxdHpj7r6Rc",
+      "type": "OP",
+      "vocal": "female"
+    },
+    {
+      "title": "Secrets of the Silent Witch (Feel - Hitsujibungaku)",
+      "yt": "8dky0A7Gx1c",
+      "type": "OP",
+      "vocal": "female"
+    },
+    {
+      "title": "Hunter X Hunter (If You And I Can't Come Into This World - Sunflower's Garden)",
+      "yt": "M9d4TPo1JqE",
+      "type": "ED",
+      "vocal": "male"
+    },
+    {
+      "title": "Agents of the Four Seasons (Petals - Orangestar feat. 夏背)",
+      "yt": "7k4VN-XmgLs",
+      "type": "ED",
+      "vocal": "female"
+    },
+    {
+      "title": "Gods' Games We Play (NewGame - AliA)",
+      "yt": "Ok0Qslq_tbY",
+      "type": "OP",
+      "vocal": "female"
+    },
+    {
+      "title": "Hunter X Hunter (E-Jan - Do You Feel Like I Feel - Masato Nagai)",
+      "yt": "BxsYyLhDblk",
+      "type": "ED",
+      "vocal": "male"
+    },
+    {
+      "title": "Twin Star Exorcists (Re:Call - i☆Ris)",
+      "yt": "HHmn4quN7Zc",
+      "type": "OP",
+      "vocal": "female"
+    },
+    {
+      "title": "The Case Book of Arne (Q.E.D. - Sou)",
+      "yt": "IZNfAETIaEc",
+      "type": "op",
+      "vocal": "male"
+    },
+    {
+      "title": "Yu Gi Oh GX (Get Your Game On - Jean-Marc Anthony Kabeya)",
+      "yt": "LTQeZikmLp8",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Rurouni Kenshin (Hiten - Ayase & R-Shitei)",
+      "yt": "vAKBZeQklQw",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Chainsmoker Cat (Nannmonee - Wasureranneyo)",
+      "yt": "mJICDZoKgao",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Food for the Soul (Misoshiru to Butter - Reira Ushio)",
+      "yt": "8oGdZZ9y3Uw",
+      "type": "ED",
+      "vocal": "female"
+    },
+    {
+      "title": "I Want to Eat Your Pancreas (Every Heart - BoA)",
+      "as": "https://naedist.animemusicquiz.com/9nnwuv.webm",
+      "thumb": "https://i.ytimg.com/vi/DA_LZFaksSw/hq720.jpg?sqp=-oaymwEnCNAFEJQDSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLDhml88E84TvS-0qcx8zDDpq9DjTw",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "The Ramparts of Ice (SAKASAMA - POLKADOT STINGRAY)",
+      "yt": "YX6MibSUaYA",
+      "type": "ED",
+      "vocal": "female"
+    },
+    {
+      "title": "Blue Orchestra (Cantabile - Novelbright)",
+      "yt": "1BkadFixBX4",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Hisone to Masotan (Le temps de la rentrée - Hisone × Nao)",
+      "yt": "hG-ahxkDPCA",
+      "type": "ED",
+      "vocal": "female"
+    },
+    {
+      "title": "Mobile Suit Gundam 00 the Movie: A Wakening of the Trailblazer (Tozasareta Sekai - THE BACK HORN)",
+      "as": "https://naedist.animemusicquiz.com/87ucx5.webm",
+      "thumb": "https://i.ytimg.com/vi/rnsGR6mIh7Y/hq720.jpg?sqp=-oaymwFBCNAFEJQDSFryq4qpAzMIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB8AEB-AH-CYAC0AWKAgwIABABGBQgJyh_MA8=&rs=AOn4CLBl8Isnn4FihGhaPkKg1l0nmWme9g",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Shadowverse Flame: Arc-hen (Do or Die - nano)",
+      "yt": "PuTiDfhlftQ",
+      "type": "OP",
+      "vocal": "female"
+    },
+    {
+      "title": "Marriage Toxin (Shake Na Baby - AKASAKI)",
+      "yt": "QVKQCbzLW0k",
+      "type": "ED",
+      "vocal": "male"
+    }
+
+  ]
+}

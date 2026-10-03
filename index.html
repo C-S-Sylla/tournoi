@@ -303,6 +303,7 @@
 
         
         // Fichiers exclusifs "Male VS Female"
+        { id: "male_vs_female_gigarandom", name: "Giga-Random", path: "data/male_vs_femalegigarandom.json" },
         { id: "male_vs_female1", name: "Male vs Female Singer 1", path: "data/male_vs_female1.json" },
         { id: "male_vs_female2", name: "Male vs Female Singer 2", path: "data/male_vs_female2.json" },
         { id: "male_vs_female3", name: "Male vs Female Singer 3", path: "data/male_vs_female3.json" },
@@ -591,16 +592,26 @@
             }
         } else if (currentMode === "GENDER") {
             let parsed = getSelectedEntries();
+
+            // Sépare tous les hommes et toutes les femmes et les mélange aléatoirement
             const males = parsed.filter(e => e.vocal === "male" || e.vocal === "m").sort(() => Math.random() - 0.5);
             const females = parsed.filter(e => e.vocal === "female" || e.vocal === "f").sort(() => Math.random() - 0.5);
             
-            let pairs = Math.min(males.length, females.length, size / 2);
+            // Calcule le nombre exact de paires selon la taille demandée (ex: 64 participants = 32 paires)
+            let pairs = Math.min(males.length, females.length, Math.floor(size / 2));
             if (pairs === 0) return alert("Pas assez de musiques taguées vocal: male et female dans ce fichier !");
             
+            // Construit les duels (Tire au sort l'emplacement gauche/droite pour chaque duel)
             for (let i = 0; i < pairs; i++) {
-                if (Math.random() > 0.5) finalEntries.push(males[i], females[i]);
-                else finalEntries.push(females[i], males[i]);
+                if (Math.random() > 0.5) {
+                    finalEntries.push(males[i], females[i]);
+                } else {
+                    finalEntries.push(females[i], males[i]);
+                }
             }
+
+            // Met à jour la taille finale réelle
+            size = finalEntries.length;
         } else {
             let parsed = getSelectedEntries();
             const cat = document.querySelector('input[name="category"]:checked').value;
