@@ -282,7 +282,12 @@
 
 <div id="results-container"></div>
 <br><button onclick="window.location.href='index.html'" style="padding: 15px 40px; margin-top: 20px;">Retourner au Menu</button>
-
+        
+<div style="margin: 25px auto; text-align: center;">
+    <button id="share-link-btn" onclick="copySeedLink()" style="background: #3b82f6; color: white; border: none; padding: 14px 28px; border-radius: 12px; font-weight: bold; font-size: 1.1rem; cursor: pointer; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);">
+        🔗 Copier le Lien de la Seed pour un Pote
+    </button>
+</div>
 <script>
     // Variables globales
     let data = JSON.parse(localStorage.getItem('finalResults') || "{}");
@@ -426,6 +431,8 @@
                 }
             }
         }
+
+
 
         if (leftWon) leftWins++;
         if (rightWon) rightWins++;
