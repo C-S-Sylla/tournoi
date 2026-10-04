@@ -630,8 +630,11 @@
     // COPIE DU LIEN UNIVERSELLE (FONCTIONNE EN LOCAL FILE:/// ET SUR GITHUB)
     function copySeedLink() {
         const seedNumber = localStorage.getItem('currentSeed') || Math.floor(10000 + Math.random() * 90000);
-        const seasonId = localStorage.getItem('currentSeasonId') || "tournoi_gigarandom";
-        const mode = localStorage.getItem('gameMode') || "STANDARD";
+const fileName = localStorage.getItem('currentSeasonFile') || "tournoi_gigarandom";
+        
+        // Le lien transmet directement le vrai nom du fichier JSON
+        const shareUrl = `${baseUrl}/${pageName}?seed=${seedNumber}&file=${encodeURIComponent(fileName)}&size=${size}`;
+                const mode = localStorage.getItem('gameMode') || "STANDARD";
         const size = (initialShuffled && initialShuffled.length) ? initialShuffled.length : 64;
 
         let pageName = "tournament.html";
@@ -643,8 +646,6 @@
         if (window.location.protocol === "file:") {
             baseUrl = "https://c-s-sylla.github.io/tournoi";
         }
-
-        const shareUrl = `${baseUrl}/${pageName}?seed=${seedNumber}&season=${seasonId}&size=${size}`;
 
         // 1. MÉTHODE DE COPIE UNIVERSELLE
         let isCopied = false;

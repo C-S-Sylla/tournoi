@@ -217,19 +217,23 @@
 
     // --- 1. DÉMARRAGE ET PRÉCHARGEMENT ---
     window.onload = async () => {
+
         const urlParams = new URLSearchParams(window.location.search);
         const sharedSeed = urlParams.get('seed');
-        const sharedSeason = urlParams.get('season');
+        const sharedFile = urlParams.get('file') || urlParams.get('season');
         const sharedSize = parseInt(urlParams.get('size')) || 64;
 
-        if (sharedSeed && sharedSeason) {
-            console.log(`🔗 [Lien Partagé] Reconstitution exacte de la Seed : ${sharedSeed}`);
+        if (sharedSeed && sharedFile) {
+            console.log(`🔗 [Lien Direct] Chargement de data/${sharedFile}.json avec seed ${sharedSeed}`);
+            
             try {
-                const resp = await fetch(`data/${sharedSeason}.json`);
+                // TÉLÉCHARGEMENT DIRECT SANS AUCUN DICTIONNAIRE !
+                const resp = await fetch(`data/${decodeURIComponent(sharedFile)}.json`);
+                if (!resp.ok) throw new Error("Fichier introuvable sur GitHub");
                 const json = await resp.json();
                 let entries = json.entries || json;
 
-                // MÉLANGE STRICTEMENT IDENTIQUE À INDEX.HTML
+                // Tirage déterministe identique
                 let s = parseInt(sharedSeed);
                 const rng = function() {
                     let t = s += 0x6D2B79F5;
@@ -256,7 +260,7 @@
                 localStorage.setItem('tournamentParticipants', JSON.stringify(initialShuffled));
                 localStorage.setItem('finalResults', JSON.stringify({ matchHistory: [], initialShuffled }));
             } catch (e) {
-                console.warn("Erreur chargement seed distante");
+                console.error("Erreur de chargement :", e);
             }
         } else {
             const storedParticipants = localStorage.getItem('tournamentParticipants');
