@@ -217,23 +217,23 @@
 
     // --- 1. DÉMARRAGE ET PRÉCHARGEMENT ---
     window.onload = async () => {
-
         const urlParams = new URLSearchParams(window.location.search);
         const sharedSeed = urlParams.get('seed');
-        const sharedFile = urlParams.get('file') || urlParams.get('season');
+        const sharedPath = urlParams.get('path'); // Récupère le vrai chemin
         const sharedSize = parseInt(urlParams.get('size')) || 64;
 
-        if (sharedSeed && sharedFile) {
-            console.log(`🔗 [Lien Direct] Chargement de data/${sharedFile}.json avec seed ${sharedSeed}`);
+        if (sharedSeed && sharedPath) {
+            const realPath = decodeURIComponent(sharedPath);
+            console.log(`🔗 [Lien Partagé] Téléchargement direct du fichier : ${realPath}`);
             
             try {
-                // TÉLÉCHARGEMENT DIRECT SANS AUCUN DICTIONNAIRE !
-                const resp = await fetch(`data/${decodeURIComponent(sharedFile)}.json`);
-                if (!resp.ok) throw new Error("Fichier introuvable sur GitHub");
+                // TÉLÉCHARGEMENT DIRECT SANS AUCUNE MODIFICATION DU NOM !
+                const resp = await fetch(realPath);
+                if (!resp.ok) throw new Error("Fichier introuvable : " + realPath);
                 const json = await resp.json();
                 let entries = json.entries || json;
 
-                // Tirage déterministe identique
+                // Tirage mathématique identique
                 let s = parseInt(sharedSeed);
                 const rng = function() {
                     let t = s += 0x6D2B79F5;
@@ -260,9 +260,10 @@
                 localStorage.setItem('tournamentParticipants', JSON.stringify(initialShuffled));
                 localStorage.setItem('finalResults', JSON.stringify({ matchHistory: [], initialShuffled }));
             } catch (e) {
-                console.error("Erreur de chargement :", e);
+                console.error("Erreur de chargement du fichier :", e);
             }
         } else {
+            // Lancement normal depuis le menu
             const storedParticipants = localStorage.getItem('tournamentParticipants');
             if (!storedParticipants) return window.location.href = 'index.html';
             initialShuffled = JSON.parse(storedParticipants);

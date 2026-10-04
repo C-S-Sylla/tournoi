@@ -630,7 +630,7 @@
     // COPIE DU LIEN UNIVERSELLE (FONCTIONNE EN LOCAL FILE:/// ET SUR GITHUB)
     function copySeedLink() {
         const seedNumber = localStorage.getItem('currentSeed') || Math.floor(10000 + Math.random() * 90000);
-        const fileName = localStorage.getItem('currentSeasonFile') || "tournoi_gigarandom";
+        const exactPath = localStorage.getItem('currentSeasonPath') || "data/tournoi_gigarandom.json";
         const mode = localStorage.getItem('gameMode') || "STANDARD";
         const size = (initialShuffled && initialShuffled.length) ? initialShuffled.length : 64;
 
@@ -639,16 +639,16 @@
         if (mode === "YEARS") pageName = "year_vs_year.html";
         else if (mode === "GENDER") pageName = "gender_match.html";
 
-        // 2. Détermine l'adresse de base
+        // 2. Détermine l'adresse web de base
         let baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
         if (window.location.protocol === "file:") {
             baseUrl = "https://c-s-sylla.github.io/tournoi";
         }
 
-        // 3. Construit l'URL partagée (Maintenant que toutes les variables sont prêtes !)
-        const shareUrl = `${baseUrl}/${pageName}?seed=${seedNumber}&file=${encodeURIComponent(fileName)}&size=${size}`;
+        // 3. Assemble le lien avec le vrai chemin exact
+        const shareUrl = `${baseUrl}/${pageName}?seed=${seedNumber}&path=${encodeURIComponent(exactPath)}&size=${size}`;
 
-        // 4. MÉTHODE DE COPIE UNIVERSELLE
+        // 4. Copie universelle
         let isCopied = false;
         try {
             const textArea = document.createElement("textarea");
@@ -665,7 +665,7 @@
             isCopied = false;
         }
 
-        // 5. RETOUR VISUEL SUR LE BOUTON
+        // 5. Retour visuel sur le bouton
         const btn = document.getElementById('share-link-btn');
         if (btn) {
             btn.innerText = "✅ Lien Copié dans le Presse-Papier !";
@@ -676,7 +676,7 @@
             }, 3000);
         }
 
-        // 6. FENÊTRE DE CONFIRMATION
+        // 6. Boîte de dialogue de confirmation
         prompt("✅ Voici le lien direct de ta Seed pour ton pote (déjà copié) :", shareUrl);
     }
 

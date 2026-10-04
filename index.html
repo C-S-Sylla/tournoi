@@ -579,21 +579,24 @@
         let finalEntries = [];
         let size = parseInt(document.getElementById('tournament-size-select').value);
 
-        // 1. GÉNÉRATION DE LA SEED AVANT LE MÉLANGE !
+        // 1. GÉNÉRATION DE LA SEED AVANT TOUT MÉLANGE
         const currentSeed = Math.floor(10000 + Math.random() * 90000);
         localStorage.setItem('currentSeed', currentSeed);
-// Trouve le vrai chemin du fichier sélectionné
+
+        // 2. RÉCUPÉRATION DU VRAI CHEMIN (.path) DANS PRESETSEASONS
         const selectedSeasonObj = presetSeasons.find(s => s.id === document.getElementById('season-select')?.value);
-        const realFileName = selectedSeasonObj ? selectedSeasonObj.path.replace(/^data\//, '').replace(/\.json$/, '') : "tournoi_gigarandom";
-        
-        localStorage.setItem('currentSeasonFile', realFileName);
-        
+        const exactPath = selectedSeasonObj ? selectedSeasonObj.path : "data/tournoi_gigarandom.json";
+        localStorage.setItem('currentSeasonPath', exactPath);
+
         if (currentMode === "YEARS") {
             const leftSelect = document.getElementById('season-select-left');
             const rightSelect = document.getElementById('season-select-right');
             if (!leftSelect.value || !rightSelect.value) return alert("Sélectionnez deux années valides.");
 
-            const yearNames = { left: leftSelect.options[leftSelect.selectedIndex].text, right: rightSelect.options[rightSelect.selectedIndex].text };
+            const leftName = leftSelect.options[leftSelect.selectedIndex].text;
+            const rightName = rightSelect.options[rightSelect.selectedIndex].text;
+
+            const yearNames = { left: leftName, right: rightName };
             localStorage.setItem('yearNames', JSON.stringify(yearNames));
 
             const cat = document.querySelector('input[name="category"]:checked').value;
@@ -605,7 +608,6 @@
                 rightEntries = rightEntries.filter(e => e.type === cat);
             }
 
-            // Mélange avec la Seed !
             shuffleWithSeed(leftEntries, currentSeed);
             shuffleWithSeed(rightEntries, currentSeed + 1);
 
