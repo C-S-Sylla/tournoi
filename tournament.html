@@ -216,24 +216,56 @@
     const historyStateStack = [];
 
     // --- 1. DÉMARRAGE ET PRÉCHARGEMENT ---
+    // FONCTION POUR NORMALISER CHAQUE MUSIQUE DE LA SEED
+    function normalizeSeedEntry(e, index) {
+        let title = e.title || e.name || e.song || `Entrée ${index + 1}`;
+        const yt = e.yt || e.youtube || e.youtubeId || "";
+        const as = e.as || e.url || e.link || "";
+        const at = e.at || "";
+        const thumb = e.thumb || "";
+
+        const rawType = (e.type || "").toUpperCase();
+        if (rawType === "OP" && !title.toUpperCase().includes("(OP)")) title = `${title} (OP)`;
+        else if (rawType === "ED" && !title.toUpperCase().includes("(ED)")) title = `${title} (ED)`;
+
+        const uid = e.uid || `seed_${index}_${as || yt || title}`;
+        return { uid, title, yt, as, at, thumb, type: e.type || "OP", starred: false, result: "" };
+    }
+
+    // CHARGEMENT INITIAL (NORMAL OU VIA LIEN SEED)
     window.onload = async () => {
         const urlParams = new URLSearchParams(window.location.search);
         const sharedSeed = urlParams.get('seed');
-        const sharedPath = urlParams.get('path'); // Récupère le vrai chemin
+        const sharedPath = urlParams.get('path');
         const sharedSize = parseInt(urlParams.get('size')) || 64;
 
         if (sharedSeed && sharedPath) {
             const realPath = decodeURIComponent(sharedPath);
-            console.log(`🔗 [Lien Partagé] Téléchargement direct du fichier : ${realPath}`);
+            console.log(`🔗 [Lien Seed] Chargement de : ${realPath} avec seed ${sharedSeed}`);
             
             try {
-                // TÉLÉCHARGEMENT DIRECT SANS AUCUNE MODIFICATION DU NOM !
                 const resp = await fetch(realPath);
                 if (!resp.ok) throw new Error("Fichier introuvable : " + realPath);
+                
                 const json = await resp.json();
-                let entries = json.entries || json;
 
-                // Tirage mathématique identique
+                // EXTRACTION UNIVERSELLE DU TABLEAU (Gère array brut, json.entries, json.data, etc.)
+                let entries = [];
+                if (Array.isArray(json)) {
+                    entries = json;
+                } else if (json && typeof json === 'object') {
+                    const possible = [json.entries, json.items, json.data, json.tracks, json.songs, json.musics].filter(Array.isArray);
+                    entries = possible[0] || [];
+                }
+
+                if (!entries.length) {
+                    throw new Error("Aucune musique trouvée dans le fichier JSON !");
+                }
+
+                // Normalise chaque entrée
+                entries = entries.map((entry, idx) => normalizeSeedEntry(entry, idx));
+
+                // MÉLANGE DÉTERMINISTE REPRODUCTIBLE PAR LA SEED
                 let s = parseInt(sharedSeed);
                 const rng = function() {
                     let t = s += 0x6D2B79F5;
@@ -249,18 +281,18 @@
                     entries[j] = temp;
                 }
 
-                initialShuffled = entries.slice(0, sharedSize).map((e, idx) => ({ 
-                    ...e, 
-                    uid: e.uid || `seed_${idx}_${e.as || e.yt || e.title}`,
-                    starred: false, 
-                    result: `Top ${sharedSize}` 
-                }));
+                // Découpe à la taille demandée (ex: 16)
+                initialShuffled = entries.slice(0, sharedSize);
                 currentRound = initialShuffled.map(e => ({ ...e }));
 
                 localStorage.setItem('tournamentParticipants', JSON.stringify(initialShuffled));
                 localStorage.setItem('finalResults', JSON.stringify({ matchHistory: [], initialShuffled }));
+
+                console.log(`✅ [Seed Prête] ${currentRound.length} participants prêts pour le tournoi !`);
             } catch (e) {
-                console.error("Erreur de chargement du fichier :", e);
+                console.error("Erreur chargement seed :", e);
+                alert("Erreur lors du chargement de la seed : " + e.message);
+                return;
             }
         } else {
             // Lancement normal depuis le menu
