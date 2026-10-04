@@ -176,25 +176,38 @@
     object-fit: cover;
 }
 
-/* GRILLE MULTI-COLONNES POUR LA GUERRE DES SEXES */
+/* GUERRE DES SEXES : 1 SEULE COLONNE (Pour 16 ou 32 participants) */
+/* GUERRE DES SEXES : 1 SEULE COLONNE QUI PREND TOUT L'ÉCRAN DE GAUCHE A DROITE */
 .tally-gender-grid {
     display: grid !important;
-    grid-template-columns: repeat(2, minmax(260px, 1fr)) !important; /* 2 colonnes par défaut */
+    grid-template-columns: 100% !important; /* 100% de toute la largeur */
     gap: 15px !important;
     width: 100% !important;
+    max-width: 100% !important; /* Plus aucune limite, prend tout l'espace */
+    margin: 0 !important;
     box-sizing: border-box !important;
 }
 
-/* 3 colonnes sur grand écran pour 64 participants */
-@media (min-width: 1100px) {
-    .tally-gender-grid {
-        grid-template-columns: repeat(3, minmax(240px, 1fr)) !important;
-    }
+/* La carte occupe tout l'espace d'un bout à l'autre */
+.tally-gender-grid > .tally-card {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
 }
 
-/* 1 colonne sur petit écran de téléphone */
-@media (max-width: 768px) {
-    .tally-gender-grid {
+/* 3 COLONNES : UNIQUEMENT SI SUPÉRIEUR A 32 PARTICIPANTS (ex: 64) */
+.tally-gender-grid.tally-gender-3cols {
+    grid-template-columns: repeat(3, minmax(240px, 1fr)) !important;
+}
+
+/* Adaptation mobile pour le mode 3 colonnes */
+@media (max-width: 900px) {
+    .tally-gender-grid.tally-gender-3cols {
+        grid-template-columns: 100% !important;
+    }
+}
+@media (max-width: 600px) {
+    .tally-gender-grid, .tally-gender-grid.tally-gender-3cols {
         grid-template-columns: 1fr !important;
     }
 }
@@ -223,23 +236,36 @@
             width: 100%;
         }
 
-        .tally-card {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            background: #1e293b;
-            border: 1px solid #334155;
-            padding: 10px;
-            border-radius: 10px;
-            gap: 8px;
-            box-sizing: border-box;
-        }
+        /* ====================================================
+   ENCADREMENT NET ET ÉLÉGANT DE CHAQUE DUEL
+   ==================================================== */
+.tally-card {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    background: #111827 !important;
+    border: 2px solid #ef4444 !important; /* Encadrement rouge tout autour du duel */
+    box-shadow: 0 0 12px rgba(239, 68, 68, 0.25), inset 0 0 10px rgba(0, 0, 0, 0.5) !important;
+    padding: 10px !important;
+    border-radius: 14px !important;
+    gap: 8px !important;
+    box-sizing: border-box !important;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+
 
         @media (max-width: 900px) {
             .tally-grid {
                 grid-template-columns: 1fr;
             }
         }
+
+/* ====================================================
+   LIGNES ROUGES DE SÉPARATION ENTRE LES COLONNES (100% VISIBLES)
+   ==================================================== */
+
+
 
         /* ======== MODE TOURNOI : BRACKET ======== */
         .bracket-scroll { width: 100%; max-height: 850px; overflow: hidden !important; border: 1px solid #334155; background: #090d16; padding: 30px 15px; border-radius: 12px; position: relative; cursor: grab; user-select: none; -ms-overflow-style: none; scrollbar-width: none; }
@@ -444,33 +470,40 @@
         const rThumb = rightP.yt ? `https://img.youtube.com/vi/${rightP.yt}/mqdefault.jpg` : (rightP.thumb ? `https://images.weserv.nl/?url=${encodeURIComponent(rightP.thumb)}` : "");
 
         if (isYearsMode) {
-            // FORMAT UNIFIÉ COMPACT EN 2 OU 3 COLONNES (Pour Années ET Guerre des Sexes)
-        graphRowsHtml += `
-            <div class="tally-card">
-                <div class="bracket-node bracket-node-tall ${leftWon ? 'node-winner' : 'node-loser'} ${leftP.starred ? 'node-starred' : ''}" style="flex: 1; margin:0;">
-                    ${lThumb ? `<img src="${lThumb}" crossorigin="anonymous" alt="" />` : `<div style="background:#1e293b;width:100%;height:80px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;">🎵</div>`}
-                    <div class="node-title">${leftP.starred ? '⭐ ' : ''}${leftP.title}</div>
-                </div>
-
-                <div style="font-size: 1.1rem; font-weight: 900; color: #ef4444; padding: 0 4px;">VS</div>
-
-                <div class="bracket-node bracket-node-tall ${rightWon ? 'node-winner' : 'node-loser'} ${rightP.starred ? 'node-starred' : ''}" style="flex: 1; margin:0;">
-                    ${rThumb ? `<img src="${rThumb}" crossorigin="anonymous" alt="" />` : `<div style="background:#1e293b;width:100%;height:80px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;">🎵</div>`}
-                    <div class="node-title">${rightP.starred ? '⭐ ' : ''}${rightP.title}</div>
-                </div>
-            </div>
-        `;
-        } else {
             graphRowsHtml += `
-                <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; border-bottom: 1px solid #1e293b; padding-bottom: 15px;">
-                    <div class="bracket-node bracket-node-tall ${leftWon ? 'node-winner' : 'node-loser'} ${leftP.starred ? 'node-starred' : ''}" style="width: 42%; margin:0;">
+                <div class="tally-card">
+                    <!-- CANDIDAT GAUCHE -->
+                    <div class="bracket-node bracket-node-tall ${leftWon ? 'node-winner' : 'node-loser'} ${leftP.starred ? 'node-starred' : ''}" style="flex: 1; margin:0;">
                         ${lThumb ? `<img src="${lThumb}" crossorigin="anonymous" alt="" />` : `<div style="background:#1e293b;width:100%;height:80px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;">🎵</div>`}
                         <div class="node-title">${leftP.starred ? '⭐ ' : ''}${leftP.title}</div>
                     </div>
 
-                    <div style="font-size: 1.5rem; font-weight: bold; color: #ef4444; width: 10%; text-align: center;">VS</div>
+                    <!-- LIGNE ROUGE VERTICALE AUTOUR DU VS -->
+                    <div style="font-size: 1.1rem; font-weight: 900; color: #ef4444; padding: 0 6px;">VS</div>
 
-                    <div class="bracket-node bracket-node-tall ${rightWon ? 'node-winner' : 'node-loser'} ${rightP.starred ? 'node-starred' : ''}" style="width: 42%; margin:0;">
+
+                    <!-- CANDIDAT DROITE -->
+                    <div class="bracket-node bracket-node-tall ${rightWon ? 'node-winner' : 'node-loser'} ${rightP.starred ? 'node-starred' : ''}" style="flex: 1; margin:0;">
+                        ${rThumb ? `<img src="${rThumb}" crossorigin="anonymous" alt="" />` : `<div style="background:#1e293b;width:100%;height:80px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;">🎵</div>`}
+                        <div class="node-title">${rightP.starred ? '⭐ ' : ''}${rightP.title}</div>
+                    </div>
+                </div>
+            `;
+        } else {
+            // MODE GUERRE DES SEXES : ENCADREMENT ROUGE DE CHAQUE DUEL
+            graphRowsHtml += `
+                <div class="tally-card">
+                    <!-- FEMME (GAUCHE) -->
+                    <div class="bracket-node bracket-node-tall ${leftWon ? 'node-winner' : 'node-loser'} ${leftP.starred ? 'node-starred' : ''}" style="flex: 1; margin:0;">
+                        ${lThumb ? `<img src="${lThumb}" crossorigin="anonymous" alt="" />` : `<div style="background:#1e293b;width:100%;height:80px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;">🎵</div>`}
+                        <div class="node-title">${leftP.starred ? '⭐ ' : ''}${leftP.title}</div>
+                    </div>
+
+                    <!-- BADGE VS -->
+                    <div style="font-size: 1.1rem; font-weight: 900; color: #ef4444; padding: 0 6px;">VS</div>
+
+                    <!-- HOMME (DROITE) -->
+                    <div class="bracket-node bracket-node-tall ${rightWon ? 'node-winner' : 'node-loser'} ${rightP.starred ? 'node-starred' : ''}" style="flex: 1; margin:0;">
                         ${rThumb ? `<img src="${rThumb}" crossorigin="anonymous" alt="" />` : `<div style="background:#1e293b;width:100%;height:80px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;">🎵</div>`}
                         <div class="node-title">${rightP.starred ? '⭐ ' : ''}${rightP.title}</div>
                     </div>
@@ -491,13 +524,21 @@
         title = isYearsMode ? `🏆 ${rightLabel.toUpperCase()} L'EMPORTE` : "🏆 LES HOMMES L'EMPORTENT";
     }
 
-    // DÉTECTION : Si plus de 32 duels (64 participants), on active la grille à 5 colonnes pour 128 !
-    const is128 = (initialShuffled && initialShuffled.length >= 128) || (matchHistory && matchHistory.length >= 64);
-    const gridClass = is128 ? "tally-grid tally-grid-5cols" : "tally-grid";
+    // DÉTECTION DU NOMBRE TOTAL DE PARTICIPANTS
+    const totalCount = (initialShuffled && initialShuffled.length) || (matchHistory ? matchHistory.length * 2 : 0);
 
+    // 1. Mode Année VS Année : 5 colonnes UNIQUEMENT pour 128 participants, sinon normal
+    const is128 = totalCount >= 128 || (matchHistory && matchHistory.length >= 64);
+    const yearsGridClass = is128 ? "tally-grid tally-grid-5cols" : "tally-grid";
+
+    // 2. Mode Guerre des Sexes : 3 colonnes UNIQUEMENT si supérieur à 32 participants (ex: 64)
+    const isOver32 = totalCount > 32;
+    const genderGridClass = isOver32 ? "tally-gender-grid tally-gender-3cols" : "tally-gender-grid";
+
+    // Choix du conteneur final
     const graphContainerHtml = isYearsMode 
-        ? `<div class="${gridClass}">${graphRowsHtml}</div>` 
-        : `<div class="tally-gender-grid">${graphRowsHtml}</div>`;
+        ? `<div class="${yearsGridClass}">${graphRowsHtml}</div>` 
+        : `<div class="${genderGridClass}">${graphRowsHtml}</div>`;
 
     document.getElementById('results-container').innerHTML = `
         <h1 style="color:#f8fafc; font-size:2.5rem; margin-top:20px;">${title}</h1>
