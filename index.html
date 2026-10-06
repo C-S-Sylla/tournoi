@@ -483,18 +483,23 @@
     }
 
     function updateCountLabel() {
-        // MET A JOUR LA TAILLE MAX (128) SI CATEGORIE CHANGE
         updateTournamentSizeOptions();
 
         if (currentMode === 'YEARS') {
-            if (!leftSeasonData || !rightSeasonData) return;
-            const leftEntries = parseEntries(leftSeasonData.entries);
-            const rightEntries = parseEntries(rightSeasonData.entries);
+            const leftSelect = document.getElementById('season-select-left');
+            const rightSelect = document.getElementById('season-select-right');
+
+            // PREND LE TEXTE EXACT DU MENU DÉROULANT SÉLECTIONNÉ (ex: "Année 2004" / "Année 2024")
+            const leftTitle = leftSelect?.options[leftSelect.selectedIndex]?.text || "Année Gauche";
+            const rightTitle = rightSelect?.options[rightSelect.selectedIndex]?.text || "Année Droite";
+
+            const leftCount = (leftSeasonData && leftSeasonData.entries) ? parseEntries(leftSeasonData.entries).length : 0;
+            const rightCount = (rightSeasonData && rightSeasonData.entries) ? parseEntries(rightSeasonData.entries).length : 0;
 
             document.getElementById('available-count').innerText =
                 `⚔️ CONFRONTATION D'ANNÉES ⚔️\n` +
-                `Zone Gauche (${leftSeasonData.seasonName}) : ${leftEntries.length} morceaux\n` +
-                `Zone Droite (${rightSeasonData.seasonName}) : ${rightEntries.length} morceaux`;
+                `Zone Gauche (${leftTitle}) : ${leftCount} morceaux\n` +
+                `Zone Droite (${rightTitle}) : ${rightCount} morceaux`;
             return;
         }
 
@@ -507,7 +512,7 @@
         const males = parsed.filter(e => e.vocal === "male" || e.vocal === "m").length;
         const females = parsed.filter(e => e.vocal === "female" || e.vocal === "f").length;
 
-        const name = selectedSeasonData.seasonName || "Aucune saison";
+        const name = document.getElementById('season-select')?.options[document.getElementById('season-select')?.selectedIndex]?.text || "Saison sélectionnée";
 
         document.getElementById('available-count').innerText =
             `Saison chargée : ${name}\n` +
@@ -539,12 +544,19 @@
     }
 
     async function onYearVsYearChange() {
-        const leftId = document.getElementById('season-select-left').value;
-        const rightId = document.getElementById('season-select-right').value;
+        const leftSelect = document.getElementById('season-select-left');
+        const rightSelect = document.getElementById('season-select-right');
 
+        if (!leftSelect || !rightSelect) return;
+
+        const leftId = leftSelect.value;
+        const rightId = rightSelect.value;
+
+        // Charge les deux années sélectionnées
         leftSeasonData = await loadPresetSeason(leftId);
         rightSeasonData = await loadPresetSeason(rightId);
 
+        // Met à jour l'affichage immédiatement
         updateCountLabel();
     }
 
