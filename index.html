@@ -580,39 +580,106 @@
         let finalEntries = [];
         let size = parseInt(document.getElementById('tournament-size-select').value);
 
+        // 1. Sauvegarde du chemin exact du fichier sélectionné
         const selectedSeasonObj = presetSeasons.find(s => s.id === document.getElementById('season-select')?.value);
         const exactPath = selectedSeasonObj ? selectedSeasonObj.path : "data/tournoi_gigarandom.json";
         localStorage.setItem('currentSeasonPath', exactPath);
 
-        let parsed = getSelectedEntries();
-        // On donne à chaque chanson son numéro d'origine dans le fichier JSON (0, 1, 2, 3...)
-        parsed.forEach((e, idx) => { e._origIdx = idx; });
+        // ==========================================
+        // MODE 1 : ANNÉE VS ANNÉE (YEARS)
+        // ==========================================
+        if (currentMode === "YEARS") {
+            const leftSelect = document.getElementById('season-select-left');
+            const rightSelect = document.getElementById('season-select-right');
+            if (!leftSelect.value || !rightSelect.value) return alert("Sélectionnez deux années valides.");
 
-        const cat = document.querySelector('input[name="category"]:checked').value;
-        if (cat !== "MIX") parsed = parsed.filter(e => e.type === cat);
+            const leftName = leftSelect.options[leftSelect.selectedIndex].text;
+            const rightName = rightSelect.options[rightSelect.selectedIndex].text;
+            localStorage.setItem('yearNames', JSON.stringify({ left: leftName, right: rightName }));
 
-        if (parsed.length === 0) return alert("Aucun morceau ne correspond aux critères choisis !");
+            const cat = document.querySelector('input[name="category"]:checked').value;
+            let leftEntries = parseEntries(leftSeasonData ? leftSeasonData.entries : []);
+            let rightEntries = parseEntries(rightSeasonData ? rightSeasonData.entries : []);
 
-        // Mélange aléatoire
-        parsed.sort(() => Math.random() - 0.5);
+            if (cat !== "MIX") {
+                leftEntries = leftEntries.filter(e => e.type === cat);
+                rightEntries = rightEntries.filter(e => e.type === cat);
+            }
 
-        const powers = [64, 32, 16, 8, 4, 2];
-        const maxPossible = powers.find(p => p <= parsed.length) || 2;
-        size = Math.min(size, maxPossible);
-        finalEntries = parsed.slice(0, size);
+            leftEntries.sort(() => Math.random() - 0.5);
+            rightEntries.sort(() => Math.random() - 0.5);
 
-        // COMPRESSION BINAIRE ULTRA-COURTE DE LA SEED
-        const rawIndices = finalEntries.map(e => e._origIdx);
+            let pairs = Math.min(leftEntries.length, rightEntries.length, size / 2);
+            for (let i = 0; i < pairs; i++) {
+                finalEntries.push(leftEntries[i], rightEntries[i]);
+            }
+        } 
+        // ==========================================
+        // MODE 2 : GUERRE DES SEXES (GENDER) -> STRICT 1 HOMME VS 1 FEMME
+        // ==========================================
+        else if (currentMode === "GENDER") {
+            let parsed = getSelectedEntries();
+            parsed.forEach((e, idx) => { e._origIdx = idx; });
+
+            // Séparation stricte et insensible à la casse
+            const males = parsed.filter(e => {
+                const v = (e.vocal || e.gender || "").toLowerCase().trim();
+                return v === "male" || v === "m";
+            }).sort(() => Math.random() - 0.5);
+
+            const females = parsed.filter(e => {
+                const v = (e.vocal || e.gender || "").toLowerCase().trim();
+                return v === "female" || v === "f";
+            }).sort(() => Math.random() - 0.5);
+
+            let pairs = Math.min(males.length, females.length, Math.floor(size / 2));
+            if (pairs === 0) return alert("Pas assez de musiques taguées vocal: male et female dans ce fichier !");
+
+            // GARANTIE ABSOLUE : 1 HOMME VS 1 FEMME DANS CHAQUE DUEL
+            for (let i = 0; i < pairs; i++) {
+                if (Math.random() > 0.5) {
+                    finalEntries.push(males[i], females[i]);
+                } else {
+                    finalEntries.push(females[i], males[i]);
+                }
+            }
+            size = finalEntries.length;
+        } 
+        // ==========================================
+        // MODE 3 : TOURNOI CLASSIQUE (STANDARD)
+        // ==========================================
+        else {
+            let parsed = getSelectedEntries();
+            parsed.forEach((e, idx) => { e._origIdx = idx; });
+
+            const cat = document.querySelector('input[name="category"]:checked').value;
+            if (cat !== "MIX") parsed = parsed.filter(e => e.type === cat);
+
+            if (parsed.length === 0) return alert("Aucun morceau ne correspond aux critères choisis !");
+
+            parsed.sort(() => Math.random() - 0.5);
+
+            const powers = [64, 32, 16, 8, 4, 2];
+            const maxPossible = powers.find(p => p <= parsed.length) || 2;
+            size = Math.min(size, maxPossible);
+            finalEntries = parsed.slice(0, size);
+        }
+
+        // --- ENREGISTREMENT DE LA SEED COURTE COMPRESSÉE ---
+        const rawIndices = finalEntries.map(e => (e._origIdx !== undefined ? e._origIdx : 0));
         const u16 = new Uint16Array(rawIndices);
         const u8 = new Uint8Array(u16.buffer);
         let binary = '';
         for (let i = 0; i < u8.length; i++) binary += String.fromCharCode(u8[i]);
-        
-        // Crée le mini-code propre (ex: "OAIcAjEAmAEAXAL-AYEB")
         const shortSeedCode = btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
         localStorage.setItem('currentSeed', shortSeedCode);
 
-        finalEntries.forEach(entry => { entry.starred = false; entry.result = `Top ${size}`; });
+        // --- FINALISATION ---
+        finalEntries.forEach(entry => { 
+            entry.starred = false; 
+            entry.result = `Top ${size}`; 
+            entry.uid = entry.uid || `id_${Math.random().toString(36).substr(2, 9)}`;
+        });
 
         localStorage.setItem('tournamentParticipants', JSON.stringify(finalEntries));
         localStorage.setItem('gameMode', currentMode);
