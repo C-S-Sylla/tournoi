@@ -593,14 +593,27 @@
             const rightSelect = document.getElementById('season-select-right');
             if (!leftSelect.value || !rightSelect.value) return alert("Sélectionnez deux années valides.");
 
+            // 1. Sauvegarde des noms affichés
             const leftName = leftSelect.options[leftSelect.selectedIndex].text;
             const rightName = rightSelect.options[rightSelect.selectedIndex].text;
             localStorage.setItem('yearNames', JSON.stringify({ left: leftName, right: rightName }));
 
-            const cat = document.querySelector('input[name="category"]:checked').value;
-            let leftEntries = parseEntries(leftSeasonData ? leftSeasonData.entries : []);
-            let rightEntries = parseEntries(rightSeasonData ? rightSeasonData.entries : []);
+            // 2. Sauvegarde des vrais chemins de fichiers pour le lien partagé
+            const leftObj = presetSeasons.find(s => s.id === leftSelect.value);
+            const rightObj = presetSeasons.find(s => s.id === rightSelect.value);
+            localStorage.setItem('yearPaths', JSON.stringify({ 
+                left: leftObj ? leftObj.path : "data/annee_2021.json", 
+                right: rightObj ? rightObj.path : "data/annee_2022.json" 
+            }));
 
+            // 3. Récupération et indexation des chansons
+            let leftEntries = parseEntries(leftSeasonData ? leftSeasonData.entries : []);
+            leftEntries.forEach((e, idx) => { e._origIdx = idx; });
+
+            let rightEntries = parseEntries(rightSeasonData ? rightSeasonData.entries : []);
+            rightEntries.forEach((e, idx) => { e._origIdx = idx; });
+
+            const cat = document.querySelector('input[name="category"]:checked').value;
             if (cat !== "MIX") {
                 leftEntries = leftEntries.filter(e => e.type === cat);
                 rightEntries = rightEntries.filter(e => e.type === cat);
@@ -613,7 +626,9 @@
             for (let i = 0; i < pairs; i++) {
                 finalEntries.push(leftEntries[i], rightEntries[i]);
             }
-        } 
+
+            size = finalEntries.length;
+        }
         // ==========================================
         // MODE 2 : GUERRE DES SEXES (GENDER) -> STRICT 1 HOMME VS 1 FEMME
         // ==========================================

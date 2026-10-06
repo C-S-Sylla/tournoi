@@ -673,7 +673,6 @@
     // COPIE DU LIEN UNIVERSELLE (FONCTIONNE EN LOCAL FILE:/// ET SUR GITHUB)
     function copySeedLink() {
         const seedNumber = localStorage.getItem('currentSeed') || Math.floor(10000 + Math.random() * 90000);
-        const exactPath = localStorage.getItem('currentSeasonPath') || "data/tournoi_gigarandom.json";
         const mode = localStorage.getItem('gameMode') || "STANDARD";
         const size = (initialShuffled && initialShuffled.length) ? initialShuffled.length : 64;
 
@@ -688,10 +687,20 @@
             baseUrl = "https://c-s-sylla.github.io/tournoi";
         }
 
-        // 3. Assemble le lien avec le vrai chemin exact
-        const shareUrl = `${baseUrl}/${pageName}?seed=${seedNumber}&path=${encodeURIComponent(exactPath)}&size=${size}`;
+        // 3. Assemble le lien (Gère les 2 fichiers pour YEARS, et 1 fichier pour les autres !)
+        let shareUrl = "";
 
-        // 4. Copie universelle
+        if (mode === "YEARS") {
+            const yearPaths = JSON.parse(localStorage.getItem('yearPaths') || '{}');
+            const lPath = encodeURIComponent(yearPaths.left || "data/annee_2021.json");
+            const rPath = encodeURIComponent(yearPaths.right || "data/annee_2022.json");
+            shareUrl = `${baseUrl}/year_vs_year.html?seed=${seedNumber}&left=${lPath}&right=${rPath}&size=${size}`;
+        } else {
+            const exactPath = localStorage.getItem('currentSeasonPath') || "data/tournoi_gigarandom.json";
+            shareUrl = `${baseUrl}/${pageName}?seed=${seedNumber}&path=${encodeURIComponent(exactPath)}&size=${size}`;
+        }
+
+        // 4. Copie universelle dans le presse-papier
         let isCopied = false;
         try {
             const textArea = document.createElement("textarea");
@@ -719,7 +728,7 @@
             }, 3000);
         }
 
-        // 6. Boîte de dialogue de confirmation
+        // 6. Fenêtre de confirmation avec le bon lien assemblé
         prompt("✅ Voici le lien direct de ta Seed pour ton pote (déjà copié) :", shareUrl);
     }
 

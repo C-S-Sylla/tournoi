@@ -100,49 +100,122 @@
     const matchHistory = [];
     const historyStateStack = [];
 
-    // --- 1. DÉMARRAGE ET PRÉCHARGEMENT ---
-    window.onload = () => {
-        const stored = localStorage.getItem('tournamentParticipants');
-        if (!stored) return window.location.href = 'index.html';
-        
-        const yearNames = JSON.parse(localStorage.getItem('yearNames') || '{}');
-        if (yearNames.left) document.getElementById('score-left-name').innerText = yearNames.left;
-        if (yearNames.right) document.getElementById('score-right-name').innerText = yearNames.right;
-        
-        currentList = JSON.parse(stored);
-        
+    // 1. DÉCODEUR DE SEED COMPACTE
+    function unpackSeedCode(shortSeed) {
+        if (!shortSeed) return [];
+        try {
+            let b64 = shortSeed.replace(/-/g, '+').replace(/_/g, '/');
+            while (b64.length % 4) b64 += '=';
+            const binary = atob(b64);
+            const u8 = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) u8[i] = binary.charCodeAt(i);
+            const byteLen = binary.length - (binary.length % 2);
+            const u16 = new Uint16Array(u8.buffer, 0, byteLen / 2);
+            return Array.from(u16);
+        } catch(e) {
+            console.error("Erreur décompression :", e);
+            return [];
+        }
+    }
+
+    // 2. CHARGEMENT INITIAL (NORMAL OU VIA LIEN DE SEED PARTAGÉ)
+    window.onload = async () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const sharedSeed = urlParams.get('seed');
+        const leftPath = urlParams.get('left');
+        const rightPath = urlParams.get('right');
+
+        // CAS 1 : OUVERTURE D'UN LIEN PARTAGÉ
+        if (sharedSeed && leftPath && rightPath) {
+            console.log(`🔗 [Lien Années Reçu] Chargement de ${leftPath} VS ${rightPath}`);
+
+            try {
+                // Télécharge les 2 fichiers JSON des 2 années
+                const [respL, respR] = await Promise.all([
+                    fetch(decodeURIComponent(leftPath)),
+                    fetch(decodeURIComponent(rightPath))
+                ]);
+
+                if (!respL.ok || !respR.ok) throw new Error("Un des fichiers d'années est introuvable");
+                const [jsonL, jsonR] = await Promise.all([respL.json(), respR.json()]);
+
+                const getEntries = (j) => Array.isArray(j) ? j : (j.entries || j.items || j.data || []);
+                const norm = (e, idx) => ({
+                    title: e.title || `Anime ${idx+1}`,
+                    as: e.as || e.url || e.link || "",
+                    yt: e.yt || e.youtube || "",
+                    thumb: e.thumb || "",
+                    type: e.type || "OP"
+                });
+
+                const allL = getEntries(jsonL).map(norm);
+                const allR = getEntries(jsonR).map(norm);
+
+                // Noms des années
+                const lName = jsonL.seasonName || "Année Gauche";
+                const rName = jsonR.seasonName || "Année Droite";
+                document.getElementById('score-left-name').innerText = lName;
+                document.getElementById('score-right-name').innerText = rName;
+                localStorage.setItem('yearNames', JSON.stringify({ left: lName, right: rName }));
+
+                // Décode les index de la seed (Chaque paire = 1 Gauche et 1 Droite)
+                const indexList = unpackSeedCode(sharedSeed);
+                currentList = [];
+
+                for (let i = 0; i < indexList.length; i += 2) {
+                    const idxL = indexList[i];
+                    const idxR = indexList[i + 1];
+
+                    const itemL = allL[idxL] || allL[i] || { title: "Anime L" };
+                    const itemR = allR[idxR] || allR[i + 1] || { title: "Anime R" };
+
+                    currentList.push(
+                        { ...itemL, uid: `seed_L_${i}_${itemL.as || itemL.yt || itemL.title}` },
+                        { ...itemR, uid: `seed_R_${i+1}_${itemR.as || itemR.yt || itemR.title}` }
+                    );
+                }
+
+                localStorage.setItem('tournamentParticipants', JSON.stringify(currentList));
+                localStorage.setItem('gameMode', "YEARS");
+                console.log(`✅ [Synchronisé] ${currentList.length} morceaux chargés pour la Battle d'Années !`);
+            } catch (err) {
+                console.error("Erreur Seed :", err);
+                alert("Erreur lors du chargement de la seed :\n" + err.message);
+                return;
+            }
+        } 
+        // CAS 2 : LANCEMENT NORMAL DEPUIS LE MENU LOCAL
+        else {
+            const stored = localStorage.getItem('tournamentParticipants');
+            if (!stored) return window.location.href = 'index.html';
+            
+            const yearNames = JSON.parse(localStorage.getItem('yearNames') || '{}');
+            if (yearNames.left) document.getElementById('score-left-name').innerText = yearNames.left;
+            if (yearNames.right) document.getElementById('score-right-name').innerText = yearNames.right;
+            
+            currentList = JSON.parse(stored);
+        }
+
         updateDisplay();
         startBackgroundPreloadAll();
     };
 
-    // PRÉCHARGEMENT 100% BLOB EN TÂCHE DE FOND
+    // 3. PRÉCHARGEMENT BLOB 100%
     async function startBackgroundPreloadAll() {
-        console.log("🚀 [AnisongDB] Téléchargement 100% Blob de tout le tableau...");
-
         for (let i = 0; i < currentList.length; i++) {
             const item = currentList[i];
             const videoUrl = item.as || item.at || item.link || item.url || item.resolvedUrl;
 
-            // Si un lien vidéo existe et n'est pas encore téléchargé à 100%
             if (videoUrl && typeof videoUrl === 'string' && videoUrl.trim() !== "" && !item.blobUrl && !item.isDownloading) {
                 item.isDownloading = true;
-
                 try {
                     const cleanUrl = videoUrl.trim();
-                    console.log(`📥 [Aspiration 100%] Téléchargement de : ${item.title}`);
-                    
                     const response = await fetch(cleanUrl);
                     const blob = await response.blob();
-
-                    // Crée l'URL Blob locale (Garantit une barre de chargement 100% pleine !)
                     item.blobUrl = URL.createObjectURL(blob);
                     item.isDownloaded = true;
-                    console.log(`✅ [Barre 100% Pleine !] : ${item.title}`);
-
-                    // HOT-SWAP EN DIRECT : Bascule la barre à 100% si le joueur regarde cette vidéo !
                     refreshActiveVideoPlayersIfBlobReady();
                 } catch (e) {
-                    console.warn(`Passage en flux direct pour ${item.title}`, e);
                 } finally {
                     item.isDownloading = false;
                 }
@@ -150,7 +223,6 @@
         }
     }
 
-    // HOT-SWAP EN DIRECT : Met la barre à 100% sans couper la musique
     function refreshActiveVideoPlayersIfBlobReady() {
         const checkAndSwap = (item, playerContainerId) => {
             if (!item || !item.blobUrl) return;
@@ -158,18 +230,12 @@
             if (!container) return;
 
             const video = container.querySelector('video');
-            // Si la vidéo tourne actuellement sur l'URL directe (pas encore en Blob)
             if (video && !video.src.startsWith('blob:')) {
-                const currentTime = video.currentTime; // Retient la seconde exacte
+                const currentTime = video.currentTime;
                 const isPaused = video.paused;
-
-                // Bascule sur la version 100% locale
                 video.src = item.blobUrl;
-                video.currentTime = currentTime; // Reprend au même endroit
-                if (!isPaused) {
-                    video.play().catch(() => {});
-                }
-                console.log(`⚡ [Hot-Swap 100%] Barre de chargement passée à 100% en direct pour : ${item.title}`);
+                video.currentTime = currentTime;
+                if (!isPaused) video.play().catch(() => {});
             }
         };
 
@@ -177,16 +243,14 @@
         if (currentList[currentIndex + 1]) checkAndSwap(currentList[currentIndex + 1], 'player2');
     }
 
-    // --- 2. AFFICHAGE ET LECTEURS ---
+    // 4. AFFICHAGE ET DUELS
     function updateDisplay() {
         if (currentIndex >= currentList.length) {
             return endCompte();
         }
 
         const undoBtn = document.getElementById('undo-btn');
-        if (undoBtn) {
-            undoBtn.style.display = historyStateStack.length > 0 ? 'inline-block' : 'none';
-        }
+        if (undoBtn) undoBtn.style.display = historyStateStack.length > 0 ? 'inline-block' : 'none';
 
         document.getElementById('match-info').innerText = `Duel ${(currentIndex/2)+1} / ${currentList.length/2}`;
 
@@ -206,16 +270,13 @@
     function getPlayerHTML(choice, index) {
         if (!choice) return `<div style="color:#ef4444; padding:20px;">⚠️ Élément vide</div>`;
 
-        // 1. Utilise l'URL Blob (100% remplie) si disponible, sinon le lien direct (as, at, link)
         const videoSource = choice.blobUrl || choice.as || choice.at || choice.link || choice.url || choice.webm || choice.resolvedUrl;
 
         if (videoSource && typeof videoSource === 'string' && videoSource.trim() !== "") {
             return `<video src="${videoSource.trim()}" controls preload="auto" style="width:100%; height:100%; object-fit:cover; border-radius:10px; background:#000;"></video>`;
         }
         
-        // 2. Si c'est un lien YouTube
         const ytId = choice.yt || choice.youtube || choice.youtubeId;
-
         if (ytId && typeof ytId === 'string' && ytId.trim() !== "") {
             return `
                 <iframe src="https://www.youtube.com/embed/${ytId.trim()}?rel=0" allowfullscreen></iframe>
@@ -225,24 +286,16 @@
             `;
         }
 
-        return `
-            <div style="height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#ef4444; background:#000; padding:10px; text-align:center;">
-                <span style="font-weight:bold; font-size:0.9rem;">⚠️ Lien manquant dans le JSON</span>
-            </div>
-        `;
+        return `<div style="height:100%; display:flex; align-items:center; justify-content:center; color:#ef4444; background:#000;">⚠️ Lien manquant</div>`;
     }
 
     function switchPlayer(i, ytId) {
         const iframe = document.querySelector(`#player${i + 1} iframe`);
         if (!iframe) return;
-        if (iframe.src.includes('youtube.com')) {
-            iframe.src = `https://yewtu.be/embed/${ytId}`;
-        } else {
-            iframe.src = `https://www.youtube.com/embed/${ytId}?rel=0`;
-        }
+        if (iframe.src.includes('youtube.com')) iframe.src = `https://yewtu.be/embed/${ytId}`;
+        else iframe.src = `https://www.youtube.com/embed/${ytId}?rel=0`;
     }
 
-    // --- 3. BOUTONS ET NAVIGATION ---
     function toggleStar(idx) {
         const entry = currentList[currentIndex + idx];
         entry.starred = !entry.starred;
@@ -251,20 +304,19 @@
     
     function updateStarButtonState(idx, st) {
         const btn = document.getElementById('star-' + idx);
-        if (!btn) return;
-        btn.classList.toggle('starred', st); 
-        btn.innerText = st ? "⭐ Marqué !" : "☆ Marquer ?";
+        if (btn) {
+            btn.classList.toggle('starred', st); 
+            btn.innerText = st ? "⭐ Marqué !" : "☆ Marquer ?";
+        }
     }
 
     function undo() {
         if (!historyStateStack.length) return;
         const prev = historyStateStack.pop();
-        
         currentList = prev.currentList;
         currentIndex = prev.currentIndex;
         matchHistory.length = 0;
         matchHistory.push(...prev.matchHistory);
-        
         updateDisplay();
     }
 
@@ -281,7 +333,7 @@
         matchHistory.push({ 
             p1: currentList[currentIndex], 
             p2: currentList[currentIndex+1], 
-            winnerSide: idx,                 // <-- 0 = GAUCHE / 1 = DROITE
+            winnerSide: idx,
             winnerUid: winner.uid,
             winnerTitle: winner.title 
         });
