@@ -97,44 +97,106 @@
     const matchHistory = [];
     const historyStateStack = [];
 
-    // --- 1. DÉMARRAGE ET PRÉCHARGEMENT ---
-    window.onload = () => {
-        const stored = localStorage.getItem('tournamentParticipants');
-        if (!stored) return window.location.href = 'index.html';
-        
-        currentList = JSON.parse(stored);
-        
+    // 1. DÉCODEUR PARFAIT DE TA SEED COMPACTE
+    function unpackSeedCode(shortSeed) {
+        if (!shortSeed) return [];
+        try {
+            // Rétablit le format standard Base64 avec padding
+            let b64 = shortSeed.replace(/-/g, '+').replace(/_/g, '/');
+            while (b64.length % 4) b64 += '=';
+
+            const binary = atob(b64);
+            const u8 = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) u8[i] = binary.charCodeAt(i);
+
+            // Décode les 64 numéros exacts en entiers 16 bits
+            const byteLen = binary.length - (binary.length % 2);
+            const u16 = new Uint16Array(u8.buffer, 0, byteLen / 2);
+            return Array.from(u16);
+        } catch(e) {
+            console.error("Erreur de décompression de la seed :", e);
+            return [];
+        }
+    }
+
+    // 2. CHARGEMENT ET DÉMARRAGE DU LIEN
+    window.onload = async () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const sharedSeed = urlParams.get('seed');
+        let sharedPath = urlParams.get('path') || urlParams.get('file') || urlParams.get('season');
+
+        // SI OUVERT AVEC TON LIEN :
+        if (sharedSeed && sharedPath) {
+            let realPath = decodeURIComponent(sharedPath);
+            if (!realPath.endsWith('.json')) realPath += '.json';
+            if (!realPath.startsWith('data/')) realPath = 'data/' + realPath;
+
+            console.log(`🔗 [Lien Reçu] Décodage de la seed pour : ${realPath}`);
+
+            try {
+                const resp = await fetch(realPath);
+                if (!resp.ok) throw new Error("Fichier introuvable : " + realPath);
+                const json = await resp.json();
+
+                let allRaw = Array.isArray(json) ? json : (json.entries || json.items || json.data || []);
+                
+                // Normalise toutes les musiques du gros fichier Giga-Random
+                const allNormalized = allRaw.map((e, idx) => ({
+                    title: e.title || `Anime ${idx+1}`,
+                    as: e.as || e.url || e.link || "",
+                    yt: e.yt || e.youtube || "",
+                    thumb: e.thumb || "",
+                    type: e.type || "OP",
+                    vocal: (e.vocal || e.gender || "").toLowerCase().trim(),
+                    starred: false
+                }));
+
+                // Décode les 64 numéros de ta seed
+                const indexList = unpackSeedCode(sharedSeed);
+                console.log(`✅ [Décodage réussi] ${indexList.length} numéros extraits de la seed !`);
+
+                // Pioche les 64 musiques exactes dans l'ordre !
+                currentList = indexList.map((idx, pos) => {
+                    const orig = allNormalized[idx] || allNormalized[pos] || { title: "Anime " + (pos+1) };
+                    return { ...orig, uid: `seed_${pos}_${orig.as || orig.yt || orig.title}` };
+                });
+
+                // Écrase l'ancienne mémoire par les 64 musiques de la seed
+                localStorage.setItem('tournamentParticipants', JSON.stringify(currentList));
+                localStorage.setItem('gameMode', "GENDER");
+            } catch (err) {
+                console.error("Erreur Seed :", err);
+                alert("Erreur lors du chargement de la seed :\n" + err.message);
+                return;
+            }
+        } else {
+            // Lancement normal depuis le menu
+            const stored = localStorage.getItem('tournamentParticipants');
+            if (!stored) return window.location.href = 'index.html';
+            currentList = JSON.parse(stored);
+        }
+
+        // Lance le jeu immédiatement
         updateDisplay();
         startBackgroundPreloadAll();
     };
 
-    // PRÉCHARGEMENT 100% BLOB EN TÂCHE DE FOND
+    // 3. PRÉCHARGEMENT 100% BLOB
     async function startBackgroundPreloadAll() {
-        console.log("🚀 [AnisongDB] Téléchargement 100% Blob de la Guerre des Sexes...");
-
         for (let i = 0; i < currentList.length; i++) {
             const item = currentList[i];
             const videoUrl = item.as || item.at || item.link || item.url || item.resolvedUrl;
 
             if (videoUrl && typeof videoUrl === 'string' && videoUrl.trim() !== "" && !item.blobUrl && !item.isDownloading) {
                 item.isDownloading = true;
-
                 try {
                     const cleanUrl = videoUrl.trim();
-                    console.log(`📥 [Aspiration 100%] Téléchargement de : ${item.title}`);
-                    
                     const response = await fetch(cleanUrl);
                     const blob = await response.blob();
-
-                    // Crée l'URL Blob locale (Barre 100% pleine !)
                     item.blobUrl = URL.createObjectURL(blob);
                     item.isDownloaded = true;
-                    console.log(`✅ [Barre 100% Pleine !] : ${item.title}`);
-
-                    // HOT-SWAP EN DIRECT
                     refreshActiveVideoPlayersIfBlobReady();
                 } catch (e) {
-                    console.warn(`Passage en flux direct pour ${item.title}`, e);
                 } finally {
                     item.isDownloading = false;
                 }
@@ -142,7 +204,6 @@
         }
     }
 
-    // HOT-SWAP EN DIRECT
     function refreshActiveVideoPlayersIfBlobReady() {
         const checkAndSwap = (item, playerContainerId) => {
             if (!item || !item.blobUrl) return;
@@ -153,13 +214,9 @@
             if (video && !video.src.startsWith('blob:')) {
                 const currentTime = video.currentTime;
                 const isPaused = video.paused;
-
                 video.src = item.blobUrl;
                 video.currentTime = currentTime;
-                if (!isPaused) {
-                    video.play().catch(() => {});
-                }
-                console.log(`⚡ [Hot-Swap 100%] Barre mise à 100% en direct pour : ${item.title}`);
+                if (!isPaused) video.play().catch(() => {});
             }
         };
 
@@ -167,23 +224,20 @@
         if (currentList[currentIndex + 1]) checkAndSwap(currentList[currentIndex + 1], 'player2');
     }
 
-    // --- 2. AFFICHAGE ET LECTEURS ---
+    // 4. AFFICHAGE DES MATCHS
     function updateDisplay() {
         if (currentIndex >= currentList.length) {
             return endCompte();
         }
 
         const undoBtn = document.getElementById('undo-btn');
-        if (undoBtn) {
-            undoBtn.style.display = historyStateStack.length > 0 ? 'inline-block' : 'none';
-        }
+        if (undoBtn) undoBtn.style.display = historyStateStack.length > 0 ? 'inline-block' : 'none';
 
         document.getElementById('match-info').innerText = `Duel ${(currentIndex/2)+1} / ${currentList.length/2}`;
 
         const c1 = currentList[currentIndex];
         const c2 = currentList[currentIndex + 1];
 
-        // Bordures colorées selon le genre (Bleu = Homme, Rose = Femme)
         document.getElementById('card1').className = `match-card ${c1.vocal === 'male' || c1.vocal === 'm' ? 'male-card' : 'female-card'}`;
         document.getElementById('card2').className = `match-card ${c2.vocal === 'male' || c2.vocal === 'm' ? 'male-card' : 'female-card'}`;
 
@@ -200,16 +254,13 @@
     function getPlayerHTML(choice, index) {
         if (!choice) return `<div style="color:#ef4444; padding:20px;">⚠️ Élément vide</div>`;
 
-        // Utilise l'URL Blob (100% remplie) si prête, sinon le lien direct (as, at, link)
         const videoSource = choice.blobUrl || choice.as || choice.at || choice.link || choice.url || choice.webm || choice.resolvedUrl;
 
         if (videoSource && typeof videoSource === 'string' && videoSource.trim() !== "") {
             return `<video src="${videoSource.trim()}" controls preload="auto" style="width:100%; height:100%; object-fit:cover; border-radius:10px; background:#000;"></video>`;
         }
         
-        // Si c'est un lien YouTube ("yt")
         const ytId = choice.yt || choice.youtube || choice.youtubeId;
-
         if (ytId && typeof ytId === 'string' && ytId.trim() !== "") {
             return `
                 <iframe src="https://www.youtube.com/embed/${ytId.trim()}?rel=0" allowfullscreen></iframe>
@@ -219,24 +270,16 @@
             `;
         }
 
-        return `
-            <div style="height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#ef4444; background:#000; padding:10px; text-align:center;">
-                <span style="font-weight:bold; font-size:0.9rem;">⚠️ Lien manquant dans le JSON</span>
-            </div>
-        `;
+        return `<div style="height:100%; display:flex; align-items:center; justify-content:center; color:#ef4444; background:#000;">⚠️ Lien manquant</div>`;
     }
 
     function switchPlayer(i, ytId) {
         const iframe = document.querySelector(`#player${i + 1} iframe`);
         if (!iframe) return;
-        if (iframe.src.includes('youtube.com')) {
-            iframe.src = `https://yewtu.be/embed/${ytId}`;
-        } else {
-            iframe.src = `https://www.youtube.com/embed/${ytId}?rel=0`;
-        }
+        if (iframe.src.includes('youtube.com')) iframe.src = `https://yewtu.be/embed/${ytId}`;
+        else iframe.src = `https://www.youtube.com/embed/${ytId}?rel=0`;
     }
 
-    // --- 3. BOUTONS ET NAVIGATION ---
     function toggleStar(idx) {
         const entry = currentList[currentIndex + idx];
         entry.starred = !entry.starred;
@@ -244,21 +287,20 @@
     }
     
     function updateStarButtonState(idx, st) {
-        const btn = document.getElementById(`star-${idx}`);
-        if (!btn) return;
-        btn.classList.toggle('starred', st); 
-        btn.innerText = st ? "⭐ Marqué !" : "☆ Marquer ?";
+        const btn = document.getElementById('star-' + idx);
+        if (btn) {
+            btn.classList.toggle('starred', st); 
+            btn.innerText = st ? "⭐ Marqué !" : "☆ Marquer ?";
+        }
     }
 
     function undo() {
         if (!historyStateStack.length) return;
         const prev = historyStateStack.pop();
-        
         currentList = prev.currentList;
         currentIndex = prev.currentIndex;
         matchHistory.length = 0;
         matchHistory.push(...prev.matchHistory);
-        
         updateDisplay();
     }
 
