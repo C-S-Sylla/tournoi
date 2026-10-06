@@ -233,65 +233,77 @@
     }
 
     // CHARGEMENT INITIAL (NORMAL OU VIA LIEN SEED)
+    // DÉCOMPRESSION DU MINI-CODE EN LISTE D'INDEX
+    function unpackSeedCode(shortSeed) {
+        if (!shortSeed) return [];
+        if (shortSeed.includes(',')) {
+            return shortSeed.split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n));
+        }
+        try {
+            let b64 = shortSeed.replace(/-/g, '+').replace(/_/g, '/');
+            while (b64.length % 4) b64 += '=';
+            const binary = atob(b64);
+            const u8 = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) u8[i] = binary.charCodeAt(i);
+            const u16 = new Uint16Array(u8.buffer);
+            return Array.from(u16);
+        } catch(e) {
+            console.error("Erreur décompression seed :", e);
+            return [];
+        }
+    }
+
+    // CHARGEMENT INITIAL (GÈRE LES LIENS PARTAGÉS SUR N'IMPORTE QUEL APPAREIL)
     window.onload = async () => {
         const urlParams = new URLSearchParams(window.location.search);
         const sharedSeed = urlParams.get('seed');
         let sharedPath = urlParams.get('path') || urlParams.get('file') || urlParams.get('season');
 
+        // SI L'APPAREIL OUVRE UN LIEN PARTAGÉ :
         if (sharedSeed && sharedPath) {
             let realPath = decodeURIComponent(sharedPath);
             if (!realPath.endsWith('.json')) realPath += '.json';
             if (!realPath.startsWith('data/')) realPath = 'data/' + realPath;
 
-            console.log(`🔗 [Lien Seed] Reconstitution 100% exacte des chansons : ${sharedSeed}`);
-            
+            console.log(`🔗 [Appareil Distant] Chargement de la seed pour : ${realPath}`);
+
             try {
                 const resp = await fetch(realPath);
                 if (!resp.ok) throw new Error("Fichier introuvable : " + realPath);
                 const json = await resp.json();
 
-                let allRawEntries = Array.isArray(json) ? json : (json.entries || json.items || json.data || []);
-                
-                // Normalise toutes les musiques brutes du fichier
-                const allNormalized = allRawEntries.map((entry, idx) => normalizeSeedEntry(entry, idx));
+                let allRaw = Array.isArray(json) ? json : (json.entries || json.items || json.data || []);
+                const allNormalized = allRaw.map((e, idx) => ({
+                    title: e.title || `Anime ${idx+1}`,
+                    as: e.as || e.url || e.link || "",
+                    yt: e.yt || e.youtube || "",
+                    thumb: e.thumb || "",
+                    type: e.type || "OP",
+                    vocal: (e.vocal || e.gender || "").toLowerCase(),
+                    starred: false
+                }));
 
-                // RECONSTITUTION EXACTE : On pioche les chansons selon la liste de numéros de la seed
-// DÉCOMPRESSION DU MINI-CODE EN LISTE DE CHIFFRES (Compatible ancien et nouveau format)
-                let indexList = [];
-                if (sharedSeed.includes(',')) {
-                    // Si ancien format avec virgules
-                    indexList = sharedSeed.split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n));
-                } else {
-                    // Décompression du mini-code Base64
-                    let b64 = sharedSeed.replace(/-/g, '+').replace(/_/g, '/');
-                    while (b64.length % 4) b64 += '=';
-                    const binary = atob(b64);
-                    const u8 = new Uint8Array(binary.length);
-                    for (let i = 0; i < binary.length; i++) u8[i] = binary.charCodeAt(i);
-                    const u16 = new Uint16Array(u8.buffer);
-                    indexList = Array.from(u16);
-                }
-                initialShuffled = indexList.map((idx, pos) => {
-                    const original = allNormalized[idx] || allNormalized[pos] || { title: "Anime " + (pos+1) };
-                    return { ...original, uid: `seed_${pos}_${original.as || original.yt || original.title}`, starred: false, result: `Top ${indexList.length}` };
+                // Décompresse la seed pour retrouver la liste exacte des chansons
+                const indexList = unpackSeedCode(sharedSeed);
+                currentList = indexList.map((idx, pos) => {
+                    const orig = allNormalized[idx] || allNormalized[pos] || { title: "Anime " + (pos+1) };
+                    return { ...orig, uid: `seed_${pos}_${orig.as || orig.yt || orig.title}` };
                 });
 
-                currentRound = initialShuffled.map(e => ({ ...e }));
-
-                localStorage.setItem('tournamentParticipants', JSON.stringify(initialShuffled));
-                localStorage.setItem('finalResults', JSON.stringify({ matchHistory: [], initialShuffled }));
-
-                console.log(`✅ [Partie Identique] ${currentRound.length} musiques parfaitement synchronisées !`);
+                // Écrase l'ancienne sauvegarde de l'appareil par la nouvelle partie du lien !
+                localStorage.setItem('tournamentParticipants', JSON.stringify(currentList));
+                localStorage.setItem('gameMode', "GENDER");
+                console.log(`✅ [Synchronisé] ${currentList.length} morceaux chargés depuis le lien !`);
             } catch (err) {
-                console.error("Erreur Seed :", err);
-                alert("Erreur chargement seed : " + err.message);
+                console.error("Erreur chargement seed :", err);
+                alert("Erreur lors du chargement de la seed : " + err.message);
                 return;
             }
         } else {
+            // Lancement normal depuis le menu local
             const stored = localStorage.getItem('tournamentParticipants');
             if (!stored) return window.location.href = 'index.html';
-            initialShuffled = JSON.parse(stored);
-            currentRound = initialShuffled.map(e => ({ ...e }));
+            currentList = JSON.parse(stored);
         }
 
         updateDisplay();
