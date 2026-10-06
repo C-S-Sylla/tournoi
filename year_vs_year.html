@@ -302,11 +302,20 @@
         updateStarButtonState(idx, entry.starred);
     }
     
+    // MISE A JOUR DES ÉTOILES 100% FIABLE (SANS INVERSION AUTOMATIQUE)
     function updateStarButtonState(idx, st) {
         const btn = document.getElementById('star-' + idx);
-        if (btn) {
-            btn.classList.toggle('starred', st); 
-            btn.innerText = st ? "⭐ Marqué !" : "☆ Marquer ?";
+        if (!btn) return;
+
+        // Force strictement VRAI (true) ou FAUX (false)
+        const isStarred = Boolean(st); 
+
+        if (isStarred) {
+            btn.classList.add('starred');
+            btn.innerText = "⭐ Marqué !";
+        } else {
+            btn.classList.remove('starred');
+            btn.innerText = "☆ Marquer ?";
         }
     }
 
