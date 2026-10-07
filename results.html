@@ -557,10 +557,18 @@
             </div>
             
             <div class="tally-wrapper" id="tally-graph-wrapper">
-                <div style="display: flex; justify-content: space-between; color: #94a3b8; font-weight: bold; font-size: 1.1rem; padding: 0 10px; margin-bottom: 10px;">
-                    <span style="color: ${leftColor};">${leftLabel}</span>
-                    <span style="color: ${rightColor};">${rightLabel}</span>
-                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 1.2rem; padding: 0 10px; margin-bottom: 15px;">
+    <!-- ÉQUIPE GAUCHE -->
+    <span style="color: ${leftColor}; flex: 1; text-align: left;">${leftLabel}</span>
+
+    <!-- SCORE DU MATCH AU MILIEU (ex: 16 - 16) -->
+    <span style="background: rgba(15, 23, 42, 0.9); color: #f8fafc; border: 2px solid #ef4444; box-shadow: 0 0 10px rgba(239, 68, 68, 0.4); padding: 5px 18px; border-radius: 25px; font-size: 1.3rem; letter-spacing: 2px; font-weight: 900;">
+        ${leftWins} - ${rightWins}
+    </span>
+
+    <!-- ÉQUIPE DROITE -->
+    <span style="color: ${rightColor}; flex: 1; text-align: right;">${rightLabel}</span>
+</div>
 
                 ${graphContainerHtml}
             </div>
