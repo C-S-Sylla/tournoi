@@ -1,22 +1,231 @@
+ [  
+    {
+      "title": "Blue Box (Contrast - TOMOO)",
+      "yt": "_sf22g9Vl9Q",
+      "type": "OP",
+      "vocal": "female"
+    },
+    {
+        "title": "Mobile Suit Gundam the Witch from Mercury (The Blessing - YOASOBI)",
+        "yt": "vIhQ9zya2-g",
+      "type": "OP",
+      "vocal": "female"
+    },
+        {
+      "title": "Orb: On the Movements of the Earth (Kaiju - sakanaction)",
+      "yt": "eZAocot63s8",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Blue Box (Teenage Blue - Eve)",
+      "yt": "LuFgbDFcCT4",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Black Butler (MAISIE - Cö shu Nie feat. HYDE)",
+      "yt": "WmLqVVnLl80",
+      "type": "OP",
+      "vocal": "female"
+    },
+    {
+      "title": "Dororo (Sayonara Gokko - amazarashi)",
+      "yt": "IMx-IZRwDp0",
+      "type": "ED",
+      "vocal": "male"
+    },
+    {
+      "title": "Deltora Quest (In This Life - Delta Goodrem)",
+      "yt": "hQCJ5CSH9T8",
+      "type": "OP",
+      "vocal": "female"
+    },
+    {
+      "title": "Black Butler (MAISIE - Cö shu Nie feat. HYDE)",
+      "yt": "Vzanj1ORkJQ",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Houseki no Kuni (Kyoumen no Nami - YURiKA)",
+      "yt": "C9MuI4gfyiA",
+      "type": "OP",
+      "vocal": "female"
+    },
+    {
+      "title": "Attack on Titan (The Rumbling - SiM)",
+      "yt": "Tmyd04xkr6E",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "K RETURN OF KINGS (Asymmetry - Horie Yui)",
+      "yt": "Sq4l1AdgiU0",
+      "type": "OP",
+      "vocal": "female"
+    },
+    {
+      "title": "Death Note (What's up, people?! - Maximum the Hormone)",
+      "yt": "BTevuW9xeuE",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Naruto Shippuden (U Can Do It - DOMINO)",
+      "yt": "fU4zb23tKLM",
+      "type": "OP",
+      "vocal": "female"
+    },
+    {
+      "title": "Urusei Yatsura (Aiue - Minami, SAKURAmoti)",
+      "yt": "OgsWK7pwx7k",
+      "type": "OP",
+      "vocal": "female"
+    },
+    {
+      "title": "Ginga Eiyuu Densetsu: Die Neue These - Seiran (Binary Star - SawanoHiroyuki[nZk]:Uru)",
+      "yt": "40MMUekeVQo",
+      "type": "OP",
+      "vocal": "female"
+    },
+    {
+      "title": "Dead Mount Death Play (Nero - Sou)",
+      "yt": "ToeO0rWl-xY",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Ginga Eiyuu Densetsu: Die Neue These - Seiran (CRY - SawanoHiroyuki[nZk]:mizuki)",
+      "as": "https://naedist.animemusicquiz.com/ut4khb.webm",
+      "type": "OP",
+      "thumb": "https://i.ytimg.com/vi/MxYyXtrpwr8/hq720.jpg?sqp=-oaymwEnCNAFEJQDSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLAURTMxvOJ73wBhRX-7G3IiJuiSLw",
+      "vocal": "female"
+    },
+    {
+      "title": "Made in Abyss (Katachi - Riko Azuna)",
+      "yt": "o_RG03t7cVE",
+      "type": "OP",
+      "vocal": "female"
+    },
+    {
+      "title": "Tokyo Revengers (White Noise - Official髭男dism)",
+      "yt": "bQ0_w4sDHLg",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Overlord (VORACITY - NMYTH & ROID)",
+      "yt": "yxptP0CXMVo",
+      "type": "OP",
+      "vocal": "female"
+    },
+    {
+      "title": "My Hero Academia (Ta ga Tame - TK from Ling tosite sigure)",
+      "yt": "soRisUFPwXQ",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "The Perfect Insider (Sangenshoku - PELICAN FANCLUB)",
+      "yt": "SohCAjC-Npk",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Slam Dunk (Kimi Ga Suki Da To Sakebitai - BAAD)",
+      "yt": "m_QP5_rdH_g",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Saint Seiya (Blue Forever - Make-Up)",
+      "yt": "ggCL1RB3RWM",
+      "type": "ED",
+      "vocal": "male"
+    },
+    {
+      "title": "World Trigger (Ungai Dōkei - Fantastic Youth)",
+      "yt": "j8fo01EZaSU",
+      "type": "ED",
+      "vocal": "female"
+    },
+    {
+      "title": "Dragon Ball Super: Beerus (ONOGAMI - MEGATERA・ZERO)",
+      "yt": "p7j-iOhl8GI",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "The Apothecary Diaries (Ambivalent - Uru)",
+      "yt": "z-UPUXGYYqo",
+      "type": "OP",
+      "vocal": "female"
+    },
+    {
+      "title": "Overgeared (SATISFY - Re:name)",
+      "yt": "bMtoYP135bc",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Yorinuki GinTama san (Katoniago  - FLiP)",
+      "yt": "Hvrbhny3Je4",
+      "type": "OP",
+      "vocal": "female"
+    },
+    {
+      "title": "Noragami (Goya wa Machiawase - Hello Sleepwalkers)",
+      "yt": "qx9ieoCsd1w",
+      "type": "OP",
+      "vocal": "male"
+    },
+    {
+      "title": "Kakegurui (Deal with the devil - Tia)",
+      "yt": "g04QC2Ewnl4",
+      "type": "OP",
+      "vocal": "female"
+    },
+    {
+      "title": "The Eminence in Shadow (HIGHEST - OxT)",
+      "yt": "9iQVgj4z-I4",
+      "type": "OP",
+      "vocal": "male"
+    }
 
- The Rising of the Shield Hero - Opening 1
+] 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+blue box ed 2
+Mobile Suit Gundam the Witch from Mercury op 1
+WmLqVVnLl80
+Deltora quest op 3
+yoseki no kuni
+K: return of kings
 fU4zb23tKLM
+Urusei yatsura op 1
+40MMUekeVQo
+https://naedist.animemusicquiz.com/ut4khb.webm
+o_RG03t7cVE
+yxptP0CXMVo
+j8fo01EZaSU
+z-UPUXGYYqo
+Kakegurui op 1
+
+
+orb
+blue box ed 1
+The Rising of the Shield Hero - Opening 1
+Vzanj1ORkJQ
+sim rumbling
+death note op 2
+dead mount death play op 1
+tokyo revengers op 2
+soRisUFPwXQ
+dr. stone op 2
+m_QP5_rdH_g
+ggCL1RB3RWM
+p7j-iOhl8GI
+bMtoYP135bc
+qx9ieoCsd1w
