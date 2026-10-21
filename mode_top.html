@@ -446,8 +446,10 @@
         <div id="top-stage">
             <video id="deck-a" class="video-deck" preload="auto" playsinline></video>
             <video id="deck-b" class="video-deck" preload="auto" playsinline></video>
-            <iframe id="yt-deck-a" class="video-deck" allow="autoplay" allowfullscreen></iframe>
-<iframe id="yt-deck-b" class="video-deck" allow="autoplay" allowfullscreen></iframe>
+            <!-- L'API Google remplacera automatiquement ces divs par les vrais lecteurs ! -->
+<div id="yt-deck-a" class="video-deck hidden"></div>
+<div id="yt-deck-b" class="video-deck hidden"></div>
+
             
             <div id="hud-overlay">
                 <div id="rank-badge">10</div>
@@ -490,6 +492,8 @@
     let timerInterval = null;
     let clipTimeout = null;
 
+    
+
     const deckA = document.getElementById('deck-a');
     const deckB = document.getElementById('deck-b');
     const rankBadge = document.getElementById('rank-badge');
@@ -497,6 +501,28 @@
     const songTitle = document.getElementById('song-title');
     const timerBar = document.getElementById('timer-bar');
 
+    // INITIALISATION DE L'API OFFICIELLE YOUTUBE
+    let ytPlayer = null;
+    let isYtReady = false;
+
+    // Injecte le script de l'API YouTube dans la page
+    const tag = document.createElement('script');
+    tag.src = "https://www.youtube.com/iframe_api";
+    const firstScriptTag = document.getElementsByTagName('script')[0];
+    firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+    // Fonction appelée automatiquement par Google quand l'API est prête
+    function onYouTubeIframeAPIReady() {
+        ytPlayer = new YT.Player('yt-deck-a', {
+            playerVars: { 'controls': 0, 'disablekb': 1, 'rel': 0, 'fs': 0 },
+            events: {
+                'onReady': () => { 
+                    isYtReady = true; 
+                    console.log("✅ API YouTube connectée et prête !"); 
+                }
+            }
+        });
+    }
 
     // GÉNÈRE LE LIEN DIRECT DE LA VIDÉO DU TOP
     function copyTopVideoLink() {
@@ -904,7 +930,7 @@ function runClip(playlist) {
 
         const currentSong = currentList[playIndex];
         
-        // Met à jour les textes du bandeau
+        // Textes du bandeau
         const rank = topSize - timelineSlots.indexOf(currentSong);
         rankBadge.innerText = rank > 0 ? rank : (currentList.length - playIndex);
         animeTitle.innerText = currentSong.title || "Morceau sans titre";
@@ -915,13 +941,12 @@ function runClip(playlist) {
 
         if (!mainVid) return alert("Erreur : Pas de balise <video>");
 
-        // Reset total (barre à 0% et arrêt de tous les anciens timers)
+        // Remise à zéro forcée et nette
         timerBar.style.width = '0%';
-        clearInterval(timerInterval);
-        clearTimeout(clipTimeout);
         mainVid.pause();
+        mainVid.ontimeupdate = null; 
 
-        const videoUrl = currentSong.as || currentSong.url || currentSong.link;
+        const videoUrl = currentSong.blobUrl || currentSong.as || currentSong.url || currentSong.link;
         
         if (videoUrl) {
             if (mainYt) mainYt.style.display = 'none';
@@ -933,61 +958,107 @@ function runClip(playlist) {
             mainVid.currentTime = START_OFFSET;
             mainVid.load();
 
-            // SÉCURITÉ AUDIO : Attend que le son soit prêt avant de lancer la lecture et la barre
-            const startWhenAudioReady = () => {
-                mainVid.removeEventListener('canplaythrough', startWhenAudioReady);
+            let clipStartedTime = null;
+            let hasEnded = false;
 
-                mainVid.play().then(() => {
-                    let startTime = Date.now();
+            // Événement déclenché à chaque frame de la vidéo
+            mainVid.ontimeupdate = () => {
+                if (hasEnded) return;
 
-                    // 1. Animation fluide de la barre de 0% à 100% sur 10 secondes exactes
-                    clearInterval(timerInterval);
-                    timerInterval = setInterval(() => {
-                        const elapsed = (Date.now() - startTime) / 1000;
-                        const pct = Math.min((elapsed / CLIP_DURATION) * 100, 100);
-                        timerBar.style.width = pct + '%';
-                    }, 50);
+                // 1. La vidéo doit avoir dépassé 48s ET ne pas être en train de lagger (readyState >= 3)
+                if (mainVid.currentTime >= START_OFFSET && mainVid.readyState >= 3 && !mainVid.paused) {
+                    
+                    // 2. Initialise le compteur EXACTEMENT au moment où la 1ère frame apparaît
+                    if (clipStartedTime === null) {
+                        clipStartedTime = mainVid.currentTime;
+                    }
 
-                    // 2. COUPURE NETTE ET OBLIGATOIRE AU BOUT DE 10 SECONDES PILE
-                    clearTimeout(clipTimeout);
-                    clipTimeout = setTimeout(() => {
-                        clearInterval(timerInterval);
-                        timerBar.style.width = '100%';
+                    // 3. Calcul pur basé sur la vidéo (Si la vidéo freeze, playedDuration freeze aussi !)
+                    const playedDuration = mainVid.currentTime - clipStartedTime;
+                    const pct = Math.min((playedDuration / CLIP_DURATION) * 100, 100);
+                    
+                    // Met à jour la barre brute, sans transition CSS
+                    timerBar.style.width = pct + '%';
+
+                    // 4. Arrêt net à 10 secondes réelles lues
+                    if (playedDuration >= CLIP_DURATION || mainVid.currentTime >= (START_OFFSET + CLIP_DURATION)) {
+                        hasEnded = true;
+                        mainVid.ontimeupdate = null;
                         mainVid.pause();
                         playIndex++;
-                        runClip(currentList);
-                    }, CLIP_DURATION * 1000);
-
-                }).catch(err => {
-                    console.warn("Lecture bloquée :", err);
-                });
+                        runClip(currentList); // Passe au suivant
+                    }
+                }
             };
 
-            mainVid.addEventListener('canplaythrough', startWhenAudioReady);
+            mainVid.play().catch(err => {
+                // Seulement si le navigateur bloque l'autoplay (rare)
+                setTimeout(() => {
+                    if (!hasEnded) { hasEnded = true; playIndex++; runClip(currentList); }
+                }, 12000);
+            });
 
         } else if (currentSong.yt) {
+            // C'EST DU YOUTUBE
             mainVid.style.display = 'none';
             mainVid.pause();
+            
             if (mainYt) {
                 mainYt.style.display = 'block';
                 mainYt.classList.add('active');
-                mainYt.src = `https://www.youtube.com/embed/${currentSong.yt}?autoplay=1&start=48&end=58&enablejsapi=1`;
             }
 
-            let start = Date.now();
-            clearInterval(timerInterval);
-            timerInterval = setInterval(() => {
-                const elapsed = (Date.now() - start) / 1000;
-                const pct = Math.min((elapsed / CLIP_DURATION) * 100, 100);
-                timerBar.style.width = pct + '%';
-            }, 50);
+            // Si le "cerveau" YouTube est bien branché
+            if (isYtReady && ytPlayer) {
+                
+                // Charge et lance la vidéo directement à 48 secondes
+                ytPlayer.loadVideoById({
+                    videoId: currentSong.yt,
+                    startSeconds: START_OFFSET
+                });
 
-            clearTimeout(clipTimeout);
-            clipTimeout = setTimeout(() => {
+                let clipStartedTime = null;
+                let hasEnded = false;
+
+                // Surveille le lecteur YouTube toutes les 50 millisecondes
                 clearInterval(timerInterval);
-                playIndex++;
-                runClip(currentList);
-            }, CLIP_DURATION * 1000);
+                timerInterval = setInterval(() => {
+                    if (hasEnded) return;
+
+                    // getPlayerState() : 1 = En lecture fluide | 3 = Buffering/Lag
+                    const state = ytPlayer.getPlayerState();
+                    
+                    if (state === 1) { 
+                        // LA VIDÉO TOURNE RÉELLEMENT SANS LAG !
+                        const currentTime = ytPlayer.getCurrentTime();
+
+                        // Enregistre le temps exact de départ (souvent 48.001s)
+                        if (clipStartedTime === null) {
+                            clipStartedTime = currentTime;
+                        }
+
+                        // La barre se base sur les VRAIES secondes YouTube lues
+                        const playedDuration = currentTime - clipStartedTime;
+                        const pct = Math.min((playedDuration / CLIP_DURATION) * 100, 100);
+                        timerBar.style.width = pct + '%';
+
+                        // Arrêt net après 10 secondes réelles d'images
+                        if (playedDuration >= CLIP_DURATION || currentTime >= (START_OFFSET + CLIP_DURATION)) {
+                            hasEnded = true;
+                            clearInterval(timerInterval);
+                            ytPlayer.pauseVideo();
+                            playIndex++;
+                            runClip(currentList);
+                        }
+                    } else {
+                        // Si ça bufferise (chargement infini), le timer ne bouge pas !
+                        // La barre reste bloquée à sa position jusqu'à la reprise de la connexion.
+                    }
+                }, 50);
+
+            } else {
+                alert("⚠️ L'API YouTube n'a pas pu se connecter.");
+            }
         }
     }
 
