@@ -915,10 +915,11 @@ function runClip(playlist) {
 
         if (!mainVid) return alert("Erreur : Pas de balise <video>");
 
-        // Reset de la barre de progression en attendant le chargement
+        // Reset total (barre à 0% et arrêt de tous les anciens timers)
         timerBar.style.width = '0%';
         clearInterval(timerInterval);
         clearTimeout(clipTimeout);
+        mainVid.pause();
 
         const videoUrl = currentSong.as || currentSong.url || currentSong.link;
         
@@ -926,38 +927,43 @@ function runClip(playlist) {
             if (mainYt) mainYt.style.display = 'none';
             mainVid.style.display = 'block';
             mainVid.classList.add('active');
-            mainVid.muted = false;
+            mainVid.muted = false; 
+            mainVid.volume = 1.0;
             mainVid.src = videoUrl;
             mainVid.currentTime = START_OFFSET;
             mainVid.load();
 
-            // SÉCURITÉ : Attend que la vidéo soit prête et calée à 48s AVANT de lancer la barre et le chrono de 10s
-            const startPlaybackWhenReady = () => {
-                mainVid.removeEventListener('playing', startPlaybackWhenReady);
-                
-                mainVid.play().catch(() => {});
+            // SÉCURITÉ AUDIO : Attend que le son soit prêt avant de lancer la lecture et la barre
+            const startWhenAudioReady = () => {
+                mainVid.removeEventListener('canplaythrough', startWhenAudioReady);
 
-                // Démarrage de la barre de progression des 10 secondes
-                let start = Date.now();
-                clearInterval(timerInterval);
-                timerInterval = setInterval(() => {
-                    const elapsed = (Date.now() - start) / 1000;
-                    const pct = Math.min((elapsed / CLIP_DURATION) * 100, 100);
-                    timerBar.style.width = pct + '%';
-                }, 50);
+                mainVid.play().then(() => {
+                    let startTime = Date.now();
 
-                // Fin du clip de 10 secondes
-                clearTimeout(clipTimeout);
-                clipTimeout = setTimeout(() => {
+                    // 1. Animation fluide de la barre de 0% à 100% sur 10 secondes exactes
                     clearInterval(timerInterval);
-                    mainVid.pause();
-                    playIndex++;
-                    runClip(currentList);
-                }, CLIP_DURATION * 1000);
+                    timerInterval = setInterval(() => {
+                        const elapsed = (Date.now() - startTime) / 1000;
+                        const pct = Math.min((elapsed / CLIP_DURATION) * 100, 100);
+                        timerBar.style.width = pct + '%';
+                    }, 50);
+
+                    // 2. COUPURE NETTE ET OBLIGATOIRE AU BOUT DE 10 SECONDES PILE
+                    clearTimeout(clipTimeout);
+                    clipTimeout = setTimeout(() => {
+                        clearInterval(timerInterval);
+                        timerBar.style.width = '100%';
+                        mainVid.pause();
+                        playIndex++;
+                        runClip(currentList);
+                    }, CLIP_DURATION * 1000);
+
+                }).catch(err => {
+                    console.warn("Lecture bloquée :", err);
+                });
             };
 
-            // Écoute le moment exact où la vidéo est prête à jouer
-            mainVid.addEventListener('playing', startPlaybackWhenReady);
+            mainVid.addEventListener('canplaythrough', startWhenAudioReady);
 
         } else if (currentSong.yt) {
             mainVid.style.display = 'none';
@@ -965,11 +971,9 @@ function runClip(playlist) {
             if (mainYt) {
                 mainYt.style.display = 'block';
                 mainYt.classList.add('active');
-                // YouTube gère son propre paramètre start=48 & end=58
                 mainYt.src = `https://www.youtube.com/embed/${currentSong.yt}?autoplay=1&start=48&end=58&enablejsapi=1`;
             }
 
-            // Pour YouTube, on lance la barre immédiatement car l'iframe gère son propre temps
             let start = Date.now();
             clearInterval(timerInterval);
             timerInterval = setInterval(() => {
