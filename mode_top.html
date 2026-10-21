@@ -270,18 +270,14 @@
 
         /* ======== VUE 2 : LE LECTEUR VIDÉO FINAL AUTOMATIQUE ======== */
         #player-view {
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            width: 100vw;
-            height: 100vh;
-            position: fixed;
-            top: 0;
-            left: 0;
-            background: #000;
-            z-index: 100;
-        }
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding-bottom: 60px; /* Débloque le scroll vertical */
+}
 
         #top-stage {
             position: relative;
@@ -442,6 +438,8 @@
         <div id="top-stage">
             <video id="deck-a" class="video-deck" preload="auto" playsinline></video>
             <video id="deck-b" class="video-deck" preload="auto" playsinline></video>
+            <iframe id="yt-deck-a" class="video-deck" allow="autoplay" allowfullscreen></iframe>
+<iframe id="yt-deck-b" class="video-deck" allow="autoplay" allowfullscreen></iframe>
             
             <div id="hud-overlay">
                 <div id="rank-badge">10</div>
@@ -456,9 +454,13 @@
         </div>
 
         <div class="player-controls">
-            <button onclick="backToStudio()" style="background:#475569;">✏️ Modifier le TOP</button>
-            <button onclick="toggleFullscreen()">🖥️ Plein écran</button>
-        </div>
+    <button onclick="togglePlayPause()" id="pause-btn" style="background:#3b82f6;">⏸️ Pause</button>
+    <button onclick="skipToNextClip()" style="background:#6366f1;">Passer au suivant ⏭️</button>
+    <button onclick="toggleFullscreen()" style="background:#334155;">🖥️ Plein écran</button>
+
+    <!-- AJOUTE CE BOUTON DE PARTAGE : -->
+    <button id="share-top-btn" onclick="copyTopVideoLink()" style="background:#10b981;">🔗 Copier le Lien de ce TOP</button>
+</div>
     </div>
 
 <script>
@@ -487,6 +489,51 @@
     const songTitle = document.getElementById('song-title');
     const timerBar = document.getElementById('timer-bar');
 
+
+    // GÉNÈRE LE LIEN DIRECT DE LA VIDÉO DU TOP
+    function copyTopVideoLink() {
+        const finalPlaylist = timelineSlots.filter(s => s !== null);
+        if (!finalPlaylist.length) return alert("Ton TOP est vide !");
+
+        const exactPath = localStorage.getItem('currentSeasonPath') || "data/summer-2026-mix.json";
+        
+        // Mémorise les numéros des morceaux dans l'ordre exact du Top
+        const topIndices = finalPlaylist.map(s => {
+            const idx = allSongs.findIndex(item => item.title === s.title);
+            return idx !== -1 ? idx : 0;
+        }).join(',');
+
+        let baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
+        if (window.location.protocol === "file:") {
+            baseUrl = "https://c-s-sylla.github.io/tournoi";
+        }
+
+        const shareUrl = `${baseUrl}/mode_top.html?path=${encodeURIComponent(exactPath)}&top=${topIndices}&play=1`;
+
+        // Copie universelle dans le presse-papier
+        try {
+            const ta = document.createElement("textarea");
+            ta.value = shareUrl;
+            ta.style.position = "fixed"; ta.style.top = "-9999px";
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+        } catch(e) {}
+
+        const btn = document.getElementById('share-top-btn');
+        if (btn) {
+            btn.innerText = "✅ Lien du TOP Copié !";
+            btn.style.background = "#059669";
+            setTimeout(() => { 
+                btn.innerText = "🔗 Copier le Lien de ce TOP"; 
+                btn.style.background = "#10b981";
+            }, 3000);
+        }
+
+        prompt("✅ Voici le lien direct de la vidéo de ton TOP pour ton pote :", shareUrl);
+    }
+    
     // Détection universelle de miniature
     function getThumb(item) {
         if (!item) return "";
@@ -758,11 +805,26 @@
         document.getElementById('editor-view').style.display = 'flex';
     }
 
-    function prepareDeck(deck, song) {
+    function prepareDeck(song, isA) {
         if (!song) return;
-        deck.src = song.as || song.url || song.link || "";
-        deck.currentTime = START_OFFSET;
-        deck.load();
+        const vid = isA ? document.getElementById('deck-a') : document.getElementById('deck-b');
+        const yt = isA ? document.getElementById('yt-deck-a') : document.getElementById('yt-deck-b');
+
+        const videoUrl = song.as || song.url || song.link;
+        if (videoUrl) {
+            yt.style.display = 'none';
+            yt.src = '';
+            vid.style.display = 'block';
+            vid.src = videoUrl;
+            vid.currentTime = START_OFFSET;
+            vid.load();
+        } else if (song.yt) {
+            vid.style.display = 'none';
+            vid.src = '';
+            vid.pause();
+            yt.style.display = 'block';
+            yt.src = `https://www.youtube.com/embed/${song.yt}?autoplay=1&start=48&end=58`;
+        }
     }
 
     function startFinalCountdown(playlist) {
@@ -784,23 +846,37 @@
         const currentSong = playlist[playIndex];
         const nextSong = playlist[playIndex + 1];
 
-        const activeDeck = isDeckAActive ? deckA : deckB;
-        const standbyDeck = isDeckAActive ? deckB : deckA;
+        const activeVid = isDeckAActive ? document.getElementById('deck-a') : document.getElementById('deck-b');
+        const standbyVid = isDeckAActive ? document.getElementById('deck-b') : document.getElementById('deck-a');
+        const activeYt = isDeckAActive ? document.getElementById('yt-deck-a') : document.getElementById('yt-deck-b');
+        const standbyYt = isDeckAActive ? document.getElementById('yt-deck-b') : document.getElementById('yt-deck-a');
 
-        // Le rang correspond à sa place sur la timeline
+        // Met à jour les textes du bandeau
         const rank = topSize - timelineSlots.indexOf(currentSong);
-
         rankBadge.innerText = rank > 0 ? rank : (playlist.length - playIndex);
         animeTitle.innerText = currentSong.title;
         songTitle.innerText = currentSong.song ? `[${currentSong.song}]` : "";
 
-        activeDeck.classList.add('active');
-        standbyDeck.classList.remove('active');
+        // Lance la vidéo selon son type (as ou yt)
+        const videoUrl = currentSong.as || currentSong.url || currentSong.link;
+        if (videoUrl) {
+            activeYt.style.display = 'none';
+            activeVid.style.display = 'block';
+            activeVid.classList.add('active');
+            activeVid.currentTime = START_OFFSET;
+            activeVid.play().catch(() => {});
+        } else if (currentSong.yt) {
+            activeVid.style.display = 'none';
+            activeYt.style.display = 'block';
+            activeYt.classList.add('active');
+            activeYt.src = `https://www.youtube.com/embed/${currentSong.yt}?autoplay=1&start=48&end=58`;
+        }
 
-        activeDeck.currentTime = START_OFFSET;
-        activeDeck.play().catch(() => {});
+        // Masque la platine inactive
+        standbyVid.classList.remove('active');
+        standbyYt.classList.remove('active');
 
-        // Barre de 10s
+        // Barre de 10 secondes
         let start = Date.now();
         clearInterval(timerInterval);
         timerInterval = setInterval(() => {
@@ -809,13 +885,16 @@
             timerBar.style.width = pct + '%';
         }, 50);
 
-        // Précharge l'extrait suivant sur l'autre deck
-        if (nextSong) prepareDeck(standbyDeck, nextSong);
+        // Précharge l'extrait suivant sur l'autre platine
+        if (nextSong) {
+            prepareDeck(nextSong, !isDeckAActive);
+        }
 
+        // Passe au morceau suivant au bout de 10 secondes
         clearTimeout(clipTimeout);
         clipTimeout = setTimeout(() => {
             clearInterval(timerInterval);
-            activeDeck.pause();
+            activeVid.pause();
             isDeckAActive = !isDeckAActive;
             playIndex++;
             runClip(playlist);
