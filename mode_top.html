@@ -699,36 +699,30 @@
         document.getElementById('slots-count').innerText = `${filledCount} / ${topSize} placés`;
     }
 
-    // DÉCLENCHE LA RECHERCHE EN DIRECT
+// DÉCLENCHE LA RECHERCHE EN DIRECT
     function filterPool() {
-        const query = document.getElementById('pool-search')?.value || "";
-        renderPool(query);
+        renderPool();
     }
 
-    // RENDU DE LA RÉSERVE AVEC FILTRE DE RECHERCHE
-    function renderPool(filterText = "") {
+    // RENDU DE LA RÉSERVE (Garde TOUJOURS le filtre de recherche actif !)
+    function renderPool() {
         const grid = document.getElementById('pool-grid');
+        if (!grid) return;
         grid.innerHTML = "";
 
-        const cleanQuery = filterText.toLowerCase().trim();
+        // Récupère toujours le texte actuel écrit dans la barre de recherche
+        const searchInput = document.getElementById('pool-search');
+        const cleanQuery = (searchInput ? searchInput.value : "").toLowerCase().trim();
 
-        // Filtre la liste selon le titre ou le nom de la chanson
-        const filteredList = allSongs.filter(song => {
-            if (!cleanQuery) return true;
-            const t = (song.title || "").toLowerCase();
-            const s = (song.song || "").toLowerCase();
-            return t.includes(cleanQuery) || s.includes(cleanQuery);
-        });
+        allSongs.forEach((song, idx) => {
+            // Filtre actif en continu
+            if (cleanQuery) {
+                const t = (song.title || "").toLowerCase();
+                const s = (song.song || "").toLowerCase();
+                if (!t.includes(cleanQuery) && !s.includes(cleanQuery)) return;
+            }
 
-        if (filteredList.length === 0) {
-            grid.innerHTML = `<div style="grid-column: 1 / -1; padding: 30px; text-align: center; color: #64748b; font-weight: bold;">❌ Aucun anime trouvé pour "${filterText}"</div>`;
-            return;
-        }
-
-        filteredList.forEach((song) => {
-            // Retrouve le vrai numéro d'origine dans allSongs pour ne jamais décaler le drag & drop
-            const originalIndex = allSongs.findIndex(item => item.title === song.title);
-            const isPlaced = timelineSlots.some(s => s && (s.as === song.as && s.title === song.title));
+            const isPlaced = timelineSlots.some(slot => slot && ((slot.as && slot.as === song.as) || (slot.yt && slot.yt === song.yt) || slot.title === song.title));
             const thumb = getThumb(song);
 
             const card = document.createElement('div');
@@ -737,7 +731,7 @@
 
             card.ondragstart = (e) => {
                 e.dataTransfer.setData('source-type', 'pool');
-                e.dataTransfer.setData('text/plain', originalIndex);
+                e.dataTransfer.setData('text/plain', idx);
             };
 
             card.innerHTML = `
@@ -745,28 +739,14 @@
                 <div class="pool-info">
                     <div class="pool-title" title="${song.title}">${song.title}</div>
                     <div class="pool-actions">
-                        <button onclick="previewSong(allSongs[${originalIndex}])" style="background:#334155;">🎧 Écouter</button>
-                        ${!isPlaced ? `<button onclick="placeInFirstEmptySlot(${originalIndex})" style="background:var(--accent);">+ Placer</button>` : `<span style="font-size:0.75rem; color:#10b981; align-self:center;">✓ Placé</span>`}
+                        <button onclick="previewSong(allSongs[${idx}])" style="background:#334155;">🎧 Écouter</button>
+                        ${!isPlaced ? `<button onclick="placeInFirstEmptySlot(${idx})" style="background:var(--accent);">+ Placer</button>` : `<span style="font-size:0.75rem; color:#10b981; align-self:center;">✓ Placé</span>`}
                     </div>
                 </div>
             `;
 
             grid.appendChild(card);
         });
-    }
-    // --- PRÉVISUALISATION D'UN MORCEAU ---
-    function previewSong(song) {
-        currentPreviewedSong = song;
-        const box = document.getElementById('preview-player-box');
-        document.getElementById('prev-title').innerText = song.title;
-        document.getElementById('prev-add-btn').style.display = 'inline-block';
-
-        const videoUrl = song.as || song.url || song.link;
-        if (videoUrl) {
-            box.innerHTML = `<video src="${videoUrl}" controls autoplay style="width:100%; height:100%; object-fit:cover;"></video>`;
-        } else if (song.yt) {
-            box.innerHTML = `<iframe src="https://www.youtube.com/embed/${song.yt}?autoplay=1" allowfullscreen></iframe>`;
-        }
     }
 
     // --- GESTION DU PLACEMENT DANS LES SLOTS ---
