@@ -824,22 +824,24 @@ function placeSongInSlot(songIdx, slotIdx) {
     // BASULE VERS LA VIDÉO FINALE (LECTURE AUTOMATIQUE)
     // ====================================================
     function launchVideoMode() {
-        // Filtre les slots remplis
-        const finalPlaylist = timelineSlots.filter(s => s !== null);
+        // 1. Récupère STRICTEMENT les morceaux placés sur la Timeline de 10 à 1
+        activePlaylist = timelineSlots.filter(s => s !== null);
 
-        if (finalPlaylist.length === 0) {
-            alert("Place au moins un morceau sur la timeline pour lancer la vidéo !");
-            return;
+        if (activePlaylist.length === 0) {
+            return alert("⚠️ Ton TOP est vide ! Glisse au moins un morceau sur l'axe avant de lancer la vidéo.");
         }
 
-        // Coupe le lecteur de prévisualisation
-        document.getElementById('preview-player-box').innerHTML = "";
-
-        // Masque le studio et affiche le lecteur plein écran
+        // 2. Bascule l'affichage du studio vers le lecteur vidéo
         document.getElementById('editor-view').style.display = 'none';
         document.getElementById('player-view').style.display = 'flex';
 
-        startFinalCountdown(finalPlaylist);
+        // 3. Lance le décompte avec ta vraie playlist
+        playIndex = 0;
+        isDeckAActive = true;
+        prepareDeck(activePlaylist[0], true);
+        if (activePlaylist.length > 1) prepareDeck(activePlaylist[1], false);
+        
+        runClip(activePlaylist);
     }
 
     function backToStudio() {
@@ -854,26 +856,31 @@ function placeSongInSlot(songIdx, slotIdx) {
 
 function prepareDeck(song, isA) {
         if (!song) return;
-        const vid = isA ? document.getElementById('video-deck-a') : document.getElementById('video-deck-b');
-        const yt = isA ? document.getElementById('yt-deck-a') : document.getElementById('yt-deck-b');
+        
+        // Cherche les ID de manière sécurisée (gère "video-deck" ou "deck")
+        const vid = isA ? (document.getElementById('video-deck-a') || document.getElementById('deck-a')) : (document.getElementById('video-deck-b') || document.getElementById('deck-b'));
+        const yt = isA ? (document.getElementById('yt-deck-a') || document.getElementById('deck-a-yt')) : (document.getElementById('yt-deck-b') || document.getElementById('deck-b-yt'));
 
-        vid.muted = false; 
-        vid.volume = 1.0;
+        if (vid) {
+            vid.muted = false; 
+            vid.volume = 1.0;
+        }
 
         const videoUrl = song.as || song.url || song.link;
         if (videoUrl) {
-            yt.style.display = 'none';
-            yt.src = '';
-            vid.style.display = 'block';
-            vid.src = videoUrl;
-            vid.currentTime = START_OFFSET;
-            vid.load();
+            if (yt) { yt.style.display = 'none'; yt.src = ''; }
+            if (vid) {
+                vid.style.display = 'block';
+                vid.src = videoUrl;
+                vid.currentTime = START_OFFSET;
+                vid.load();
+            }
         } else if (song.yt) {
-            vid.style.display = 'none';
-            vid.src = '';
-            vid.pause();
-            yt.style.display = 'block';
-            yt.src = `https://www.youtube.com/embed/${song.yt}?autoplay=0&start=48&end=58&enablejsapi=1`;
+            if (vid) { vid.style.display = 'none'; vid.src = ''; vid.pause(); }
+            if (yt) {
+                yt.style.display = 'block';
+                yt.src = `https://www.youtube.com/embed/${song.yt}?autoplay=0&start=48&end=58&enablejsapi=1`;
+            }
         }
     }
 
@@ -888,58 +895,51 @@ function prepareDeck(song, isA) {
     }
 
 
-    function runClip(playlist) {
-        if (playIndex >= playlist.length) {
+function runClip(playlist) {
+        const currentList = playlist || activePlaylist;
+        if (!currentList || playIndex >= currentList.length) {
             endFinalVideo();
             return;
         }
 
-        const currentSong = playlist[playIndex];
-        const nextSong = playlist[playIndex + 1];
-
-        const activeVid = isDeckAActive ? document.getElementById('video-deck-a') : document.getElementById('video-deck-b');
-        const standbyVid = isDeckAActive ? document.getElementById('video-deck-b') : document.getElementById('video-deck-a');
-        const activeYt = isDeckAActive ? document.getElementById('yt-deck-a') : document.getElementById('yt-deck-b');
-        const standbyYt = isDeckAActive ? document.getElementById('yt-deck-b') : document.getElementById('yt-deck-a');
-
-        // CORRECTION DE LA LIGNE (Ajout du '=')
-        standbyVid.pause();
-        standbyVid.currentTime = START_OFFSET;
-        standbyYt.src = '';
-
+        const currentSong = currentList[playIndex];
+        
         // Met à jour les textes du bandeau proprement
         const rank = topSize - timelineSlots.indexOf(currentSong);
-        rankBadge.innerText = rank > 0 ? rank : (playlist.length - playIndex);
-        
-        // Titre de l'anime (Garantit de ne plus afficher "Titre")
+        rankBadge.innerText = rank > 0 ? rank : (currentList.length - playIndex);
         animeTitle.innerText = currentSong.title || "Morceau sans titre";
-        
-        // Type (OP ou ED)
-        const typeLabel = currentSong.type ? `[${currentSong.type.toUpperCase()}]` : "";
-        songTitle.innerText = typeLabel;
+        songTitle.innerText = currentSong.type ? `[${currentSong.type.toUpperCase()}]` : "";
 
-        // Lance la vidéo active avec le son
-        const videoUrl = currentSong.as || currentSong.url || currentSong.link;
-        if (videoUrl) {
-            activeYt.style.display = 'none';
-            activeYt.src = '';
-            activeVid.style.display = 'block';
-            activeVid.classList.add('active');
-            activeVid.muted = false; 
-            activeVid.currentTime = START_OFFSET;
-            activeVid.play().catch(() => {});
-        } else if (currentSong.yt) {
-            activeVid.style.display = 'none';
-            activeVid.pause();
-            activeYt.style.display = 'block';
-            activeYt.classList.add('active');
-            activeYt.src = `https://www.youtube.com/embed/${currentSong.yt}?autoplay=1&start=48&end=58&enablejsapi=1`;
+        // Récupère l'unique lecteur vidéo actif dans le HTML (cherche "video-deck-a", "deck-a", ou crée-le s'il manque)
+        let mainVid = document.getElementById('video-deck-a') || document.getElementById('deck-a') || document.querySelector('video');
+        let mainYt = document.getElementById('yt-deck-a') || document.getElementById('deck-a-yt') || document.querySelector('iframe');
+
+        if (!mainVid) {
+            alert("Erreur critique : Aucune balise <video> n'a été trouvée dans ton HTML !");
+            return;
         }
 
-        standbyVid.classList.remove('active');
-        standbyYt.classList.remove('active');
+        const videoUrl = currentSong.as || currentSong.url || currentSong.link;
+        
+        if (videoUrl) {
+            if (mainYt) mainYt.style.display = 'none';
+            mainVid.style.display = 'block';
+            mainVid.classList.add('active');
+            mainVid.muted = false;
+            mainVid.src = videoUrl;
+            mainVid.currentTime = START_OFFSET;
+            mainVid.play().catch(err => console.log("Lecture en attente :", err));
+        } else if (currentSong.yt) {
+            mainVid.style.display = 'none';
+            mainVid.pause();
+            if (mainYt) {
+                mainYt.style.display = 'block';
+                mainYt.classList.add('active');
+                mainYt.src = `https://www.youtube.com/embed/${currentSong.yt}?autoplay=1&start=48&end=58&enablejsapi=1`;
+            }
+        }
 
-        // Barre de 10 secondes
+        // Barre de progression des 10 secondes
         let start = Date.now();
         clearInterval(timerInterval);
         timerInterval = setInterval(() => {
@@ -948,19 +948,13 @@ function prepareDeck(song, isA) {
             timerBar.style.width = pct + '%';
         }, 50);
 
-        // Précharge l'extrait suivant sur l'autre platine
-        if (nextSong) {
-            prepareDeck(nextSong, !isDeckAActive);
-        }
-
-        // Passe au morceau suivant au bout de 10 secondes
+        // Passe au morceau suivant au bout de 10 secondes exactes
         clearTimeout(clipTimeout);
         clipTimeout = setTimeout(() => {
             clearInterval(timerInterval);
-            activeVid.pause();
-            isDeckAActive = !isDeckAActive;
+            mainVid.pause();
             playIndex++;
-            runClip(playlist);
+            runClip(currentList);
         }, CLIP_DURATION * 1000);
     }
 
