@@ -423,11 +423,19 @@
         </div>
 
         <!-- Réserve de musiques disponibles (Pool) -->
+        <!-- RÉSERVE AVEC BARRE DE RECHERCHE -->
         <div class="pool-section">
-            <h3 style="margin-top:0; color:#38bdf8;">📦 RÉSERVE DES MUSIQUES DE LA SAISON</h3>
-            <div class="pool-grid" id="pool-grid">
-                <!-- Cartes des musiques générées en JS -->
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;">
+                <h3 style="margin: 0; color: #38bdf8;">RÉSERVE DES MUSIQUES DE LA SAISON</h3>
+                <input 
+                    type="text" 
+                    id="pool-search" 
+                    placeholder="🔍 Rechercher un anime ou une musique..." 
+                    oninput="filterPool()"
+                    style="padding: 10px 15px; border-radius: 8px; border: 2px solid #475569; background: #0f172a; color: white; width: 300px; max-width: 100%; font-size: 0.95rem; outline: none;"
+                />
             </div>
+            <div class="pool-grid" id="pool-grid"></div>
         </div>
     </div>
 
@@ -533,7 +541,7 @@
 
         prompt("✅ Voici le lien direct de la vidéo de ton TOP pour ton pote :", shareUrl);
     }
-    
+
     // Détection universelle de miniature
     function getThumb(item) {
         if (!item) return "";
@@ -691,12 +699,35 @@
         document.getElementById('slots-count').innerText = `${filledCount} / ${topSize} placés`;
     }
 
-    // --- RENDU DE LA RÉSERVE (POOL) ---
-    function renderPool() {
+    // DÉCLENCHE LA RECHERCHE EN DIRECT
+    function filterPool() {
+        const query = document.getElementById('pool-search')?.value || "";
+        renderPool(query);
+    }
+
+    // RENDU DE LA RÉSERVE AVEC FILTRE DE RECHERCHE
+    function renderPool(filterText = "") {
         const grid = document.getElementById('pool-grid');
         grid.innerHTML = "";
 
-        allSongs.forEach((song, idx) => {
+        const cleanQuery = filterText.toLowerCase().trim();
+
+        // Filtre la liste selon le titre ou le nom de la chanson
+        const filteredList = allSongs.filter(song => {
+            if (!cleanQuery) return true;
+            const t = (song.title || "").toLowerCase();
+            const s = (song.song || "").toLowerCase();
+            return t.includes(cleanQuery) || s.includes(cleanQuery);
+        });
+
+        if (filteredList.length === 0) {
+            grid.innerHTML = `<div style="grid-column: 1 / -1; padding: 30px; text-align: center; color: #64748b; font-weight: bold;">❌ Aucun anime trouvé pour "${filterText}"</div>`;
+            return;
+        }
+
+        filteredList.forEach((song) => {
+            // Retrouve le vrai numéro d'origine dans allSongs pour ne jamais décaler le drag & drop
+            const originalIndex = allSongs.findIndex(item => item.title === song.title);
             const isPlaced = timelineSlots.some(s => s && (s.as === song.as && s.title === song.title));
             const thumb = getThumb(song);
 
@@ -706,7 +737,7 @@
 
             card.ondragstart = (e) => {
                 e.dataTransfer.setData('source-type', 'pool');
-                e.dataTransfer.setData('text/plain', idx);
+                e.dataTransfer.setData('text/plain', originalIndex);
             };
 
             card.innerHTML = `
@@ -714,8 +745,8 @@
                 <div class="pool-info">
                     <div class="pool-title" title="${song.title}">${song.title}</div>
                     <div class="pool-actions">
-                        <button onclick="previewSong(allSongs[${idx}])" style="background:#334155;">🎧 Écouter</button>
-                        ${!isPlaced ? `<button onclick="placeInFirstEmptySlot(${idx})" style="background:var(--accent);">+ Placer</button>` : `<span style="font-size:0.75rem; color:#10b981; align-self:center;">✓ Placé</span>`}
+                        <button onclick="previewSong(allSongs[${originalIndex}])" style="background:#334155;">🎧 Écouter</button>
+                        ${!isPlaced ? `<button onclick="placeInFirstEmptySlot(${originalIndex})" style="background:var(--accent);">+ Placer</button>` : `<span style="font-size:0.75rem; color:#10b981; align-self:center;">✓ Placé</span>`}
                     </div>
                 </div>
             `;
@@ -723,7 +754,6 @@
             grid.appendChild(card);
         });
     }
-
     // --- PRÉVISUALISATION D'UN MORCEAU ---
     function previewSong(song) {
         currentPreviewedSong = song;
