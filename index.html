@@ -276,6 +276,9 @@
         <div id="card-YEARS" class="mode-card" onclick="selectMode('YEARS')">
             Année VS Année
         </div>
+        <div id="card-TOP" class="mode-card" onclick="selectMode('TOP')">
+            Mode TOP
+        </div>
     </div>
 </div>
 
@@ -357,12 +360,38 @@
         document.getElementById('card-STANDARD').classList.remove('active');
         document.getElementById('card-GENDER').classList.remove('active');
         document.getElementById('card-YEARS').classList.remove('active');
+                const topCard = document.getElementById('card-TOP');
+    if (topCard) topCard.classList.remove('active');
         document.getElementById(`card-${mode}`).classList.add('active');
+
+
 
         const singleGroup = document.getElementById('single-select-group');
         const yearGroup = document.getElementById('year-vs-year-group');
         const categoryGroup = document.getElementById('category-group');
 
+         // Si on clique sur TOP, on configure le menu déroulant avec des formats de Top (5, 10, 15, 20)
+    if (mode === 'TOP') {
+        singleGroup.style.display = 'block';
+        yearGroup.style.display = 'none';
+        categoryGroup.style.display = 'block';
+
+        const sizeSelect = document.getElementById('tournament-size-select');
+        sizeSelect.innerHTML = `
+            <option value="10">Top 10</option>
+            <option value="5">Top 5</option>
+            <option value="15">Top 15</option>
+            <option value="20">Top 20</option>
+        `;
+
+        const select = document.getElementById('season-select');
+        select.innerHTML = '';
+        presetSeasons.forEach(season => {
+            select.add(new Option(season.name, season.id));
+        });
+        onSeasonChange();
+        return;
+    }
         // Affichage conditionnel de la catégorie
         categoryGroup.style.display = (mode === 'GENDER') ? 'none' : 'block';
 
@@ -673,6 +702,19 @@
             }
             size = finalEntries.length;
         } 
+        else if (currentMode === "TOP") {
+            let parsed = getSelectedEntries();
+            const cat = document.querySelector('input[name="category"]:checked')?.value || "MIX";
+            if (cat !== "MIX") parsed = parsed.filter(e => e.type === cat);
+
+            if (parsed.length === 0) return alert("Aucun morceau disponible !");
+
+            // Envoie toutes les musiques de la saison au Studio
+            localStorage.setItem('topCandidates', JSON.stringify(parsed));
+            localStorage.setItem('topSize', size); // 10, 5, 15, 20...
+            window.location.href = 'mode_top.html';
+            return;
+        }
         // ==========================================
         // MODE 3 : TOURNOI CLASSIQUE (STANDARD)
         // ==========================================

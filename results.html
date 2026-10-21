@@ -314,7 +314,21 @@
     </button>
 </div>
 <br><button onclick="window.location.href='index.html'" style="padding: 15px 40px; margin-top: 20px;">Retourner au Menu</button>
-        
+ <button onclick="playTournamentTop()" style="background: #eab308; color: #0f172a; border: none; padding: 12px 20px; border-radius: 10px; font-weight: bold; cursor: pointer;">
+    🎬 Voir le TOP Vidéo du Tournoi
+</button>
+
+<script>
+function playTournamentTop() {
+    // Récupère les 10 meilleurs du tournoi ou les favoris
+    let ranked = (initialShuffled || []).slice(0, 10);
+    const total = ranked.length;
+    ranked.forEach((e, idx) => { e.rank = total - idx; });
+
+    localStorage.setItem('topPlaylist', JSON.stringify(ranked));
+    window.location.href = 'mode_top.html';
+}
+</script>       
 
 <script>
     // Variables globales
