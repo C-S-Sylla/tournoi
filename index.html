@@ -704,14 +704,22 @@
         } 
         else if (currentMode === "TOP") {
             let parsed = getSelectedEntries();
+
+            // Sécurité si le fichier JSON était encore en cours de lecture
+            if (!parsed.length && selectedSeasonData) {
+                parsed = parseEntries(selectedSeasonData.entries || selectedSeasonData);
+            }
+
             const cat = document.querySelector('input[name="category"]:checked')?.value || "MIX";
             if (cat !== "MIX") parsed = parsed.filter(e => e.type === cat);
 
-            if (parsed.length === 0) return alert("Aucun morceau disponible !");
+            if (parsed.length === 0) return alert("Aucun morceau trouvé dans ce fichier JSON !");
 
-            // Envoie toutes les musiques de la saison au Studio
+            // Envoie toutes les musiques au Studio
             localStorage.setItem('topCandidates', JSON.stringify(parsed));
-            localStorage.setItem('topSize', size); // 10, 5, 15, 20...
+            localStorage.setItem('topSize', size || 10);
+            localStorage.setItem('gameMode', 'TOP');
+            
             window.location.href = 'mode_top.html';
             return;
         }

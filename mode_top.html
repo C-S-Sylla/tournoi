@@ -374,6 +374,14 @@
             display: flex;
             gap: 15px;
         }
+
+        /* Curseur de main sur les cases remplies de la timeline */
+.timeline-slot.filled {
+    cursor: grab;
+}
+.timeline-slot.filled:active {
+    cursor: grabbing;
+}
     </style>
 </head>
 <body>
@@ -482,58 +490,133 @@
     // Détection universelle de miniature
     function getThumb(item) {
         if (!item) return "";
+
+        // Récupère la miniature 'thumb' de ton JSON pour les liens 'as'
         if (item.thumb && typeof item.thumb === 'string' && item.thumb.trim()) {
-            const clean = item.thumb.trim();
-            return clean.startsWith('http') ? `https://images.weserv.nl/?url=${encodeURIComponent(clean)}` : clean;
+            return item.thumb.trim();
         }
+
+        // Si c'est du YouTube, génère la miniature automatique
         if (item.yt && typeof item.yt === 'string' && item.yt.trim()) {
             return `https://img.youtube.com/vi/${item.yt.trim()}/mqdefault.jpg`;
         }
+
         return "";
     }
 
+
     // --- CHARGEMENT DU STUDIO ---
-    window.onload = () => {
-        if (!allSongs.length) {
-            // Démo automatique si ouvert sans passer par le menu
-            allSongs = [
-                { title: "Sword Art Online: Alicization ED 2", as: "https://naedist.animemusicquiz.com/slwpxw.webm", thumb: "https://i.ytimg.com/vi/7jM0fUAR2xg/hqdefault.jpg" },
-                { title: "Arknights: Prelude to Dawn OP", as: "https://naedist.animemusicquiz.com/5w21z8.webm" },
-                { title: "Gun Gale Online OP 2", as: "https://naedist.animemusicquiz.com/83p14c.webm" },
-                { title: "Arknights: Rise from Ember OP", as: "https://naedist.animemusicquiz.com/ldbm8e.webm" },
-                { title: "Shadows House ED 1", as: "https://naedist.animemusicquiz.com/zptefi.webm" }
-            ];
-            topSize = allSongs.length;
-            timelineSlots = new Array(topSize).fill(null);
+    window.onload = async () => {
+        // 1. Tente de lire les musiques transmises par le menu
+        const stored = localStorage.getItem('topCandidates');
+        if (stored) {
+            try {
+                allSongs = JSON.parse(stored);
+            } catch(e) {}
         }
+
+        // 2. SÉCURITÉ : Si la mémoire était vide, on charge directement le fichier JSON de la saison !
+        if (!allSongs || !allSongs.length) {
+            const seasonPath = localStorage.getItem('currentSeasonPath') || "data/summer-2026-mix.json";
+            console.log("📂 Chargement direct du fichier JSON :", seasonPath);
+            try {
+                const resp = await fetch(seasonPath);
+                if (resp.ok) {
+                    const json = await resp.json();
+                    const entries = Array.isArray(json) ? json : (json.entries || json.items || json.data || []);
+                    allSongs = entries.map((e, idx) => ({
+                        title: e.title || `Anime ${idx+1}`,
+                        as: e.as || e.url || e.link || "",
+                        yt: e.yt || e.youtube || "",
+                        thumb: e.thumb || "",
+                        type: e.type || "OP"
+                    }));
+                }
+            } catch (err) {
+                console.error("Erreur de chargement :", err);
+            }
+        }
+
+        // 3. Détermine le nombre de cases du Top (10, 5, 15 ou 20)
+        topSize = parseInt(localStorage.getItem('topSize')) || 10;
+        timelineSlots = new Array(topSize).fill(null);
+
+        // 4. Affiche l'Axe de montage et toutes tes musiques dans la réserve
+        renderTimeline();
+        renderPool();
+
+        console.log(`✅ [Studio Prêt] ${allSongs.length} musiques de ta saison chargées dans la réserve !`);
+    };
+
+    function swapSlots(fromSlot, toSlot) {
+        if (fromSlot === toSlot) return;
+        
+        // Échange les deux éléments (ou déplace vers la case vide)
+        const temp = timelineSlots[toSlot];
+        timelineSlots[toSlot] = timelineSlots[fromSlot];
+        timelineSlots[fromSlot] = temp;
 
         renderTimeline();
         renderPool();
-    };
+    }
 
     // --- RENDU DE LA TIMELINE (L'AXE DE 10 À 1) ---
     function renderTimeline() {
         const track = document.getElementById('timeline-track');
         track.innerHTML = "";
-
         let filledCount = 0;
 
         timelineSlots.forEach((slotItem, slotIdx) => {
-            // Le rang affiché décompte : ex pour 10 slots -> 10, 9, 8 ... 1
             const rankNumber = topSize - slotIdx;
-
             const slotEl = document.createElement('div');
             slotEl.className = `timeline-slot ${slotItem ? 'filled' : ''}`;
             slotEl.dataset.slotIndex = slotIdx;
 
-            // Gestion du Drag & Drop sur le slot
-            slotEl.ondragover = (e) => { e.preventDefault(); slotEl.classList.add('drag-over'); };
-            slotEl.ondragleave = () => { slotEl.classList.remove('drag-over'); };
+            // Rendre le slot déplaçable uniquement s'il contient une musique
+            if (slotItem) {
+                slotEl.draggable = true;
+
+                slotEl.ondragstart = (e) => {
+                    e.dataTransfer.setData('source-type', 'timeline');
+                    e.dataTransfer.setData('source-slot', slotIdx);
+                    slotEl.style.opacity = '0.4';
+                };
+
+                slotEl.ondragend = () => {
+                    slotEl.style.opacity = '1';
+                };
+            }
+
+            // Gestion de la réception du Drag & Drop
+            slotEl.ondragover = (e) => {
+                e.preventDefault();
+                slotEl.classList.add('drag-over');
+            };
+
+            slotEl.ondragleave = () => {
+                slotEl.classList.remove('drag-over');
+            };
+
             slotEl.ondrop = (e) => {
                 e.preventDefault();
                 slotEl.classList.remove('drag-over');
-                const songIndex = e.dataTransfer.getData('text/plain');
-                if (songIndex !== "") placeSongInSlot(parseInt(songIndex), slotIdx);
+
+                const sourceType = e.dataTransfer.getData('source-type');
+
+                // CAS A : Déplacement / Échange entre 2 slots de la Timeline
+                if (sourceType === 'timeline') {
+                    const sourceSlot = parseInt(e.dataTransfer.getData('source-slot'));
+                    if (!isNaN(sourceSlot) && sourceSlot !== slotIdx) {
+                        swapSlots(sourceSlot, slotIdx);
+                    }
+                } 
+                // CAS B : Arrivée d'un nouveau morceau depuis la Réserve (Pool)
+                else {
+                    const songIndex = e.dataTransfer.getData('text/plain');
+                    if (songIndex !== "") {
+                        placeSongInSlot(parseInt(songIndex), slotIdx);
+                    }
+                }
             };
 
             if (slotItem) {
@@ -542,7 +625,7 @@
                 slotEl.innerHTML = `
                     <div class="slot-rank">${rankNumber}</div>
                     <button class="slot-remove-btn" onclick="removeFromSlot(${slotIdx})">✕</button>
-                    ${thumb ? `<img src="${thumb}" class="slot-thumb" alt="" />` : `<div style="height:95px; background:#1e293b; display:flex; align-items:center; justify-content:center;">🎵</div>`}
+                    ${thumb ? `<img src="${thumb}" class="slot-thumb" referrerpolicy="no-referrer" alt="" onerror="this.style.display='none'" />` : `<div style="height:95px; background:#1e293b; display:flex; align-items:center; justify-content:center;">🎵</div>`}
                     <div class="slot-title">${slotItem.title}</div>
                 `;
                 slotEl.onclick = (e) => {
@@ -551,7 +634,7 @@
             } else {
                 slotEl.innerHTML = `
                     <div class="slot-rank">${rankNumber}</div>
-                    <span style="color:#64748b; font-size:0.8rem; text-align:center;">Glisse un morceau ici</span>
+                    <span style="color:#64748b; font-size:0.8rem; text-align:center; padding: 10px;">Glisse un morceau ici</span>
                 `;
             }
 
@@ -567,7 +650,6 @@
         grid.innerHTML = "";
 
         allSongs.forEach((song, idx) => {
-            // Vérifie si déjà placé dans la timeline
             const isPlaced = timelineSlots.some(s => s && (s.as === song.as && s.title === song.title));
             const thumb = getThumb(song);
 
@@ -576,11 +658,12 @@
             card.draggable = !isPlaced;
 
             card.ondragstart = (e) => {
+                e.dataTransfer.setData('source-type', 'pool');
                 e.dataTransfer.setData('text/plain', idx);
             };
 
             card.innerHTML = `
-                ${thumb ? `<img src="${thumb}" class="pool-thumb" alt="" />` : `<div style="height:100px; background:#111827; display:flex; align-items:center; justify-content:center;">🎵</div>`}
+                ${thumb ? `<img src="${thumb}" class="pool-thumb" referrerpolicy="no-referrer" alt="" onerror="this.src='https://images.weserv.nl/?url=' + encodeURIComponent('${thumb}')" />` : `<div style="height:100px; background:#111827; display:flex; align-items:center; justify-content:center;">🎵</div>`}
                 <div class="pool-info">
                     <div class="pool-title" title="${song.title}">${song.title}</div>
                     <div class="pool-actions">
