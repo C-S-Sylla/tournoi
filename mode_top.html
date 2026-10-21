@@ -704,25 +704,25 @@
         renderPool();
     }
 
-    // RENDU DE LA RÉSERVE (Garde TOUJOURS le filtre de recherche actif !)
+// RENDU DE LA RÉSERVE AVEC IDENTIFICATION UNIQUE PAR INDEX
     function renderPool() {
         const grid = document.getElementById('pool-grid');
         if (!grid) return;
         grid.innerHTML = "";
 
-        // Récupère toujours le texte actuel écrit dans la barre de recherche
         const searchInput = document.getElementById('pool-search');
         const cleanQuery = (searchInput ? searchInput.value : "").toLowerCase().trim();
 
         allSongs.forEach((song, idx) => {
-            // Filtre actif en continu
+            // Filtre de recherche en direct
             if (cleanQuery) {
                 const t = (song.title || "").toLowerCase();
                 const s = (song.song || "").toLowerCase();
                 if (!t.includes(cleanQuery) && !s.includes(cleanQuery)) return;
             }
 
-            const isPlaced = timelineSlots.some(slot => slot && ((slot.as && slot.as === song.as) || (slot.yt && slot.yt === song.yt) || slot.title === song.title));
+            // VÉRIFICATION UNIQUE PAR INDEX (idx) : N'utilise plus le titre en commun !
+            const isPlaced = timelineSlots.some(slot => slot && slot._poolIndex === idx);
             const thumb = getThumb(song);
 
             const card = document.createElement('div');
@@ -749,15 +749,52 @@
         });
     }
 
+    // --- PRÉVISUALISATION D'UN MORCEAU ---
+// 1. LECTURE DE PRÉVISUALISATION (PRIORITÉ ABSOLUE A "as")
+    function previewSong(song) {
+        if (!song) return;
+        currentPreviewedSong = song;
+
+        const box = document.getElementById('preview-player-box');
+        document.getElementById('prev-title').innerText = song.title;
+        document.getElementById('prev-add-btn').style.display = 'inline-block';
+
+        // 1. Cherche en PRIORITÉ le fichier direct AnisongDB ("as")
+        const directMedia = (song.as && typeof song.as === 'string' && song.as.trim()) || 
+                            (song.url && typeof song.url === 'string' && song.url.trim()) || 
+                            (song.link && typeof song.link === 'string' && song.link.trim());
+
+        if (directMedia) {
+            console.log("▶️ Lecture AnisongDB WebM directe :", directMedia);
+            box.innerHTML = `<video src="${directMedia}" controls autoplay style="width:100%; height:100%; object-fit:cover;"></video>`;
+        } 
+        // 2. Seulement si "as" n'existe pas, on tente YouTube
+        else if (song.yt && typeof song.yt === 'string' && song.yt.trim()) {
+            console.log("▶️ Lecture YouTube :", song.yt);
+            box.innerHTML = `
+                <iframe src="https://www.youtube.com/embed/${song.yt.trim()}?autoplay=1" allowfullscreen></iframe>
+                <div style="margin-top: 5px; text-align: center;">
+                    <a href="https://www.youtube.com/watch?v=${song.yt.trim()}" target="_blank" style="color: #38bdf8; font-size: 0.75rem; text-decoration: none;">
+                        Ouvrir sur YouTube ↗ (si bloqué)
+                    </a>
+                </div>
+            `;
+        } else {
+            box.innerHTML = `<div style="height:100%; display:flex; align-items:center; justify-content:center; color:#ef4444; font-weight:bold;">⚠️ Aucun lien vidéo trouvé</div>`;
+        }
+    }
+
     // --- GESTION DU PLACEMENT DANS LES SLOTS ---
-    function placeSongInSlot(songIdx, slotIdx) {
+function placeSongInSlot(songIdx, slotIdx) {
         const song = allSongs[songIdx];
         if (!song) return;
 
-        // Retire le morceau s'il était déjà ailleurs dans un autre slot
-        timelineSlots = timelineSlots.map(s => (s && s.title === song.title ? null : s));
+        // Retire le morceau s'il était déjà placé ailleurs sur la timeline
+        timelineSlots = timelineSlots.map(s => (s && s._poolIndex === songIdx ? null : s));
 
-        timelineSlots[slotIdx] = song;
+        // On attache l'index unique de la réserve au slot
+        timelineSlots[slotIdx] = { ...song, _poolIndex: songIdx };
+        
         renderTimeline();
         renderPool();
     }
