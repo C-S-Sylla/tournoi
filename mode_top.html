@@ -444,10 +444,10 @@
     <!-- ========================================== -->
     <div id="player-view">
         <div id="top-stage">
-            <video id="deck-a" class="video-deck" preload="auto" playsinline></video>
-            <video id="deck-b" class="video-deck" preload="auto" playsinline></video>
+            <video id="deck-a" class="video-deck" preload="auto" playsinline muted></video>
+            <video id="deck-b" class="video-deck" preload="auto" playsinline muted></video>
             <iframe id="yt-deck-a" class="video-deck" allow="autoplay" allowfullscreen></iframe>
-<iframe id="yt-deck-b" class="video-deck" allow="autoplay" allowfullscreen></iframe>
+            <iframe id="yt-deck-b" class="video-deck" allow="autoplay" allowfullscreen></iframe>
             
             <div id="hud-overlay">
                 <div id="rank-badge">10</div>
@@ -463,7 +463,7 @@
 
         <div class="player-controls">
     <button onclick="togglePlayPause()" id="pause-btn" style="background:#3b82f6;">⏸️ Pause</button>
-    <button onclick="skipToNextClip()" style="background:#6366f1;">Passer au suivant ⏭️</button>
+            <button onclick="backToStudio()" style="background:#475569;">✏️ Modifier le TOP</button>
     <button onclick="toggleFullscreen()" style="background:#334155;">🖥️ Plein écran</button>
 
     <!-- AJOUTE CE BOUTON DE PARTAGE : -->
@@ -852,10 +852,24 @@ function placeSongInSlot(songIdx, slotIdx) {
         document.getElementById('editor-view').style.display = 'flex';
     }
 
-    function prepareDeck(song, isA) {
+
+    function startFinalCountdown(playlist) {
+        playIndex = 0;
+        isDeckAActive = true;
+
+        prepareDeck(deckA, playlist[0]);
+        if (playlist.length > 1) prepareDeck(deckB, playlist[1]);
+
+        runClip(playlist);
+    }
+
+function prepareDeck(song, isA) {
         if (!song) return;
-        const vid = isA ? document.getElementById('deck-a') : document.getElementById('deck-b');
+        const vid = isA ? document.getElementById('video-deck-a') : document.getElementById('video-deck-b');
         const yt = isA ? document.getElementById('yt-deck-a') : document.getElementById('yt-deck-b');
+
+        vid.muted = false; // S'assure que le son est actif pour la lecture principale
+        vid.volume = 1.0;
 
         const videoUrl = song.as || song.url || song.link;
         if (videoUrl) {
@@ -870,18 +884,9 @@ function placeSongInSlot(songIdx, slotIdx) {
             vid.src = '';
             vid.pause();
             yt.style.display = 'block';
-            yt.src = `https://www.youtube.com/embed/${song.yt}?autoplay=1&start=48&end=58`;
+            // Ajout de enablejsapi=1 pour contrôler le son proprement
+            yt.src = `https://www.youtube.com/embed/${song.yt}?autoplay=0&start=48&end=58&enablejsapi=1`;
         }
-    }
-
-    function startFinalCountdown(playlist) {
-        playIndex = 0;
-        isDeckAActive = true;
-
-        prepareDeck(deckA, playlist[0]);
-        if (playlist.length > 1) prepareDeck(deckB, playlist[1]);
-
-        runClip(playlist);
     }
 
     function runClip(playlist) {
@@ -893,10 +898,15 @@ function placeSongInSlot(songIdx, slotIdx) {
         const currentSong = playlist[playIndex];
         const nextSong = playlist[playIndex + 1];
 
-        const activeVid = isDeckAActive ? document.getElementById('deck-a') : document.getElementById('deck-b');
-        const standbyVid = isDeckAActive ? document.getElementById('deck-b') : document.getElementById('deck-a');
+        const activeVid = isDeckAActive ? document.getElementById('video-deck-a') : document.getElementById('video-deck-b');
+        const standbyVid = isDeckAActive ? document.getElementById('video-deck-b') : document.getElementById('video-deck-a');
         const activeYt = isDeckAActive ? document.getElementById('yt-deck-a') : document.getElementById('yt-deck-b');
         const standbyYt = isDeckAActive ? document.getElementById('yt-deck-b') : document.getElementById('yt-deck-a');
+
+        // COUPE NET LE SON DE LA PLATINE EN ATTENTE (Empêche le double son !)
+        standbyVid.pause();
+        standbyVid.currentTime = START_OFFSET;
+        standbyYtsrc = '';
 
         // Met à jour les textes du bandeau
         const rank = topSize - timelineSlots.indexOf(currentSong);
@@ -904,22 +914,24 @@ function placeSongInSlot(songIdx, slotIdx) {
         animeTitle.innerText = currentSong.title;
         songTitle.innerText = currentSong.song ? `[${currentSong.song}]` : "";
 
-        // Lance la vidéo selon son type (as ou yt)
+        // Lance la vidéo active avec le son
         const videoUrl = currentSong.as || currentSong.url || currentSong.link;
         if (videoUrl) {
             activeYt.style.display = 'none';
+            activeYt.src = '';
             activeVid.style.display = 'block';
             activeVid.classList.add('active');
+            activeVid.muted = false; // Active le son pour la vidéo en cours
             activeVid.currentTime = START_OFFSET;
             activeVid.play().catch(() => {});
         } else if (currentSong.yt) {
             activeVid.style.display = 'none';
+            activeVid.pause();
             activeYt.style.display = 'block';
             activeYt.classList.add('active');
-            activeYt.src = `https://www.youtube.com/embed/${currentSong.yt}?autoplay=1&start=48&end=58`;
+            activeYt.src = `https://www.youtube.com/embed/${currentSong.yt}?autoplay=1&start=48&end=58&enablejsapi=1`;
         }
 
-        // Masque la platine inactive
         standbyVid.classList.remove('active');
         standbyYt.classList.remove('active');
 
