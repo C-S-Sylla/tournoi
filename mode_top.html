@@ -444,10 +444,10 @@
     <!-- ========================================== -->
     <div id="player-view">
         <div id="top-stage">
-            <video id="deck-a" class="video-deck" preload="auto" playsinline muted></video>
-            <video id="deck-b" class="video-deck" preload="auto" playsinline muted></video>
+            <video id="deck-a" class="video-deck" preload="auto" playsinline></video>
+            <video id="deck-b" class="video-deck" preload="auto" playsinline></video>
             <iframe id="yt-deck-a" class="video-deck" allow="autoplay" allowfullscreen></iframe>
-            <iframe id="yt-deck-b" class="video-deck" allow="autoplay" allowfullscreen></iframe>
+<iframe id="yt-deck-b" class="video-deck" allow="autoplay" allowfullscreen></iframe>
             
             <div id="hud-overlay">
                 <div id="rank-badge">10</div>
@@ -852,23 +852,12 @@ function placeSongInSlot(songIdx, slotIdx) {
         document.getElementById('editor-view').style.display = 'flex';
     }
 
-
-    function startFinalCountdown(playlist) {
-        playIndex = 0;
-        isDeckAActive = true;
-
-        prepareDeck(deckA, playlist[0]);
-        if (playlist.length > 1) prepareDeck(deckB, playlist[1]);
-
-        runClip(playlist);
-    }
-
 function prepareDeck(song, isA) {
         if (!song) return;
         const vid = isA ? document.getElementById('video-deck-a') : document.getElementById('video-deck-b');
         const yt = isA ? document.getElementById('yt-deck-a') : document.getElementById('yt-deck-b');
 
-        vid.muted = false; // S'assure que le son est actif pour la lecture principale
+        vid.muted = false; 
         vid.volume = 1.0;
 
         const videoUrl = song.as || song.url || song.link;
@@ -884,10 +873,20 @@ function prepareDeck(song, isA) {
             vid.src = '';
             vid.pause();
             yt.style.display = 'block';
-            // Ajout de enablejsapi=1 pour contrôler le son proprement
             yt.src = `https://www.youtube.com/embed/${song.yt}?autoplay=0&start=48&end=58&enablejsapi=1`;
         }
     }
+
+    function startFinalCountdown(playlist) {
+        playIndex = 0;
+        isDeckAActive = true;
+
+        prepareDeck(deckA, playlist[0]);
+        if (playlist.length > 1) prepareDeck(deckB, playlist[1]);
+
+        runClip(playlist);
+    }
+
 
     function runClip(playlist) {
         if (playIndex >= playlist.length) {
@@ -903,16 +902,21 @@ function prepareDeck(song, isA) {
         const activeYt = isDeckAActive ? document.getElementById('yt-deck-a') : document.getElementById('yt-deck-b');
         const standbyYt = isDeckAActive ? document.getElementById('yt-deck-b') : document.getElementById('yt-deck-a');
 
-        // COUPE NET LE SON DE LA PLATINE EN ATTENTE (Empêche le double son !)
+        // CORRECTION DE LA LIGNE (Ajout du '=')
         standbyVid.pause();
         standbyVid.currentTime = START_OFFSET;
-        standbyYtsrc = '';
+        standbyYt.src = '';
 
-        // Met à jour les textes du bandeau
+        // Met à jour les textes du bandeau proprement
         const rank = topSize - timelineSlots.indexOf(currentSong);
         rankBadge.innerText = rank > 0 ? rank : (playlist.length - playIndex);
-        animeTitle.innerText = currentSong.title;
-        songTitle.innerText = currentSong.song ? `[${currentSong.song}]` : "";
+        
+        // Titre de l'anime (Garantit de ne plus afficher "Titre")
+        animeTitle.innerText = currentSong.title || "Morceau sans titre";
+        
+        // Type (OP ou ED)
+        const typeLabel = currentSong.type ? `[${currentSong.type.toUpperCase()}]` : "";
+        songTitle.innerText = typeLabel;
 
         // Lance la vidéo active avec le son
         const videoUrl = currentSong.as || currentSong.url || currentSong.link;
@@ -921,7 +925,7 @@ function prepareDeck(song, isA) {
             activeYt.src = '';
             activeVid.style.display = 'block';
             activeVid.classList.add('active');
-            activeVid.muted = false; // Active le son pour la vidéo en cours
+            activeVid.muted = false; 
             activeVid.currentTime = START_OFFSET;
             activeVid.play().catch(() => {});
         } else if (currentSong.yt) {
