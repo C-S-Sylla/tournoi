@@ -526,50 +526,65 @@
     }
 
     // GÉNÈRE LE LIEN DIRECT DE LA VIDÉO DU TOP
+    // GÉNÈRE LE LIEN DIRECT DE LA VIDÉO DU TOP
     function copyTopVideoLink() {
-    const finalPlaylist = timelineSlots.filter(s => s !== null);
-    if (!finalPlaylist.length) return alert("Ton TOP est vide !");
+        const finalPlaylist = timelineSlots.filter(s => s !== null);
+        if (!finalPlaylist.length) return alert("⚠️ Ton TOP est vide ! Place au moins un morceau avant de partager.");
 
-    // Identifie les indices des musiques pour reconstruire le top
-    const topIndices = finalPlaylist.map(s => {
-        const idx = allSongs.findIndex(item => item.title === s.title);
-        return idx !== -1 ? idx : 0;
-    }).join(',');
+        // On compresse uniquement l'essentiel des morceaux choisis
+        const compactData = finalPlaylist.map(s => ({
+            t: s.title || "",
+            a: s.as || s.url || s.link || "",
+            y: s.yt || "",
+            th: s.thumb || "",
+            tp: s.type || "OP"
+        }));
 
-    // Dans copyTopVideoLink()
-    const exactPath = localStorage.getItem('currentSeasonPath') || "data/summer-2026-mix.json";
-    const topCat = localStorage.getItem('topCategory') || "MIX"; // <--- Nouvelle ligne
-    
-    let baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
-    if (window.location.protocol === "file:") {
-        baseUrl = "https://c-s-sylla.github.io/tournoi";
+        let encodedData = "";
+        try {
+            // Encodage Base64 UTF-8 sécurisé
+            const jsonStr = JSON.stringify(compactData);
+            encodedData = encodeURIComponent(btoa(encodeURIComponent(jsonStr).replace(/%([0-9A-F]{2})/g, (m, p1) => String.fromCharCode('0x' + p1))));
+        } catch(e) {
+            encodedData = encodeURIComponent(JSON.stringify(compactData));
+        }
+
+        let currentUrl = window.location.href.split('?')[0];
+        if (window.location.protocol === "file:") {
+            currentUrl = "https://c-s-sylla.github.io/tournoi/mode_top.html";
+        }
+
+        // Le lien contient désormais directement les données du top !
+        const shareUrl = `${currentUrl}?data=${encodedData}&play=1`;
+
+        // Copie presse-papier
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(shareUrl).then(() => notifyCopySuccess());
+        } else {
+            const ta = document.createElement("textarea");
+            ta.value = shareUrl;
+            ta.style.position = "fixed"; ta.style.top = "-9999px";
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+            notifyCopySuccess();
+        }
+
+        prompt("✅ Voici le lien direct 100% fonctionnel de ton TOP :", shareUrl);
     }
 
-    // --- On ajoute &cat= à la fin du lien ---
-    const shareUrl = `${baseUrl}/mode_top.html?path=${encodeURIComponent(exactPath)}&top=${topIndices}&play=1&cat=${topCat}`;
-
-
-    // Copie presse-papier
-    const ta = document.createElement("textarea");
-    ta.value = shareUrl;
-    ta.style.position = "fixed"; ta.style.top = "-9999px";
-    document.body.appendChild(ta);
-    ta.select();
-    document.execCommand('copy');
-    document.body.removeChild(ta);
-
-    // Retour visuel
-    const btn = document.getElementById('share-top-btn');
-    if (btn) {
-        btn.innerText = "✅ Lien Copié !";
-        btn.style.background = "#059669";
-        setTimeout(() => { 
-            btn.innerText = "🔗 Copier le Lien de ce TOP"; 
-            btn.style.background = "#10b981";
-        }, 3000);
+    function notifyCopySuccess() {
+        const btn = document.getElementById('share-top-btn');
+        if (btn) {
+            btn.innerText = "✅ Lien Copié !";
+            btn.style.background = "#059669";
+            setTimeout(() => { 
+                btn.innerText = "🔗 Copier le Lien de ce TOP"; 
+                btn.style.background = "#10b981";
+            }, 3000);
+        }
     }
-    prompt("✅ Voici le lien direct pour partager ton TOP :", shareUrl);
-}
 
     // Détection universelle de miniature
     function getThumb(item) {
@@ -592,33 +607,55 @@
     // --- CHARGEMENT DU STUDIO ---
     window.onload = async () => {
         const urlParams = new URLSearchParams(window.location.search);
-        const sharedPath = urlParams.get('path');
+        const sharedData = urlParams.get('data');
         const sharedTop = urlParams.get('top');
         const autoPlay = urlParams.get('play') === '1';
-        const sharedCat = urlParams.get('cat') || 'MIX'; // <--- Récupère la catégorie du lien
 
+        // CAS A : Lien autonome partagé (?data=...) -> AUCUN FICHIER JSON REQUIS
+        if (sharedData) {
+            try {
+                let decodedStr = "";
+                try {
+                    decodedStr = decodeURIComponent(atob(decodeURIComponent(sharedData)).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+                } catch(e) {
+                    decodedStr = decodeURIComponent(sharedData);
+                }
+                const parsed = JSON.parse(decodedStr);
+                
+                allSongs = parsed.map((item, idx) => ({
+                    title: item.t || `Morceau ${idx+1}`,
+                    as: item.a || "",
+                    yt: item.y || "",
+                    thumb: item.th || "",
+                    type: item.tp || "OP",
+                    _poolIndex: idx
+                }));
+
+                topSize = allSongs.length;
+                timelineSlots = [...allSongs]; // Remplit immédiatement la timeline
+                renderTimeline();
+                renderPool();
+
+                if (autoPlay) {
+                    setTimeout(() => launchVideoMode(), 400);
+                }
+                return; // Chargement terminé avec succès !
+            } catch (err) {
+                console.error("Erreur lors de la lecture du TOP partagé :", err);
+            }
+        }
+
+        // CAS B : Mode normal depuis le menu local
         const storedCandidates = localStorage.getItem('topCandidates');
-        
-        // 1. Si menu local
         if (storedCandidates && !sharedTop) {
-            console.log("📂 Chargement des candidats filtrés depuis le Menu...");
             try { allSongs = JSON.parse(storedCandidates); } catch (e) {}
-        } 
-        // 2. Si lien partagé
-        else {
-            console.log("📂 Chargement depuis le fichier JSON avec filtre : " + sharedCat);
-            const dataPath = sharedPath || localStorage.getItem('currentSeasonPath') || "data/summer-2026-mix.json";
+        } else {
+            const dataPath = urlParams.get('path') || localStorage.getItem('currentSeasonPath') || "data/summer-2026-mix.json";
             try {
                 const resp = await fetch(dataPath);
                 if (resp.ok) {
                     const json = await resp.json();
                     let entries = Array.isArray(json) ? json : (json.entries || json.items || json.data || []);
-                    
-                    // --- LE SECRET EST ICI : ON APPLIQUE LE MÊME FILTRE QUE LE CRÉATEUR ---
-                    if (sharedCat !== 'MIX') {
-                        entries = entries.filter(e => (e.type || "OP").toUpperCase() === sharedCat.toUpperCase());
-                    }
-
                     allSongs = entries.map((e, idx) => ({
                         title: e.title || `Anime ${idx+1}`,
                         as: e.as || e.url || e.link || "",
@@ -630,27 +667,11 @@
             } catch (err) { console.error("Erreur chargement:", err); }
         }
 
-        // 3. Reconstruire la timeline
-        if (sharedTop) {
-            const indices = sharedTop.split(',').map(Number);
-            topSize = indices.length;
-            timelineSlots = new Array(topSize).fill(null);
-            indices.forEach((songIdx, slotIdx) => {
-                if (allSongs[songIdx]) {
-                    timelineSlots[slotIdx] = { ...allSongs[songIdx], _poolIndex: songIdx };
-                }
-            });
-        } else {
-            topSize = parseInt(localStorage.getItem('topSize')) || 10;
-            timelineSlots = new Array(topSize).fill(null);
-        }
+        topSize = parseInt(localStorage.getItem('topSize')) || 10;
+        timelineSlots = new Array(topSize).fill(null);
 
         renderTimeline();
         renderPool();
-
-        if (autoPlay && sharedTop) {
-            setTimeout(() => launchVideoMode(), 800);
-        }
     };
 
     function swapSlots(fromSlot, toSlot) {
