@@ -382,12 +382,19 @@
             <option value="5">Top 5</option>
             <option value="15">Top 15</option>
             <option value="20">Top 20</option>
+    <option value="30">Top 30</option>
+    <option value="50">Top 50</option>
+    <option value="100">Top 100</option>
         `;
 
         const select = document.getElementById('season-select');
         select.innerHTML = '';
+        
+        // FILTRE : On exclut les fichiers male_vs_female
         presetSeasons.forEach(season => {
-            select.add(new Option(season.name, season.id));
+            if (!season.id.startsWith('male_vs_female')) {
+                select.add(new Option(season.name, season.id));
+            }
         });
         onSeasonChange();
         return;
@@ -497,7 +504,7 @@
 
         return { uid, title, yt, as, at, thumb, type, vocal, starred: false, result: "" };
     }
-    
+
     function normalizeSeasonData(raw, fallbackName) {
         if (Array.isArray(raw)) return { seasonName: fallbackName || "Saison importée", entries: raw };
         if (raw && typeof raw === "object") {
