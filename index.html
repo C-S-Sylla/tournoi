@@ -330,33 +330,25 @@
         const catInput = document.querySelector('input[name="category"]:checked');
         const cat = catInput ? catInput.value : "MIX";
 
-        // Sauvegarde la valeur actuelle pour ne pas la perdre
-        const currentSize = sizeSelect.value;
-
-        // Condition : 128 n'est dispo qu'en mode YEARS + MIX
+        // Condition : Uniquement en mode YEARS ET catégorie MIX
         const allow128 = (currentMode === 'YEARS' && cat === 'MIX');
 
-        // Nettoie les options (sauf les fixes)
-        sizeSelect.innerHTML = `
-            <option value="10">Top 10</option>
-            <option value="5">Top 5</option>
-            <option value="15">Top 15</option>
-            <option value="20">Top 20</option>
-            <option value="30">Top 30</option>
-            <option value="50">Top 50</option>
-            <option value="100">Top 100</option>
-        `;
+        let opt128 = sizeSelect.querySelector('option[value="128"]');
 
         if (allow128) {
-            const opt128 = new Option("128 Participants (64 vs 64)", "128");
-            sizeSelect.add(opt128, 0);
-        }
-
-        // Restaure la valeur si elle existe toujours, sinon 10
-        if (sizeSelect.querySelector(`option[value="${currentSize}"]`)) {
-            sizeSelect.value = currentSize;
+            if (!opt128) {
+                opt128 = new Option("128 Participants (64 vs 64)", "128");
+                sizeSelect.add(opt128, 0); // Ajoute 128 tout en haut
+            }
+            // SÉLECTION AUTOMATIQUE DE 128 !
+            sizeSelect.value = "128"; 
         } else {
-            sizeSelect.value = "10";
+            if (opt128) {
+                if (sizeSelect.value === "128") {
+                    sizeSelect.value = "64"; // Repasse automatiquement à 64 si 128 n'est plus disponible
+                }
+                opt128.remove(); // Masque l'option 128
+            }
         }
     }
 
@@ -385,20 +377,27 @@
         categoryGroup.style.display = 'block';
 
         const sizeSelect = document.getElementById('tournament-size-select');
+        
+        // On remplace tout le menu déroulant par les options du TOP
         sizeSelect.innerHTML = `
-            <option value="10">Top 10</option>
             <option value="5">Top 5</option>
+            <option value="10" selected>Top 10</option>
             <option value="15">Top 15</option>
             <option value="20">Top 20</option>
+            <option value="30">Top 30</option>
+            <option value="50">Top 50</option>
+            <option value="100">Top 100</option>
         `;
 
         const select = document.getElementById('season-select');
         select.innerHTML = '';
-        presetSeasons.forEach(season => {
+        // Ajoute uniquement les saisons compatibles TOP
+        presetSeasons.filter(s => !isYearFile(s) && !s.id.startsWith('male_vs_female')).forEach(season => {
             select.add(new Option(season.name, season.id));
         });
+        
         onSeasonChange();
-        return;
+        return; // Important : on sort pour ne pas exécuter le reste du code
     }
         // Affichage conditionnel de la catégorie
         categoryGroup.style.display = (mode === 'GENDER') ? 'none' : 'block';

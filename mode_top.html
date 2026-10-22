@@ -477,14 +477,10 @@
 
 <script>
     // Récupère les données préparées par le menu
-    let allSongs = JSON.parse(localStorage.getItem('topCandidates') || "[]");
-    let topSize = parseInt(localStorage.getItem('topSize')) || 10;
 
-    timelineSlots = new Array(topSize).fill(null);
-
-    // Timeline des slots (de taille topSize)
-    // Exemple pour un Top 10 : slots d'index 0 à 9 représentant les rangs 10, 9, 8... jusqu'à 1
-    let timelineSlots = new Array(topSize).fill(null);
+    let allSongs = [];
+    let topSize = 10;
+    let timelineSlots = []; 
     let currentPreviewedSong = null;
 
     // Constantes de lecture automatique
@@ -592,61 +588,53 @@
 
     // --- CHARGEMENT DU STUDIO ---
     window.onload = async () => {
-    // 1. Analyse des paramètres de l'URL (si lien partagé)
-    const urlParams = new URLSearchParams(window.location.search);
-    const sharedPath = urlParams.get('path');
-    const sharedTop = urlParams.get('top');
-    const autoPlay = urlParams.get('play') === '1';
-
-    // 2. Chargement des données (priorité au path du lien)
-    const dataPath = sharedPath || localStorage.getItem('currentSeasonPath') || "data/summer-2026-mix.json";
-    
-    try {
-        const resp = await fetch(dataPath);
-        if (resp.ok) {
-            const json = await resp.json();
-            const entries = Array.isArray(json) ? json : (json.entries || json.items || json.data || []);
-            allSongs = entries.map((e, idx) => ({
-                title: e.title || `Anime ${idx+1}`,
-                as: e.as || e.url || e.link || "",
-                yt: e.yt || e.youtube || "",
-                thumb: e.thumb || "",
-                type: e.type || "OP"
-            }));
-        }
-    } catch (err) {
-        console.error("Erreur chargement:", err);
-    }
-
-    // 3. Reconstruction du Top si lien partagé, sinon initialisation vide
-    if (sharedTop) {
-        const indices = sharedTop.split(',').map(Number);
-        topSize = indices.length;
-        timelineSlots = new Array(topSize).fill(null);
-        
-        indices.forEach((songIdx, slotIdx) => {
-            if (allSongs[songIdx]) {
-                timelineSlots[slotIdx] = { ...allSongs[songIdx], _poolIndex: songIdx };
-            }
-        });
-    } else {
+        // Définir la taille du top
         topSize = parseInt(localStorage.getItem('topSize')) || 10;
         timelineSlots = new Array(topSize).fill(null);
-    }
 
-    // 4. Rendu de l'interface
-    renderTimeline();
-    renderPool();
+        // Chargement des données (Lien partagé ou stockage local)
+        const urlParams = new URLSearchParams(window.location.search);
+        const sharedPath = urlParams.get('path');
+        const sharedTop = urlParams.get('top');
+        const autoPlay = urlParams.get('play') === '1';
 
-    // 5. Lancement automatique si play=1
-    if (autoPlay && sharedTop) {
-        console.log("🚀 Lancement auto du Top partagé...");
-        // Petit délai pour assurer que les lecteurs sont prêts
-        setTimeout(() => {
-            launchVideoMode();
-        }, 800);
-    }
-};
+        const dataPath = sharedPath || localStorage.getItem('currentSeasonPath') || "data/summer-2026-mix.json";
+        
+        try {
+            const resp = await fetch(dataPath);
+            if (resp.ok) {
+                const json = await resp.json();
+                const entries = Array.isArray(json) ? json : (json.entries || json.items || json.data || []);
+                allSongs = entries.map((e, idx) => ({
+                    title: e.title || `Anime ${idx+1}`,
+                    as: e.as || e.url || e.link || "",
+                    yt: e.yt || e.youtube || "",
+                    thumb: e.thumb || "",
+                    type: e.type || "OP"
+                }));
+            }
+        } catch (err) { console.error("Erreur chargement:", err); }
+
+        // Si lien partagé : reconstruire la timeline
+        if (sharedTop) {
+            const indices = sharedTop.split(',').map(Number);
+            topSize = indices.length;
+            timelineSlots = new Array(topSize).fill(null);
+            indices.forEach((songIdx, slotIdx) => {
+                if (allSongs[songIdx]) {
+                    timelineSlots[slotIdx] = { ...allSongs[songIdx], _poolIndex: songIdx };
+                }
+            });
+        }
+
+        renderTimeline();
+        renderPool();
+
+        // Lancement auto si nécessaire
+        if (autoPlay && sharedTop) {
+            setTimeout(() => launchVideoMode(), 800);
+        }
+    };
 
     function swapSlots(fromSlot, toSlot) {
         if (fromSlot === toSlot) return;
@@ -1298,6 +1286,7 @@ updateRankNav();
         animeTitle.innerText = "FIN DU CLASSEMENT";
         songTitle.innerText = "Votre Top personnalisé est terminé !";
         timerBar.style.width = '100%';
+         updateRankNav();
     }
 
     function toggleFullscreen() {
