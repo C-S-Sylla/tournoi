@@ -930,7 +930,6 @@ function runClip(playlist) {
 
         const currentSong = currentList[playIndex];
         
-        // Textes du bandeau
         const rank = topSize - timelineSlots.indexOf(currentSong);
         rankBadge.innerText = rank > 0 ? rank : (currentList.length - playIndex);
         animeTitle.innerText = currentSong.title || "Morceau sans titre";
@@ -941,10 +940,11 @@ function runClip(playlist) {
 
         if (!mainVid) return alert("Erreur : Pas de balise <video>");
 
-        // Remise à zéro forcée et nette
         timerBar.style.width = '0%';
+        timerBar.style.background = "#38bdf8";
         mainVid.pause();
         mainVid.ontimeupdate = null; 
+        mainVid.onerror = null;
 
         const videoUrl = currentSong.blobUrl || currentSong.as || currentSong.url || currentSong.link;
         
@@ -954,113 +954,124 @@ function runClip(playlist) {
             mainVid.classList.add('active');
             mainVid.muted = false; 
             mainVid.volume = 1.0;
-            mainVid.src = videoUrl;
-            mainVid.currentTime = START_OFFSET;
-            mainVid.load();
+            
+            // Si on charge un nouveau fichier
+            if (mainVid.src !== videoUrl) {
+                mainVid.src = videoUrl;
+            }
 
-            let clipStartedTime = null;
-            let hasEnded = false;
+            mainVid.onerror = () => {
+                console.warn(`⚠️ Vidéo introuvable. Skip dans 3s...`);
+                timerBar.style.background = "#ef4444";
+                timerBar.style.width = '100%';
+                setTimeout(() => { clearInterval(timerInterval); playIndex++; runClip(currentList); }, 3000);
+            };
 
-            // Événement déclenché à chaque frame de la vidéo
+            // Démarrage Phase 1 : 0:48 (10s)
+            mainVid.currentTime = START_OFFSET; // 48.0
+            
+            let phase = 1; // 1 = Extrait de 10s | 2 = Cut de 5s
+            let phaseStartRealTime = null;
+            let phaseStartVideoTime = null;
+            
             mainVid.ontimeupdate = () => {
-                if (hasEnded) return;
+                // Ignore les frames avant 48s
+                if (mainVid.currentTime < START_OFFSET) return;
+                
+                if (phaseStartVideoTime === null) {
+                    phaseStartVideoTime = mainVid.currentTime; // ex: 48.1
+                    phaseStartRealTime = Date.now();
+                }
 
-                // 1. La vidéo doit avoir dépassé 48s ET ne pas être en train de lagger (readyState >= 3)
-                if (mainVid.currentTime >= START_OFFSET && mainVid.readyState >= 3 && !mainVid.paused) {
-                    
-                    // 2. Initialise le compteur EXACTEMENT au moment où la 1ère frame apparaît
-                    if (clipStartedTime === null) {
-                        clipStartedTime = mainVid.currentTime;
-                    }
+                const elapsed = (Date.now() - phaseStartRealTime) / 1000;
+                const totalDuration = (phase === 1) ? CLIP_DURATION : 5.0; // 10s puis 5s
 
-                    // 3. Calcul pur basé sur la vidéo (Si la vidéo freeze, playedDuration freeze aussi !)
-                    const playedDuration = mainVid.currentTime - clipStartedTime;
-                    const pct = Math.min((playedDuration / CLIP_DURATION) * 100, 100);
-                    
-                    // Met à jour la barre brute, sans transition CSS
-                    timerBar.style.width = pct + '%';
+                // La barre progresse sur 15 secondes au total !
+                let totalPct = 0;
+                if (phase === 1) {
+                    totalPct = (elapsed / 15.0) * 100;
+                } else {
+                    totalPct = ((CLIP_DURATION + elapsed) / 15.0) * 100;
+                }
+                timerBar.style.width = Math.min(totalPct, 100) + '%';
 
-                    // 4. Arrêt net à 10 secondes réelles lues
-                    if (playedDuration >= CLIP_DURATION || mainVid.currentTime >= (START_OFFSET + CLIP_DURATION)) {
-                        hasEnded = true;
-                        mainVid.ontimeupdate = null;
-                        mainVid.pause();
-                        playIndex++;
-                        runClip(currentList); // Passe au suivant
-                    }
+                // FIN DE LA PHASE 1 (Après 10s)
+                if (phase === 1 && elapsed >= CLIP_DURATION) {
+                    phase = 2; // On passe en Phase 2
+                    phaseStartVideoTime = null; // Reset
+                    mainVid.currentTime = 71.0; // JUMP À 1 MINUTE 11 !
+                }
+                
+                // FIN DE LA PHASE 2 (Après 5s)
+                if (phase === 2 && elapsed >= 5.0) {
+                    mainVid.ontimeupdate = null;
+                    mainVid.pause();
+                    playIndex++;
+                    runClip(currentList); // Musique suivante
                 }
             };
 
             mainVid.play().catch(err => {
-                // Seulement si le navigateur bloque l'autoplay (rare)
-                setTimeout(() => {
-                    if (!hasEnded) { hasEnded = true; playIndex++; runClip(currentList); }
-                }, 12000);
+                setTimeout(() => { playIndex++; runClip(currentList); }, 15000);
             });
 
         } else if (currentSong.yt) {
-            // C'EST DU YOUTUBE
+            // ===================================
+            // YOUTUBE (Nécessite l'API Google)
+            // ===================================
             mainVid.style.display = 'none';
             mainVid.pause();
             
-            if (mainYt) {
-                mainYt.style.display = 'block';
-                mainYt.classList.add('active');
-            }
+            const activeYtDiv = isDeckAActive ? document.getElementById('yt-deck-a') : document.getElementById('yt-deck-b');
+            const standbyYtDiv = isDeckAActive ? document.getElementById('yt-deck-b') : document.getElementById('yt-deck-a');
+            const activeYtPlayer = isDeckAActive ? ytPlayerA : ytPlayerB;
 
-            // Si le "cerveau" YouTube est bien branché
-            if (isYtReady && ytPlayer) {
+            if (standbyYtDiv) standbyYtDiv.classList.remove('active');
+            if (activeYtDiv) { activeYtDiv.style.display = 'block'; activeYtDiv.classList.add('active'); }
+
+            if (isYtReadyA && activeYtPlayer) {
                 
-                // Charge et lance la vidéo directement à 48 secondes
-                ytPlayer.loadVideoById({
-                    videoId: currentSong.yt,
-                    startSeconds: START_OFFSET
-                });
+                // Démarre la Phase 1 (0:48)
+                activeYtPlayer.loadVideoById({ videoId: currentSong.yt, startSeconds: START_OFFSET });
 
-                let clipStartedTime = null;
-                let hasEnded = false;
+                let phase = 1;
+                let phaseStartRealTime = null;
 
-                // Surveille le lecteur YouTube toutes les 50 millisecondes
                 clearInterval(timerInterval);
                 timerInterval = setInterval(() => {
-                    if (hasEnded) return;
-
-                    // getPlayerState() : 1 = En lecture fluide | 3 = Buffering/Lag
-                    const state = ytPlayer.getPlayerState();
+                    const state = activeYtPlayer.getPlayerState();
                     
                     if (state === 1) { 
-                        // LA VIDÉO TOURNE RÉELLEMENT SANS LAG !
-                        const currentTime = ytPlayer.getCurrentTime();
-
-                        // Enregistre le temps exact de départ (souvent 48.001s)
-                        if (clipStartedTime === null) {
-                            clipStartedTime = currentTime;
+                        if (phaseStartRealTime === null) {
+                            phaseStartRealTime = Date.now();
                         }
 
-                        // La barre se base sur les VRAIES secondes YouTube lues
-                        const playedDuration = currentTime - clipStartedTime;
-                        const pct = Math.min((playedDuration / CLIP_DURATION) * 100, 100);
-                        timerBar.style.width = pct + '%';
+                        const elapsed = (Date.now() - phaseStartRealTime) / 1000;
+                        const totalPct = phase === 1 ? (elapsed / 15.0) * 100 : ((CLIP_DURATION + elapsed) / 15.0) * 100;
+                        timerBar.style.width = Math.min(totalPct, 100) + '%';
 
-                        // Arrêt net après 10 secondes réelles d'images
-                        if (playedDuration >= CLIP_DURATION || currentTime >= (START_OFFSET + CLIP_DURATION)) {
-                            hasEnded = true;
+                        // Fin Phase 1 (10s) -> Jump à 1:11
+                        if (phase === 1 && elapsed >= CLIP_DURATION) {
+                            phase = 2;
+                            phaseStartRealTime = null; // Reset chrono
+                            activeYtPlayer.seekTo(71.0); // Jump à 1m11s
+                        }
+                        
+                        // Fin Phase 2 (5s) -> Suivant
+                        if (phase === 2 && elapsed >= 5.0) {
                             clearInterval(timerInterval);
-                            ytPlayer.pauseVideo();
+                            activeYtPlayer.pauseVideo();
                             playIndex++;
                             runClip(currentList);
                         }
-                    } else {
-                        // Si ça bufferise (chargement infini), le timer ne bouge pas !
-                        // La barre reste bloquée à sa position jusqu'à la reprise de la connexion.
                     }
                 }, 50);
-
-            } else {
-                alert("⚠️ L'API YouTube n'a pas pu se connecter.");
             }
         }
     }
+
+
+
 
     function endFinalVideo() {
         deckA.classList.remove('active');
