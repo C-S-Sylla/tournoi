@@ -501,26 +501,27 @@
     const songTitle = document.getElementById('song-title');
     const timerBar = document.getElementById('timer-bar');
 
-    // INITIALISATION DE L'API OFFICIELLE YOUTUBE
-    let ytPlayer = null;
-    let isYtReady = false;
+    // INITIALISATION DE L'API OFFICIELLE YOUTUBE (MODIFIÉ)
+    let ytPlayerA = null;
+    let ytPlayerB = null;
+    let ytReadyCount = 0;
 
-    // Injecte le script de l'API YouTube dans la page
     const tag = document.createElement('script');
     tag.src = "https://www.youtube.com/iframe_api";
     const firstScriptTag = document.getElementsByTagName('script')[0];
     firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
 
-    // Fonction appelée automatiquement par Google quand l'API est prête
     function onYouTubeIframeAPIReady() {
-        ytPlayer = new YT.Player('yt-deck-a', {
-            playerVars: { 'controls': 0, 'disablekb': 1, 'rel': 0, 'fs': 0 },
-            events: {
-                'onReady': () => { 
-                    isYtReady = true; 
-                    console.log("✅ API YouTube connectée et prête !"); 
-                }
-            }
+        const playerVars = { 'controls': 0, 'disablekb': 1, 'rel': 0, 'fs': 0, 'modestbranding': 1 };
+        
+        ytPlayerA = new YT.Player('yt-deck-a', {
+            playerVars: playerVars,
+            events: { 'onReady': () => ytReadyCount++ }
+        });
+        
+        ytPlayerB = new YT.Player('yt-deck-b', {
+            playerVars: playerVars,
+            events: { 'onReady': () => ytReadyCount++ }
         });
     }
 
@@ -927,7 +928,7 @@ function prepareDeck(song, isA) {
     let ytTimeout = null;
 
     // ==========================================
-    // 1. LANCEMENT DU MODE VIDÉO
+    // 1. LANCEMENT DU MODE VIDÉO (AVEC DÉMARRAGE FORCÉ)
     // ==========================================
     function launchVideoMode() {
         activePlaylist = timelineSlots.filter(s => s !== null);
@@ -945,7 +946,22 @@ function prepareDeck(song, isA) {
         // Arrêt forcé de toute lecture antérieure
         resetAllDecks();
 
-        runClip(activePlaylist);
+        // 🚀 TRUC ANTI-BLOCAGE NAVIGATEUR : On lance un coup de boost muet 
+        // pour déverrouiller l'audio du navigateur dès le clic sur le bouton
+        const dummyAudio = document.getElementById('deck-a');
+        if (dummyAudio) {
+            dummyAudio.muted = true;
+            dummyAudio.play().then(() => {
+                dummyAudio.pause();
+                dummyAudio.muted = false;
+                runClip(activePlaylist);
+            }).catch(() => {
+                // Si le navigateur est trop strict, on lance quand même le clip
+                runClip(activePlaylist);
+            });
+        } else {
+            runClip(activePlaylist);
+        }
     }
 
     // Réinitialisation complète de toutes les platines
@@ -983,24 +999,21 @@ function prepareDeck(song, isA) {
     }
 
     // ==========================================
-    // 2. PRÉCHARGEMENT (Sans forcer currentTime prématurément)
+    // PRÉPARATION PROPRE DE LA PLATINE SUIVANTE
     // ==========================================
     function prepareDeck(song, isA) {
         if (!song) return;
         const vid = isA ? document.getElementById('deck-a') : document.getElementById('deck-b');
-        const videoUrl = song.as || song.url || song.link;
+        const videoUrl = song.blobUrl || song.as || song.url || song.link;
 
         if (vid && videoUrl) {
             vid.src = videoUrl;
-            vid.preload = "auto";
+            vid.load();
         }
     }
 
     // ==========================================
-    // 3. LECTURE SYNCHRONISÉE (0 DÉCALAGE / 0 CRASH)
-    // ==========================================
-// ==========================================
-    // LECTURE AVEC PAUSE AUTOMATIQUE PENDANT LE CHARGEMENT (58s -> 1:11)
+    // LECTURE DU CLIP AVEC CHANGEMENT GARANTI DU MORCEAU
     // ==========================================
     function runClip(playlist) {
         const currentList = playlist || activePlaylist;
@@ -1009,68 +1022,87 @@ function prepareDeck(song, isA) {
             return;
         }
 
-        // Nettoyage complet
-        resetAllDecks();
+        // 1. Nettoyage de tous les anciens timers
+        clearInterval(timerInterval);
+        clearTimeout(ytTimeout);
+        clearTimeout(clipTimeout);
+        timerBar.style.width = '0%';
 
         const currentSong = currentList[playIndex];
         const nextSong = currentList[playIndex + 1];
 
-        // Textes et HUD
+        // 2. Mise à jour des textes et du badge de rang
         const rank = topSize - timelineSlots.indexOf(currentSong);
         rankBadge.innerText = rank > 0 ? rank : (currentList.length - playIndex);
         animeTitle.innerText = currentSong.title || "Morceau sans titre";
         songTitle.innerText = currentSong.type ? `[${currentSong.type.toUpperCase()}]` : "";
 
+        // 3. Attribution des platines (Deck A / Deck B)
         const activeVid = isDeckAActive ? document.getElementById('deck-a') : document.getElementById('deck-b');
+        const standbyVid = isDeckAActive ? document.getElementById('deck-b') : document.getElementById('deck-a');
+        
         const activeYt = isDeckAActive ? document.getElementById('yt-deck-a') : document.getElementById('yt-deck-b');
+        const standbyYt = isDeckAActive ? document.getElementById('yt-deck-b') : document.getElementById('yt-deck-a');
+
         currentDeck = activeVid;
 
+        // On coupe impérativement la platine en attente
+        if (standbyVid) {
+            standbyVid.pause();
+            standbyVid.ontimeupdate = null;
+            standbyVid.classList.remove('active');
+            standbyVid.style.display = 'none';
+        }
+        if (standbyYt) {
+            standbyYt.classList.remove('active');
+            standbyYt.style.display = 'none';
+            standbyYt.innerHTML = "";
+        }
+
         const videoUrl = currentSong.blobUrl || currentSong.as || currentSong.url || currentSong.link;
-        let phase = 1; // 1 = 10 premières secondes | "loading" = saut à 1:11 | 2 = 5 secondes du refrain
+        let phase = 1; 
         let phase2Start = null;
         let hasSwitched = false;
 
         const nextTrack = () => {
             if (hasSwitched) return;
             hasSwitched = true;
-            resetAllDecks();
-            isDeckAActive = !isDeckAActive;
+            
+            // Stoppe la vidéo actuelle avant de basculer
+            activeVid.pause();
+            activeVid.ontimeupdate = null;
+
+            isDeckAActive = !isDeckAActive; // Bascule sur l'autre platine
             playIndex++;
             runClip(currentList);
         };
 
         // ----------------------------------------------------
-        // CAS 1 : ANISONGDB / VIDÉO DIRECTE (WebM / MP4)
+        // CAS 1 : VIDÉO DIRECTE (AnisongDB / WebM / MP4)
         // ----------------------------------------------------
         if (videoUrl) {
+            if (activeYt) activeYt.style.display = 'none';
             activeVid.style.display = 'block';
             activeVid.classList.add('active');
             activeVid.muted = false;
             activeVid.volume = 1.0;
 
+            // ⚠️ FORCE LE CHANGEMENT DE SOURCE SI C'EST UN NOUVEAU MORCEAU
             if (activeVid.src !== videoUrl) {
                 activeVid.src = videoUrl;
+                activeVid.load();
             }
 
-            // Sécurité si la vidéo est trop courte pour atteindre 1:11
             activeVid.onended = () => nextTrack();
 
-            // Démarrage initial à 48s
             const setupAndSeek = () => {
                 activeVid.currentTime = START_OFFSET;
-            };
-
-            activeVid.onseeked = () => {
-                // Ce premier seeked sert uniquement au lancement à 48s
-                if (phase === 1) {
-                    activeVid.onseeked = null;
-                    const p = activeVid.play();
-                    if (p !== undefined) {
-                        p.catch(() => {
-                            activeVid.muted = true;
-                            activeVid.play().then(() => { activeVid.muted = false; });
-                        });
-                    }
+                const p = activeVid.play();
+                if (p !== undefined) {
+                    p.catch(() => {
+                        activeVid.muted = true;
+                        activeVid.play().then(() => { activeVid.muted = false; });
+                    });
                 }
             };
 
@@ -1086,43 +1118,37 @@ function prepareDeck(song, isA) {
             let clipStart = null;
 
             activeVid.ontimeupdate = () => {
-                // PENDANT LE CHARGEMENT DE 1:11 : On ne touche à rien, la barre reste figée !
                 if (phase === "loading" || activeVid.paused || activeVid.seeking) return;
+
+                if (clipStart === null && activeVid.currentTime >= START_OFFSET - 0.5) {
+                    clipStart = activeVid.currentTime;
+                }
+                if (clipStart === null) return;
+
+                const elapsed = activeVid.currentTime - clipStart;
 
                 // --- PHASE 1 : Extrait de 10 secondes (48s -> 58s) ---
                 if (phase === 1) {
-                    if (clipStart === null && activeVid.currentTime >= START_OFFSET - 0.5) {
-                        clipStart = activeVid.currentTime;
-                    }
-                    if (clipStart === null) return;
-
-                    const elapsed = activeVid.currentTime - clipStart;
                     const pct = Math.min((elapsed / 15.0) * 100, 66.66);
                     timerBar.style.width = pct + '%';
 
-                    // Les 10 secondes sont finies : on stoppe et on attend le chargement
                     if (elapsed >= 10.0) {
-                        phase = "loading"; // On verrouille
-                        timerBar.style.width = '66.66%'; // La barre s'arrête net ici
+                        phase = "loading"; 
+                        timerBar.style.width = '66.66%'; 
 
-                        // Saut à 1:11 (71.0s)
-                        activeVid.currentTime = 71.0;
+                        activeVid.currentTime = 71.0; // Saut à 1:11
 
-                        // ÉCOUTEUR : Attendre que le fichier soit chargé à la nouvelle seconde
                         activeVid.onseeked = () => {
                             activeVid.onseeked = null;
-
-                            // ÉCOUTEUR : Attendre que l'image et le son reprennent réellement
                             activeVid.onplaying = () => {
                                 activeVid.onplaying = null;
-                                phase2Start = activeVid.currentTime; // Point de départ exact du refrain
-                                phase = 2; // La vidéo tourne : on débloque la barre !
+                                phase2Start = activeVid.currentTime; 
+                                phase = 2; 
                             };
-
                             activeVid.play().catch(() => {});
                         };
                     }
-                }
+                } 
                 // --- PHASE 2 : Refrain de 5 secondes (1:11 -> 1:16) ---
                 else if (phase === 2 && phase2Start !== null) {
                     const elapsedP2 = activeVid.currentTime - phase2Start;
@@ -1136,57 +1162,77 @@ function prepareDeck(song, isA) {
             };
         }
         // ----------------------------------------------------
-        // CAS 2 : YOUTUBE (Iframe)
+        // CAS 2 : YOUTUBE (Via API Officielle)
         // ----------------------------------------------------
         else if (currentSong.yt) {
-            currentDeck = null;
-            activeYt.style.display = 'block';
-            activeYt.classList.add('active');
-            activeYt.innerHTML = `<iframe src="https://www.youtube.com/embed/${currentSong.yt}?autoplay=1&start=48&controls=0&disablekb=1&rel=0" style="width:100%;height:100%;border:none;object-fit:cover;" allow="autoplay" allowfullscreen></iframe>`;
+            activeVid.style.display = 'none';
+            activeVid.pause();
 
-            // Délai initial pour laisser YouTube démarrer avant d'animer
-            ytTimeout = setTimeout(() => {
-                let startReal = Date.now();
+            currentDeck = activeYt; // Indique au bouton pause que le deck actif est YT
+
+            if (activeYt) {
+                activeYt.style.display = 'block';
+                activeYt.classList.add('active');
+            }
+
+            const activeYtPlayer = isDeckAActive ? ytPlayerA : ytPlayerB;
+            
+            // On s'assure que l'API est chargée
+            if (activeYtPlayer && typeof activeYtPlayer.loadVideoById === 'function') {
+                // On charge la vidéo sans recréer d'iframe !
+                activeYtPlayer.loadVideoById({
+                    videoId: currentSong.yt,
+                    startSeconds: 48
+                });
+                
+                let ytClipStart = null;
 
                 timerInterval = setInterval(() => {
-                    if (phase === "loading") return; // Fige la barre
+                    if (phase === "loading" || activeYtPlayer.getPlayerState() !== YT.PlayerState.PLAYING) return;
 
-                    const elapsed = (Date.now() - startReal) / 1000;
+                    const currentTime = activeYtPlayer.getCurrentTime();
 
+                    if (ytClipStart === null && currentTime >= 47.5) {
+                        ytClipStart = currentTime;
+                    }
+                    if (ytClipStart === null) return;
+
+                    const elapsed = currentTime - ytClipStart;
+
+                    // PHASE 1 (48s -> 58s)
                     if (phase === 1) {
                         const pct = Math.min((elapsed / 15.0) * 100, 66.66);
                         timerBar.style.width = pct + '%';
 
                         if (elapsed >= 10.0) {
                             phase = "loading";
-                            clearInterval(timerInterval);
                             timerBar.style.width = '66.66%';
-
-                            // Charge le refrain à 1:11
-                            activeYt.innerHTML = `<iframe src="https://www.youtube.com/embed/${currentSong.yt}?autoplay=1&start=71&controls=0&disablekb=1&rel=0" style="width:100%;height:100%;border:none;object-fit:cover;" allow="autoplay" allowfullscreen></iframe>`;
-
-                            // Pause pour laisser YouTube bufferiser l'écran noir de 1:11 sans bouger la barre
-                            ytTimeout = setTimeout(() => {
+                            
+                            // LE SECRET EST ICI : On utilise seekTo au lieu de remplacer l'innerHTML !
+                            activeYtPlayer.seekTo(71, true);
+                            
+                            setTimeout(() => {
                                 phase = 2;
-                                let startP2 = Date.now();
+                                ytClipStart = activeYtPlayer.getCurrentTime(); // Reset du point de départ pour la phase 2
+                            }, 500); // Petit délai pour laisser YouTube charger (Buffering)
+                        }
+                    }
+                    // PHASE 2 (71s -> 76s)
+                    else if (phase === 2) {
+                        const pct = Math.min(((10.0 + elapsed) / 15.0) * 100, 100);
+                        timerBar.style.width = pct + '%';
 
-                                timerInterval = setInterval(() => {
-                                    const elapsedP2 = (Date.now() - startP2) / 1000;
-                                    const totalPct = Math.min(((10.0 + elapsedP2) / 15.0) * 100, 100);
-                                    timerBar.style.width = totalPct + '%';
-
-                                    if (elapsedP2 >= 5.0) {
-                                        nextTrack();
-                                    }
-                                }, 50);
-                            }, 1200);
+                        if (elapsed >= 5.0) {
+                            activeYtPlayer.pauseVideo();
+                            clearInterval(timerInterval);
+                            nextTrack();
                         }
                     }
                 }, 50);
-            }, 1200);
+            }
         }
 
-        // Préchargement du titre suivant
+        // 4. Préchargement du morceau suivant sur l'autre platine
         if (nextSong) {
             prepareDeck(nextSong, !isDeckAActive);
         }
@@ -1195,16 +1241,33 @@ function prepareDeck(song, isA) {
     // ==========================================
     // 4. BOUTON PAUSE / REPRISE
     // ==========================================
+    // BOUTON PAUSE / REPRISE (MODIFIÉ)
     function togglePlayPause() {
         const btn = document.getElementById('pause-btn');
-        if (!currentDeck) return;
-
-        if (currentDeck.paused) {
-            currentDeck.play();
-            btn.innerText = "⏸️ Pause";
-        } else {
-            currentDeck.pause();
-            btn.innerText = "▶️ Reprendre";
+        
+        // Si c'est une vidéo locale (WebM/MP4)
+        if (currentDeck && currentDeck.tagName === "VIDEO") {
+            if (currentDeck.paused) {
+                currentDeck.play();
+                btn.innerText = "⏸️ Pause";
+            } else {
+                currentDeck.pause();
+                btn.innerText = "▶️ Reprendre";
+            }
+        } 
+        // Si c'est le lecteur YouTube
+        else {
+            const activeYtPlayer = isDeckAActive ? ytPlayerA : ytPlayerB;
+            if (activeYtPlayer && typeof activeYtPlayer.getPlayerState === 'function') {
+                const state = activeYtPlayer.getPlayerState();
+                if (state === YT.PlayerState.PLAYING) {
+                    activeYtPlayer.pauseVideo();
+                    btn.innerText = "▶️ Reprendre";
+                } else {
+                    activeYtPlayer.playVideo();
+                    btn.innerText = "⏸️ Pause";
+                }
+            }
         }
     }
 
