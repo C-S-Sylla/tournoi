@@ -588,34 +588,46 @@
 
     // --- CHARGEMENT DU STUDIO ---
     window.onload = async () => {
-        // Définir la taille du top
-        topSize = parseInt(localStorage.getItem('topSize')) || 10;
-        timelineSlots = new Array(topSize).fill(null);
-
-        // Chargement des données (Lien partagé ou stockage local)
+        // 1. Analyse des paramètres de l'URL
         const urlParams = new URLSearchParams(window.location.search);
         const sharedPath = urlParams.get('path');
         const sharedTop = urlParams.get('top');
         const autoPlay = urlParams.get('play') === '1';
 
-        const dataPath = sharedPath || localStorage.getItem('currentSeasonPath') || "data/summer-2026-mix.json";
+        // 2. Priorité n°1 : Données filtrées envoyées par le Menu
+        const storedCandidates = localStorage.getItem('topCandidates');
         
-        try {
-            const resp = await fetch(dataPath);
-            if (resp.ok) {
-                const json = await resp.json();
-                const entries = Array.isArray(json) ? json : (json.entries || json.items || json.data || []);
-                allSongs = entries.map((e, idx) => ({
-                    title: e.title || `Anime ${idx+1}`,
-                    as: e.as || e.url || e.link || "",
-                    yt: e.yt || e.youtube || "",
-                    thumb: e.thumb || "",
-                    type: e.type || "OP"
-                }));
+        if (storedCandidates && !sharedTop) {
+            console.log("📂 Chargement des candidats filtrés depuis le Menu...");
+            try {
+                allSongs = JSON.parse(storedCandidates);
+            } catch (e) {
+                console.error("Erreur parsing localStorage", e);
             }
-        } catch (err) { console.error("Erreur chargement:", err); }
+        } 
+        // 3. Priorité n°2 : Chargement depuis le fichier JSON (si lien partagé ou refresh)
+        else {
+            console.log("📂 Chargement depuis le fichier JSON...");
+            const dataPath = sharedPath || localStorage.getItem('currentSeasonPath') || "data/summer-2026-mix.json";
+            try {
+                const resp = await fetch(dataPath);
+                if (resp.ok) {
+                    const json = await resp.json();
+                    const entries = Array.isArray(json) ? json : (json.entries || json.items || json.data || []);
+                    allSongs = entries.map((e, idx) => ({
+                        title: e.title || `Anime ${idx+1}`,
+                        as: e.as || e.url || e.link || "",
+                        yt: e.yt || e.youtube || "",
+                        thumb: e.thumb || "",
+                        type: (e.type || "OP").toUpperCase()
+                    }));
+                }
+            } catch (err) {
+                console.error("Erreur chargement:", err);
+            }
+        }
 
-        // Si lien partagé : reconstruire la timeline
+        // 4. Si lien partagé : reconstruire la timeline selon l'ordre du lien
         if (sharedTop) {
             const indices = sharedTop.split(',').map(Number);
             topSize = indices.length;
@@ -625,13 +637,19 @@
                     timelineSlots[slotIdx] = { ...allSongs[songIdx], _poolIndex: songIdx };
                 }
             });
+        } else {
+            // Initialisation normale
+            topSize = parseInt(localStorage.getItem('topSize')) || 10;
+            timelineSlots = new Array(topSize).fill(null);
         }
 
+        // 5. Rendu de l'interface
         renderTimeline();
         renderPool();
 
-        // Lancement auto si nécessaire
+        // 6. Lancement automatique si play=1
         if (autoPlay && sharedTop) {
+            console.log("🚀 Lancement auto du Top partagé...");
             setTimeout(() => launchVideoMode(), 800);
         }
     };

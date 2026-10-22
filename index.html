@@ -377,27 +377,20 @@
         categoryGroup.style.display = 'block';
 
         const sizeSelect = document.getElementById('tournament-size-select');
-        
-        // On remplace tout le menu déroulant par les options du TOP
         sizeSelect.innerHTML = `
+            <option value="10">Top 10</option>
             <option value="5">Top 5</option>
-            <option value="10" selected>Top 10</option>
             <option value="15">Top 15</option>
             <option value="20">Top 20</option>
-            <option value="30">Top 30</option>
-            <option value="50">Top 50</option>
-            <option value="100">Top 100</option>
         `;
 
         const select = document.getElementById('season-select');
         select.innerHTML = '';
-        // Ajoute uniquement les saisons compatibles TOP
-        presetSeasons.filter(s => !isYearFile(s) && !s.id.startsWith('male_vs_female')).forEach(season => {
+        presetSeasons.forEach(season => {
             select.add(new Option(season.name, season.id));
         });
-        
         onSeasonChange();
-        return; // Important : on sort pour ne pas exécuter le reste du code
+        return;
     }
         // Affichage conditionnel de la catégorie
         categoryGroup.style.display = (mode === 'GENDER') ? 'none' : 'block';
@@ -471,32 +464,40 @@
     }
 
     function normalizeEntry(e, index) {
+        // 1. Récupération des données de base
         let title = e.title || e.name || e.song || e.label || `Entrée ${index + 1}`;
         const yt = e.yt || e.youtube || e.youtubeId || e.videoId || e.id || e.url || "";
         const as = e.as || "";
         const at = e.at || ""; 
         const thumb = e.thumb || ""; 
         const vocal = (e.vocal || e.gender || "").toLowerCase();
-
-        // IDENTIFIANT UNIQUE INDÉPENDANT DU NOM :
         const uid = e.uid || `uid_${index}_${Math.random().toString(36).substr(2, 9)}`;
 
-        const rawType = e.type || e.category || e.kind || "";
-        const titleText = `${title} ${rawType}`.toUpperCase();
-
-        let type = "OP";
-        if (rawType === "ED" || rawType === "ending" || rawType === "Ending" || titleText.includes("(ED)") || titleText.includes("ENDING")) {
-            type = "ED";
-        } else if (rawType === "MIX" || rawType === "mix") {
-            type = "MIX";
+        // 2. DÉTERMINATION PROPRE DU TYPE
+        // On priorise le champ 'type' du JSON, sinon on essaie de deviner
+        let type = (e.type || "").toUpperCase();
+        
+        if (!type) {
+            const raw = (e.type || e.category || e.kind || "").toUpperCase();
+            const titleText = `${title} ${raw}`.toUpperCase();
+            
+            if (raw === "ED" || titleText.includes("ENDING") || titleText.includes("(ED)")) {
+                type = "ED";
+            } else if (raw === "MIX") {
+                type = "MIX";
+            } else {
+                type = "OP";
+            }
         }
 
-        if (type === "OP" && !title.toUpperCase().includes("(OP)")) title = `${title} (OP)`;
-        else if (type === "ED" && !title.toUpperCase().includes("(ED)")) title = `${title} (ED)`;
+        // 3. Nettoyage du titre (On ajoute le tag seulement s'il manque)
+        const upperTitle = title.toUpperCase();
+        if (type === "OP" && !upperTitle.includes("(OP)")) title += " (OP)";
+        if (type === "ED" && !upperTitle.includes("(ED)")) title += " (ED)";
 
         return { uid, title, yt, as, at, thumb, type, vocal, starred: false, result: "" };
     }
-
+    
     function normalizeSeasonData(raw, fallbackName) {
         if (Array.isArray(raw)) return { seasonName: fallbackName || "Saison importée", entries: raw };
         if (raw && typeof raw === "object") {
@@ -710,19 +711,21 @@
             size = finalEntries.length;
         } 
         else if (currentMode === "TOP") {
+            // 1. Récupération des données
             let parsed = getSelectedEntries();
-
-            // Sécurité si le fichier JSON était encore en cours de lecture
-            if (!parsed.length && selectedSeasonData) {
-                parsed = parseEntries(selectedSeasonData.entries || selectedSeasonData);
+            if (parsed.length === 0 && selectedSeasonData) {
+                parsed = parseEntries(selectedSeasonData.entries || []);
             }
 
+            // 2. Application stricte du filtre de catégorie
             const cat = document.querySelector('input[name="category"]:checked')?.value || "MIX";
-            if (cat !== "MIX") parsed = parsed.filter(e => e.type === cat);
+            if (cat !== "MIX") {
+                parsed = parsed.filter(e => e.type === cat);
+            }
 
-            if (parsed.length === 0) return alert("Aucun morceau trouvé dans ce fichier JSON !");
+            if (parsed.length === 0) return alert("Aucun morceau trouvé pour cette catégorie !");
 
-            // Envoie toutes les musiques au Studio
+            // 3. Envoi au Studio
             localStorage.setItem('topCandidates', JSON.stringify(parsed));
             localStorage.setItem('topSize', size || 10);
             localStorage.setItem('gameMode', 'TOP');
