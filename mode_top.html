@@ -480,6 +480,8 @@
     let allSongs = JSON.parse(localStorage.getItem('topCandidates') || "[]");
     let topSize = parseInt(localStorage.getItem('topSize')) || 10;
 
+    timelineSlots = new Array(topSize).fill(null);
+
     // Timeline des slots (de taille topSize)
     // Exemple pour un Top 10 : slots d'index 0 à 9 représentant les rangs 10, 9, 8... jusqu'à 1
     let timelineSlots = new Array(topSize).fill(null);

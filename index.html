@@ -330,25 +330,33 @@
         const catInput = document.querySelector('input[name="category"]:checked');
         const cat = catInput ? catInput.value : "MIX";
 
-        // Condition : Uniquement en mode YEARS ET catégorie MIX
+        // Sauvegarde la valeur actuelle pour ne pas la perdre
+        const currentSize = sizeSelect.value;
+
+        // Condition : 128 n'est dispo qu'en mode YEARS + MIX
         const allow128 = (currentMode === 'YEARS' && cat === 'MIX');
 
-        let opt128 = sizeSelect.querySelector('option[value="128"]');
+        // Nettoie les options (sauf les fixes)
+        sizeSelect.innerHTML = `
+            <option value="10">Top 10</option>
+            <option value="5">Top 5</option>
+            <option value="15">Top 15</option>
+            <option value="20">Top 20</option>
+            <option value="30">Top 30</option>
+            <option value="50">Top 50</option>
+            <option value="100">Top 100</option>
+        `;
 
         if (allow128) {
-            if (!opt128) {
-                opt128 = new Option("128 Participants (64 vs 64)", "128");
-                sizeSelect.add(opt128, 0); // Ajoute 128 tout en haut
-            }
-            // SÉLECTION AUTOMATIQUE DE 128 !
-            sizeSelect.value = "128"; 
+            const opt128 = new Option("128 Participants (64 vs 64)", "128");
+            sizeSelect.add(opt128, 0);
+        }
+
+        // Restaure la valeur si elle existe toujours, sinon 10
+        if (sizeSelect.querySelector(`option[value="${currentSize}"]`)) {
+            sizeSelect.value = currentSize;
         } else {
-            if (opt128) {
-                if (sizeSelect.value === "128") {
-                    sizeSelect.value = "64"; // Repasse automatiquement à 64 si 128 n'est plus disponible
-                }
-                opt128.remove(); // Masque l'option 128
-            }
+            sizeSelect.value = "10";
         }
     }
 
