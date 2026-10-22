@@ -277,6 +277,7 @@
     max-width: 1100px;
     margin: 0 auto;
     padding-bottom: 60px; /* Débloque le scroll vertical */
+    padding-bottom: 100px; 
 }
 
         #top-stage {
@@ -1175,6 +1176,7 @@ function prepareDeck(song, isA) {
                 }
             };
         }
+        
         // ----------------------------------------------------
         // CAS 2 : YOUTUBE (Via API Officielle)
         // ----------------------------------------------------
@@ -1245,7 +1247,7 @@ function prepareDeck(song, isA) {
                 }, 50);
             }
         }
-
+updateRankNav();
         // 4. Préchargement du morceau suivant sur l'autre platine
         if (nextSong) {
             prepareDeck(nextSong, !isDeckAActive);
@@ -1300,6 +1302,60 @@ function prepareDeck(song, isA) {
         if (!document.fullscreenElement) stage.requestFullscreen().catch(() => {});
         else document.exitFullscreen();
     }
+    function updateRankNav() {
+    const navBar = document.getElementById('rank-nav-bar');
+    if (!navBar) return;
+    
+    navBar.innerHTML = "";
+    
+    // On crée les boutons de 1 à topSize
+    for (let i = 1; i <= topSize; i++) {
+        const btn = document.createElement('div');
+        btn.innerText = i;
+        btn.style = `
+            padding: 10px 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            border: 1px solid #334155;
+            background: #1e293b;
+            color: #94a3b8;
+            transition: 0.2s;
+        `;
+        
+        // Style du bouton actif (si c'est le rang qu'on écoute actuellement)
+        // Note: playIndex est ton index actuel (0 = rang le plus haut)
+        const currentRank = topSize - playIndex; 
+        if (i === currentRank) {
+            btn.style.background = "#3b82f6";
+            btn.style.color = "white";
+            btn.style.borderColor = "#3b82f6";
+        }
+
+        btn.onclick = () => {
+            // Optionnel : sauter directement à ce rang
+            // jumpToRank(i); 
+        };
+        
+        navBar.appendChild(btn);
+    }
+}
 </script>
+<!-- Barre de navigation des rangs -->
+<div id="rank-nav-bar" style="
+    position: fixed; 
+    bottom: 0; 
+    left: 0; 
+    width: 100%; 
+    padding: 15px; 
+    background: #090d16; 
+    display: flex; 
+    justify-content: center; 
+    gap: 8px; 
+    border-top: 1px solid #334155;
+    z-index: 100;
+">
+    <!-- Les cases seront générées par le JS -->
+</div>
 </body>
 </html>
