@@ -536,15 +536,18 @@
         return idx !== -1 ? idx : 0;
     }).join(',');
 
+    // Dans copyTopVideoLink()
     const exactPath = localStorage.getItem('currentSeasonPath') || "data/summer-2026-mix.json";
+    const topCat = localStorage.getItem('topCategory') || "MIX"; // <--- Nouvelle ligne
     
     let baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
     if (window.location.protocol === "file:") {
         baseUrl = "https://c-s-sylla.github.io/tournoi";
     }
 
-    // Le lien inclut le chemin des données et l'ordre du top
-    const shareUrl = `${baseUrl}/mode_top.html?path=${encodeURIComponent(exactPath)}&top=${topIndices}&play=1`;
+    // --- On ajoute &cat= à la fin du lien ---
+    const shareUrl = `${baseUrl}/mode_top.html?path=${encodeURIComponent(exactPath)}&top=${topIndices}&play=1&cat=${topCat}`;
+
 
     // Copie presse-papier
     const ta = document.createElement("textarea");
@@ -588,32 +591,34 @@
 
     // --- CHARGEMENT DU STUDIO ---
     window.onload = async () => {
-        // 1. Analyse des paramètres de l'URL
         const urlParams = new URLSearchParams(window.location.search);
         const sharedPath = urlParams.get('path');
         const sharedTop = urlParams.get('top');
         const autoPlay = urlParams.get('play') === '1';
+        const sharedCat = urlParams.get('cat') || 'MIX'; // <--- Récupère la catégorie du lien
 
-        // 2. Priorité n°1 : Données filtrées envoyées par le Menu
         const storedCandidates = localStorage.getItem('topCandidates');
         
+        // 1. Si menu local
         if (storedCandidates && !sharedTop) {
             console.log("📂 Chargement des candidats filtrés depuis le Menu...");
-            try {
-                allSongs = JSON.parse(storedCandidates);
-            } catch (e) {
-                console.error("Erreur parsing localStorage", e);
-            }
+            try { allSongs = JSON.parse(storedCandidates); } catch (e) {}
         } 
-        // 3. Priorité n°2 : Chargement depuis le fichier JSON (si lien partagé ou refresh)
+        // 2. Si lien partagé
         else {
-            console.log("📂 Chargement depuis le fichier JSON...");
+            console.log("📂 Chargement depuis le fichier JSON avec filtre : " + sharedCat);
             const dataPath = sharedPath || localStorage.getItem('currentSeasonPath') || "data/summer-2026-mix.json";
             try {
                 const resp = await fetch(dataPath);
                 if (resp.ok) {
                     const json = await resp.json();
-                    const entries = Array.isArray(json) ? json : (json.entries || json.items || json.data || []);
+                    let entries = Array.isArray(json) ? json : (json.entries || json.items || json.data || []);
+                    
+                    // --- LE SECRET EST ICI : ON APPLIQUE LE MÊME FILTRE QUE LE CRÉATEUR ---
+                    if (sharedCat !== 'MIX') {
+                        entries = entries.filter(e => (e.type || "OP").toUpperCase() === sharedCat.toUpperCase());
+                    }
+
                     allSongs = entries.map((e, idx) => ({
                         title: e.title || `Anime ${idx+1}`,
                         as: e.as || e.url || e.link || "",
@@ -622,12 +627,10 @@
                         type: (e.type || "OP").toUpperCase()
                     }));
                 }
-            } catch (err) {
-                console.error("Erreur chargement:", err);
-            }
+            } catch (err) { console.error("Erreur chargement:", err); }
         }
 
-        // 4. Si lien partagé : reconstruire la timeline selon l'ordre du lien
+        // 3. Reconstruire la timeline
         if (sharedTop) {
             const indices = sharedTop.split(',').map(Number);
             topSize = indices.length;
@@ -638,18 +641,14 @@
                 }
             });
         } else {
-            // Initialisation normale
             topSize = parseInt(localStorage.getItem('topSize')) || 10;
             timelineSlots = new Array(topSize).fill(null);
         }
 
-        // 5. Rendu de l'interface
         renderTimeline();
         renderPool();
 
-        // 6. Lancement automatique si play=1
         if (autoPlay && sharedTop) {
-            console.log("🚀 Lancement auto du Top partagé...");
             setTimeout(() => launchVideoMode(), 800);
         }
     };
@@ -874,26 +873,7 @@ function placeSongInSlot(songIdx, slotIdx) {
     // ====================================================
     // BASULE VERS LA VIDÉO FINALE (LECTURE AUTOMATIQUE)
     // ====================================================
-    function launchVideoMode() {
-        // 1. Récupère STRICTEMENT les morceaux placés sur la Timeline de 10 à 1
-        activePlaylist = timelineSlots.filter(s => s !== null);
-
-        if (activePlaylist.length === 0) {
-            return alert("⚠️ Ton TOP est vide ! Glisse au moins un morceau sur l'axe avant de lancer la vidéo.");
-        }
-
-        // 2. Bascule l'affichage du studio vers le lecteur vidéo
-        document.getElementById('editor-view').style.display = 'none';
-        document.getElementById('player-view').style.display = 'flex';
-
-        // 3. Lance le décompte avec ta vraie playlist
-        playIndex = 0;
-        isDeckAActive = true;
-        prepareDeck(activePlaylist[0], true);
-        if (activePlaylist.length > 1) prepareDeck(activePlaylist[1], false);
-        
-        runClip(activePlaylist);
-    }
+   
 
     function backToStudio() {
         clearTimeout(clipTimeout);
@@ -959,6 +939,12 @@ function prepareDeck(song, isA) {
 
         if (activePlaylist.length === 0) {
             return alert("⚠️ Ton TOP est vide ! Glisse au moins un morceau sur l'axe avant de lancer la vidéo.");
+        }
+
+        // --- AJOUTE CES 3 LIGNES POUR COUPER LA PREVIEW ---
+        const previewBox = document.getElementById('preview-player-box');
+        if (previewBox) {
+            previewBox.innerHTML = `<div style="height:100%; display:flex; align-items:center; justify-content:center; color:#64748b;">Clique sur "🎧 Écouter" pour tester</div>`;
         }
 
         document.getElementById('editor-view').style.display = 'none';
