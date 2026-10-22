@@ -718,13 +718,11 @@
             size = finalEntries.length;
         } 
         else if (currentMode === "TOP") {
-            // 1. Récupération des données
             let parsed = getSelectedEntries();
             if (parsed.length === 0 && selectedSeasonData) {
                 parsed = parseEntries(selectedSeasonData.entries || []);
             }
 
-            // 2. Application stricte du filtre de catégorie
             const cat = document.querySelector('input[name="category"]:checked')?.value || "MIX";
             if (cat !== "MIX") {
                 parsed = parsed.filter(e => e.type === cat);
@@ -732,7 +730,10 @@
 
             if (parsed.length === 0) return alert("Aucun morceau trouvé pour cette catégorie !");
 
-            // 3. Envoi au Studio
+            // --- AJOUTE CETTE LIGNE ---
+            localStorage.setItem('topCategory', cat);
+            // --------------------------
+
             localStorage.setItem('topCandidates', JSON.stringify(parsed));
             localStorage.setItem('topSize', size || 10);
             localStorage.setItem('gameMode', 'TOP');

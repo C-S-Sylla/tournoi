@@ -1320,43 +1320,74 @@ updateRankNav();
         else document.exitFullscreen();
     }
     function updateRankNav() {
-    const navBar = document.getElementById('rank-nav-bar');
-    if (!navBar) return;
-    
-    navBar.innerHTML = "";
-    
-    // On crée les boutons de 1 à topSize
-    for (let i = 1; i <= topSize; i++) {
-        const btn = document.createElement('div');
-        btn.innerText = i;
-        btn.style = `
-            padding: 10px 18px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: bold;
-            border: 1px solid #334155;
-            background: #1e293b;
-            color: #94a3b8;
-            transition: 0.2s;
-        `;
+        const navBar = document.getElementById('rank-nav-bar');
+        if (!navBar) return;
         
-        // Style du bouton actif (si c'est le rang qu'on écoute actuellement)
-        // Note: playIndex est ton index actuel (0 = rang le plus haut)
-        const currentRank = topSize - playIndex; 
-        if (i === currentRank) {
-            btn.style.background = "#3b82f6";
-            btn.style.color = "white";
-            btn.style.borderColor = "#3b82f6";
-        }
+        navBar.innerHTML = "";
+        
+        // On récupère le vrai nombre de morceaux dans le top
+        const activePlaylist = timelineSlots.filter(s => s !== null);
+        const total = activePlaylist.length;
 
-        btn.onclick = () => {
-            // Optionnel : sauter directement à ce rang
-            // jumpToRank(i); 
-        };
-        
-        navBar.appendChild(btn);
+        for (let i = 1; i <= topSize; i++) {
+            const btn = document.createElement('div');
+            btn.innerText = i;
+            btn.style = `
+                padding: 8px 14px;
+                border-radius: 8px;
+                cursor: pointer;
+                font-weight: bold;
+                border: 1px solid #334155;
+                background: #1e293b;
+                color: #94a3b8;
+                transition: 0.2s;
+                font-size: 0.9rem;
+            `;
+            
+            // Le rang actuel en cours de lecture (ex: 10, 9, 8...)
+            const currentRank = topSize - playIndex; 
+            
+            if (i === currentRank) {
+                btn.style.background = "#3b82f6";
+                btn.style.color = "white";
+                btn.style.borderColor = "#3b82f6";
+                btn.style.boxShadow = "0 0 10px rgba(59, 130, 246, 0.5)";
+            }
+
+            // ACTION AU CLIC : Téléporte sur le rang choisi
+            btn.onclick = () => {
+                jumpToRank(i);
+            };
+            
+            navBar.appendChild(btn);
+        }
     }
-}
+
+    function jumpToRank(targetRank) {
+        // Convertit le rang (ex: 10 à 1) en index du tableau (ex: 0 à 9)
+        const targetIndex = topSize - targetRank;
+        
+        const activePlaylist = timelineSlots.filter(s => s !== null);
+        
+        // Vérifie si le rang demandé existe bien dans la playlist
+        if (targetIndex >= 0 && targetIndex < activePlaylist.length) {
+            // Arrête tous les timers et flux en cours
+            clearInterval(timerInterval);
+            clearTimeout(ytTimeout);
+            clearTimeout(clipTimeout);
+            
+            ['deck-a', 'deck-b'].forEach(id => {
+                const v = document.getElementById(id);
+                if (v) { v.pause(); v.ontimeupdate = null; }
+            });
+
+            // Change l'index de lecture et relance le clip instantanément
+            playIndex = targetIndex;
+            runClip(activePlaylist);
+        } else {
+            alert(`Le rang ${targetRank} est vide ! Place un morceau dedans d'abord.`);
+        }
+    }
 </script>
 <!-- Barre de navigation des rangs -->
 <div id="rank-nav-bar" style="
