@@ -921,158 +921,294 @@ function prepareDeck(song, isA) {
     }
 
 
-function runClip(playlist) {
+// Variables globales de contrôle
+    let activePlaylist = [];
+    let currentDeck = null;
+    let ytTimeout = null;
+
+    // ==========================================
+    // 1. LANCEMENT DU MODE VIDÉO
+    // ==========================================
+    function launchVideoMode() {
+        activePlaylist = timelineSlots.filter(s => s !== null);
+
+        if (activePlaylist.length === 0) {
+            return alert("⚠️ Ton TOP est vide ! Glisse au moins un morceau sur l'axe avant de lancer la vidéo.");
+        }
+
+        document.getElementById('editor-view').style.display = 'none';
+        document.getElementById('player-view').style.display = 'flex';
+
+        playIndex = 0;
+        isDeckAActive = true;
+
+        // Arrêt forcé de toute lecture antérieure
+        resetAllDecks();
+
+        runClip(activePlaylist);
+    }
+
+    // Réinitialisation complète de toutes les platines
+    function resetAllDecks() {
+        clearInterval(timerInterval);
+        clearTimeout(ytTimeout);
+        clearTimeout(clipTimeout);
+        timerInterval = null;
+        ytTimeout = null;
+
+        ['deck-a', 'deck-b'].forEach(id => {
+            const v = document.getElementById(id);
+            if (v) {
+                v.pause();
+                v.ontimeupdate = null;
+                v.onplaying = null;
+                v.onseeked = null;
+                v.onloadedmetadata = null;
+                v.classList.remove('active');
+                v.style.display = 'none';
+                v.src = "";
+            }
+        });
+
+        ['yt-deck-a', 'yt-deck-b'].forEach(id => {
+            const yt = document.getElementById(id);
+            if (yt) {
+                yt.classList.remove('active');
+                yt.style.display = 'none';
+                yt.innerHTML = "";
+            }
+        });
+
+        timerBar.style.width = '0%';
+    }
+
+    // ==========================================
+    // 2. PRÉCHARGEMENT (Sans forcer currentTime prématurément)
+    // ==========================================
+    function prepareDeck(song, isA) {
+        if (!song) return;
+        const vid = isA ? document.getElementById('deck-a') : document.getElementById('deck-b');
+        const videoUrl = song.as || song.url || song.link;
+
+        if (vid && videoUrl) {
+            vid.src = videoUrl;
+            vid.preload = "auto";
+        }
+    }
+
+    // ==========================================
+    // 3. LECTURE SYNCHRONISÉE (0 DÉCALAGE / 0 CRASH)
+    // ==========================================
+// ==========================================
+    // LECTURE AVEC PAUSE AUTOMATIQUE PENDANT LE CHARGEMENT (58s -> 1:11)
+    // ==========================================
+    function runClip(playlist) {
         const currentList = playlist || activePlaylist;
         if (!currentList || playIndex >= currentList.length) {
             endFinalVideo();
             return;
         }
 
+        // Nettoyage complet
+        resetAllDecks();
+
         const currentSong = currentList[playIndex];
-        
+        const nextSong = currentList[playIndex + 1];
+
+        // Textes et HUD
         const rank = topSize - timelineSlots.indexOf(currentSong);
         rankBadge.innerText = rank > 0 ? rank : (currentList.length - playIndex);
         animeTitle.innerText = currentSong.title || "Morceau sans titre";
         songTitle.innerText = currentSong.type ? `[${currentSong.type.toUpperCase()}]` : "";
 
-        let mainVid = document.getElementById('video-deck-a') || document.getElementById('deck-a') || document.querySelector('video');
-        let mainYt = document.getElementById('yt-deck-a') || document.getElementById('deck-a-yt') || document.querySelector('iframe');
-
-        if (!mainVid) return alert("Erreur : Pas de balise <video>");
-
-        timerBar.style.width = '0%';
-        timerBar.style.background = "#38bdf8";
-        mainVid.pause();
-        mainVid.ontimeupdate = null; 
-        mainVid.onerror = null;
+        const activeVid = isDeckAActive ? document.getElementById('deck-a') : document.getElementById('deck-b');
+        const activeYt = isDeckAActive ? document.getElementById('yt-deck-a') : document.getElementById('yt-deck-b');
+        currentDeck = activeVid;
 
         const videoUrl = currentSong.blobUrl || currentSong.as || currentSong.url || currentSong.link;
-        
+        let phase = 1; // 1 = 10 premières secondes | "loading" = saut à 1:11 | 2 = 5 secondes du refrain
+        let phase2Start = null;
+        let hasSwitched = false;
+
+        const nextTrack = () => {
+            if (hasSwitched) return;
+            hasSwitched = true;
+            resetAllDecks();
+            isDeckAActive = !isDeckAActive;
+            playIndex++;
+            runClip(currentList);
+        };
+
+        // ----------------------------------------------------
+        // CAS 1 : ANISONGDB / VIDÉO DIRECTE (WebM / MP4)
+        // ----------------------------------------------------
         if (videoUrl) {
-            if (mainYt) mainYt.style.display = 'none';
-            mainVid.style.display = 'block';
-            mainVid.classList.add('active');
-            mainVid.muted = false; 
-            mainVid.volume = 1.0;
-            
-            // Si on charge un nouveau fichier
-            if (mainVid.src !== videoUrl) {
-                mainVid.src = videoUrl;
+            activeVid.style.display = 'block';
+            activeVid.classList.add('active');
+            activeVid.muted = false;
+            activeVid.volume = 1.0;
+
+            if (activeVid.src !== videoUrl) {
+                activeVid.src = videoUrl;
             }
 
-            mainVid.onerror = () => {
-                console.warn(`⚠️ Vidéo introuvable. Skip dans 3s...`);
-                timerBar.style.background = "#ef4444";
-                timerBar.style.width = '100%';
-                setTimeout(() => { clearInterval(timerInterval); playIndex++; runClip(currentList); }, 3000);
+            // Sécurité si la vidéo est trop courte pour atteindre 1:11
+            activeVid.onended = () => nextTrack();
+
+            // Démarrage initial à 48s
+            const setupAndSeek = () => {
+                activeVid.currentTime = START_OFFSET;
             };
 
-            // Démarrage Phase 1 : 0:48 (10s)
-            mainVid.currentTime = START_OFFSET; // 48.0
-            
-            let phase = 1; // 1 = Extrait de 10s | 2 = Cut de 5s
-            let phaseStartRealTime = null;
-            let phaseStartVideoTime = null;
-            
-            mainVid.ontimeupdate = () => {
-                // Ignore les frames avant 48s
-                if (mainVid.currentTime < START_OFFSET) return;
-                
-                if (phaseStartVideoTime === null) {
-                    phaseStartVideoTime = mainVid.currentTime; // ex: 48.1
-                    phaseStartRealTime = Date.now();
-                }
-
-                const elapsed = (Date.now() - phaseStartRealTime) / 1000;
-                const totalDuration = (phase === 1) ? CLIP_DURATION : 5.0; // 10s puis 5s
-
-                // La barre progresse sur 15 secondes au total !
-                let totalPct = 0;
+            activeVid.onseeked = () => {
+                // Ce premier seeked sert uniquement au lancement à 48s
                 if (phase === 1) {
-                    totalPct = (elapsed / 15.0) * 100;
-                } else {
-                    totalPct = ((CLIP_DURATION + elapsed) / 15.0) * 100;
-                }
-                timerBar.style.width = Math.min(totalPct, 100) + '%';
-
-                // FIN DE LA PHASE 1 (Après 10s)
-                if (phase === 1 && elapsed >= CLIP_DURATION) {
-                    phase = 2; // On passe en Phase 2
-                    phaseStartVideoTime = null; // Reset
-                    mainVid.currentTime = 71.0; // JUMP À 1 MINUTE 11 !
-                }
-                
-                // FIN DE LA PHASE 2 (Après 5s)
-                if (phase === 2 && elapsed >= 5.0) {
-                    mainVid.ontimeupdate = null;
-                    mainVid.pause();
-                    playIndex++;
-                    runClip(currentList); // Musique suivante
+                    activeVid.onseeked = null;
+                    const p = activeVid.play();
+                    if (p !== undefined) {
+                        p.catch(() => {
+                            activeVid.muted = true;
+                            activeVid.play().then(() => { activeVid.muted = false; });
+                        });
+                    }
                 }
             };
 
-            mainVid.play().catch(err => {
-                setTimeout(() => { playIndex++; runClip(currentList); }, 15000);
-            });
+            if (activeVid.readyState >= 1) {
+                setupAndSeek();
+            } else {
+                activeVid.onloadedmetadata = () => {
+                    activeVid.onloadedmetadata = null;
+                    setupAndSeek();
+                };
+            }
 
-        } else if (currentSong.yt) {
-            // ===================================
-            // YOUTUBE (Nécessite l'API Google)
-            // ===================================
-            mainVid.style.display = 'none';
-            mainVid.pause();
-            
-            const activeYtDiv = isDeckAActive ? document.getElementById('yt-deck-a') : document.getElementById('yt-deck-b');
-            const standbyYtDiv = isDeckAActive ? document.getElementById('yt-deck-b') : document.getElementById('yt-deck-a');
-            const activeYtPlayer = isDeckAActive ? ytPlayerA : ytPlayerB;
+            let clipStart = null;
 
-            if (standbyYtDiv) standbyYtDiv.classList.remove('active');
-            if (activeYtDiv) { activeYtDiv.style.display = 'block'; activeYtDiv.classList.add('active'); }
+            activeVid.ontimeupdate = () => {
+                // PENDANT LE CHARGEMENT DE 1:11 : On ne touche à rien, la barre reste figée !
+                if (phase === "loading" || activeVid.paused || activeVid.seeking) return;
 
-            if (isYtReadyA && activeYtPlayer) {
-                
-                // Démarre la Phase 1 (0:48)
-                activeYtPlayer.loadVideoById({ videoId: currentSong.yt, startSeconds: START_OFFSET });
+                // --- PHASE 1 : Extrait de 10 secondes (48s -> 58s) ---
+                if (phase === 1) {
+                    if (clipStart === null && activeVid.currentTime >= START_OFFSET - 0.5) {
+                        clipStart = activeVid.currentTime;
+                    }
+                    if (clipStart === null) return;
 
-                let phase = 1;
-                let phaseStartRealTime = null;
+                    const elapsed = activeVid.currentTime - clipStart;
+                    const pct = Math.min((elapsed / 15.0) * 100, 66.66);
+                    timerBar.style.width = pct + '%';
 
-                clearInterval(timerInterval);
+                    // Les 10 secondes sont finies : on stoppe et on attend le chargement
+                    if (elapsed >= 10.0) {
+                        phase = "loading"; // On verrouille
+                        timerBar.style.width = '66.66%'; // La barre s'arrête net ici
+
+                        // Saut à 1:11 (71.0s)
+                        activeVid.currentTime = 71.0;
+
+                        // ÉCOUTEUR : Attendre que le fichier soit chargé à la nouvelle seconde
+                        activeVid.onseeked = () => {
+                            activeVid.onseeked = null;
+
+                            // ÉCOUTEUR : Attendre que l'image et le son reprennent réellement
+                            activeVid.onplaying = () => {
+                                activeVid.onplaying = null;
+                                phase2Start = activeVid.currentTime; // Point de départ exact du refrain
+                                phase = 2; // La vidéo tourne : on débloque la barre !
+                            };
+
+                            activeVid.play().catch(() => {});
+                        };
+                    }
+                }
+                // --- PHASE 2 : Refrain de 5 secondes (1:11 -> 1:16) ---
+                else if (phase === 2 && phase2Start !== null) {
+                    const elapsedP2 = activeVid.currentTime - phase2Start;
+                    const pct = Math.min(((10.0 + elapsedP2) / 15.0) * 100, 100);
+                    timerBar.style.width = pct + '%';
+
+                    if (elapsedP2 >= 5.0) {
+                        nextTrack();
+                    }
+                }
+            };
+        }
+        // ----------------------------------------------------
+        // CAS 2 : YOUTUBE (Iframe)
+        // ----------------------------------------------------
+        else if (currentSong.yt) {
+            currentDeck = null;
+            activeYt.style.display = 'block';
+            activeYt.classList.add('active');
+            activeYt.innerHTML = `<iframe src="https://www.youtube.com/embed/${currentSong.yt}?autoplay=1&start=48&controls=0&disablekb=1&rel=0" style="width:100%;height:100%;border:none;object-fit:cover;" allow="autoplay" allowfullscreen></iframe>`;
+
+            // Délai initial pour laisser YouTube démarrer avant d'animer
+            ytTimeout = setTimeout(() => {
+                let startReal = Date.now();
+
                 timerInterval = setInterval(() => {
-                    const state = activeYtPlayer.getPlayerState();
-                    
-                    if (state === 1) { 
-                        if (phaseStartRealTime === null) {
-                            phaseStartRealTime = Date.now();
-                        }
+                    if (phase === "loading") return; // Fige la barre
 
-                        const elapsed = (Date.now() - phaseStartRealTime) / 1000;
-                        const totalPct = phase === 1 ? (elapsed / 15.0) * 100 : ((CLIP_DURATION + elapsed) / 15.0) * 100;
-                        timerBar.style.width = Math.min(totalPct, 100) + '%';
+                    const elapsed = (Date.now() - startReal) / 1000;
 
-                        // Fin Phase 1 (10s) -> Jump à 1:11
-                        if (phase === 1 && elapsed >= CLIP_DURATION) {
-                            phase = 2;
-                            phaseStartRealTime = null; // Reset chrono
-                            activeYtPlayer.seekTo(71.0); // Jump à 1m11s
-                        }
-                        
-                        // Fin Phase 2 (5s) -> Suivant
-                        if (phase === 2 && elapsed >= 5.0) {
+                    if (phase === 1) {
+                        const pct = Math.min((elapsed / 15.0) * 100, 66.66);
+                        timerBar.style.width = pct + '%';
+
+                        if (elapsed >= 10.0) {
+                            phase = "loading";
                             clearInterval(timerInterval);
-                            activeYtPlayer.pauseVideo();
-                            playIndex++;
-                            runClip(currentList);
+                            timerBar.style.width = '66.66%';
+
+                            // Charge le refrain à 1:11
+                            activeYt.innerHTML = `<iframe src="https://www.youtube.com/embed/${currentSong.yt}?autoplay=1&start=71&controls=0&disablekb=1&rel=0" style="width:100%;height:100%;border:none;object-fit:cover;" allow="autoplay" allowfullscreen></iframe>`;
+
+                            // Pause pour laisser YouTube bufferiser l'écran noir de 1:11 sans bouger la barre
+                            ytTimeout = setTimeout(() => {
+                                phase = 2;
+                                let startP2 = Date.now();
+
+                                timerInterval = setInterval(() => {
+                                    const elapsedP2 = (Date.now() - startP2) / 1000;
+                                    const totalPct = Math.min(((10.0 + elapsedP2) / 15.0) * 100, 100);
+                                    timerBar.style.width = totalPct + '%';
+
+                                    if (elapsedP2 >= 5.0) {
+                                        nextTrack();
+                                    }
+                                }, 50);
+                            }, 1200);
                         }
                     }
                 }, 50);
-            }
+            }, 1200);
+        }
+
+        // Préchargement du titre suivant
+        if (nextSong) {
+            prepareDeck(nextSong, !isDeckAActive);
         }
     }
 
+    // ==========================================
+    // 4. BOUTON PAUSE / REPRISE
+    // ==========================================
+    function togglePlayPause() {
+        const btn = document.getElementById('pause-btn');
+        if (!currentDeck) return;
 
+        if (currentDeck.paused) {
+            currentDeck.play();
+            btn.innerText = "⏸️ Pause";
+        } else {
+            currentDeck.pause();
+            btn.innerText = "▶️ Reprendre";
+        }
+    }
 
-
+    
     function endFinalVideo() {
         deckA.classList.remove('active');
         deckB.classList.remove('active');
