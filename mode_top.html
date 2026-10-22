@@ -527,47 +527,46 @@
 
     // GÉNÈRE LE LIEN DIRECT DE LA VIDÉO DU TOP
     function copyTopVideoLink() {
-        const finalPlaylist = timelineSlots.filter(s => s !== null);
-        if (!finalPlaylist.length) return alert("Ton TOP est vide !");
+    const finalPlaylist = timelineSlots.filter(s => s !== null);
+    if (!finalPlaylist.length) return alert("Ton TOP est vide !");
 
-        const exactPath = localStorage.getItem('currentSeasonPath') || "data/summer-2026-mix.json";
-        
-        // Mémorise les numéros des morceaux dans l'ordre exact du Top
-        const topIndices = finalPlaylist.map(s => {
-            const idx = allSongs.findIndex(item => item.title === s.title);
-            return idx !== -1 ? idx : 0;
-        }).join(',');
+    // Identifie les indices des musiques pour reconstruire le top
+    const topIndices = finalPlaylist.map(s => {
+        const idx = allSongs.findIndex(item => item.title === s.title);
+        return idx !== -1 ? idx : 0;
+    }).join(',');
 
-        let baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
-        if (window.location.protocol === "file:") {
-            baseUrl = "https://c-s-sylla.github.io/tournoi";
-        }
-
-        const shareUrl = `${baseUrl}/mode_top.html?path=${encodeURIComponent(exactPath)}&top=${topIndices}&play=1`;
-
-        // Copie universelle dans le presse-papier
-        try {
-            const ta = document.createElement("textarea");
-            ta.value = shareUrl;
-            ta.style.position = "fixed"; ta.style.top = "-9999px";
-            document.body.appendChild(ta);
-            ta.select();
-            document.execCommand('copy');
-            document.body.removeChild(ta);
-        } catch(e) {}
-
-        const btn = document.getElementById('share-top-btn');
-        if (btn) {
-            btn.innerText = "✅ Lien du TOP Copié !";
-            btn.style.background = "#059669";
-            setTimeout(() => { 
-                btn.innerText = "🔗 Copier le Lien de ce TOP"; 
-                btn.style.background = "#10b981";
-            }, 3000);
-        }
-
-        prompt("✅ Voici le lien direct de la vidéo de ton TOP pour ton pote :", shareUrl);
+    const exactPath = localStorage.getItem('currentSeasonPath') || "data/summer-2026-mix.json";
+    
+    let baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
+    if (window.location.protocol === "file:") {
+        baseUrl = "https://c-s-sylla.github.io/tournoi";
     }
+
+    // Le lien inclut le chemin des données et l'ordre du top
+    const shareUrl = `${baseUrl}/mode_top.html?path=${encodeURIComponent(exactPath)}&top=${topIndices}&play=1`;
+
+    // Copie presse-papier
+    const ta = document.createElement("textarea");
+    ta.value = shareUrl;
+    ta.style.position = "fixed"; ta.style.top = "-9999px";
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+
+    // Retour visuel
+    const btn = document.getElementById('share-top-btn');
+    if (btn) {
+        btn.innerText = "✅ Lien Copié !";
+        btn.style.background = "#059669";
+        setTimeout(() => { 
+            btn.innerText = "🔗 Copier le Lien de ce TOP"; 
+            btn.style.background = "#10b981";
+        }, 3000);
+    }
+    prompt("✅ Voici le lien direct pour partager ton TOP :", shareUrl);
+}
 
     // Détection universelle de miniature
     function getThumb(item) {
@@ -589,46 +588,61 @@
 
     // --- CHARGEMENT DU STUDIO ---
     window.onload = async () => {
-        // 1. Tente de lire les musiques transmises par le menu
-        const stored = localStorage.getItem('topCandidates');
-        if (stored) {
-            try {
-                allSongs = JSON.parse(stored);
-            } catch(e) {}
-        }
+    // 1. Analyse des paramètres de l'URL (si lien partagé)
+    const urlParams = new URLSearchParams(window.location.search);
+    const sharedPath = urlParams.get('path');
+    const sharedTop = urlParams.get('top');
+    const autoPlay = urlParams.get('play') === '1';
 
-        // 2. SÉCURITÉ : Si la mémoire était vide, on charge directement le fichier JSON de la saison !
-        if (!allSongs || !allSongs.length) {
-            const seasonPath = localStorage.getItem('currentSeasonPath') || "data/summer-2026-mix.json";
-            console.log("📂 Chargement direct du fichier JSON :", seasonPath);
-            try {
-                const resp = await fetch(seasonPath);
-                if (resp.ok) {
-                    const json = await resp.json();
-                    const entries = Array.isArray(json) ? json : (json.entries || json.items || json.data || []);
-                    allSongs = entries.map((e, idx) => ({
-                        title: e.title || `Anime ${idx+1}`,
-                        as: e.as || e.url || e.link || "",
-                        yt: e.yt || e.youtube || "",
-                        thumb: e.thumb || "",
-                        type: e.type || "OP"
-                    }));
-                }
-            } catch (err) {
-                console.error("Erreur de chargement :", err);
+    // 2. Chargement des données (priorité au path du lien)
+    const dataPath = sharedPath || localStorage.getItem('currentSeasonPath') || "data/summer-2026-mix.json";
+    
+    try {
+        const resp = await fetch(dataPath);
+        if (resp.ok) {
+            const json = await resp.json();
+            const entries = Array.isArray(json) ? json : (json.entries || json.items || json.data || []);
+            allSongs = entries.map((e, idx) => ({
+                title: e.title || `Anime ${idx+1}`,
+                as: e.as || e.url || e.link || "",
+                yt: e.yt || e.youtube || "",
+                thumb: e.thumb || "",
+                type: e.type || "OP"
+            }));
+        }
+    } catch (err) {
+        console.error("Erreur chargement:", err);
+    }
+
+    // 3. Reconstruction du Top si lien partagé, sinon initialisation vide
+    if (sharedTop) {
+        const indices = sharedTop.split(',').map(Number);
+        topSize = indices.length;
+        timelineSlots = new Array(topSize).fill(null);
+        
+        indices.forEach((songIdx, slotIdx) => {
+            if (allSongs[songIdx]) {
+                timelineSlots[slotIdx] = { ...allSongs[songIdx], _poolIndex: songIdx };
             }
-        }
-
-        // 3. Détermine le nombre de cases du Top (10, 5, 15 ou 20)
+        });
+    } else {
         topSize = parseInt(localStorage.getItem('topSize')) || 10;
         timelineSlots = new Array(topSize).fill(null);
+    }
 
-        // 4. Affiche l'Axe de montage et toutes tes musiques dans la réserve
-        renderTimeline();
-        renderPool();
+    // 4. Rendu de l'interface
+    renderTimeline();
+    renderPool();
 
-        console.log(`✅ [Studio Prêt] ${allSongs.length} musiques de ta saison chargées dans la réserve !`);
-    };
+    // 5. Lancement automatique si play=1
+    if (autoPlay && sharedTop) {
+        console.log("🚀 Lancement auto du Top partagé...");
+        // Petit délai pour assurer que les lecteurs sont prêts
+        setTimeout(() => {
+            launchVideoMode();
+        }, 800);
+    }
+};
 
     function swapSlots(fromSlot, toSlot) {
         if (fromSlot === toSlot) return;
