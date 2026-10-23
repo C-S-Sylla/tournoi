@@ -300,8 +300,19 @@
             height: 100%;
             object-fit: cover;
             opacity: 0;
-            transition: opacity 0.2s ease-in-out;
+            transition: opacity 1.5s ease-in-out;
             pointer-events: none;
+        }
+        
+        .video-deck.deck-front {
+            opacity: 1;
+            z-index: 2;
+            pointer-events: auto;
+        }
+
+        .video-deck.deck-under {
+            opacity: 0;
+            z-index: 1;
         }
         .video-deck.active {
             opacity: 1;
@@ -371,6 +382,7 @@
             display: flex;
             gap: 15px;
         }
+
 
         /* Curseur de main sur les cases remplies de la timeline */
 .timeline-slot.filled {
@@ -527,40 +539,40 @@
 
     // GÉNÈRE LE LIEN DIRECT DE LA VIDÉO DU TOP
     // GÉNÈRE LE LIEN DIRECT DE LA VIDÉO DU TOP
+    // ==========================================
+    // CRÉATION D'UN LIEN COURT AUTOMATIQUE
+    // ==========================================
     function copyTopVideoLink() {
         const finalPlaylist = timelineSlots.filter(s => s !== null);
-        if (!finalPlaylist.length) return alert("⚠️ Ton TOP est vide ! Place au moins un morceau avant de partager.");
+        if (!finalPlaylist.length) return alert("Ton TOP est vide ! Glisse des musiques sur l'axe.");
 
-        // On compresse uniquement l'essentiel des morceaux choisis
-        const compactData = finalPlaylist.map(s => ({
-            t: s.title || "",
-            a: s.as || s.url || s.link || "",
-            y: s.yt || "",
-            th: s.thumb || "",
-            tp: s.type || "OP"
-        }));
+        // Récupère les index simples séparés par des tirets (ex: 26-5-19)
+        const topIndices = finalPlaylist.map(s => {
+            const idx = allSongs.findIndex(item => item.title === s.title);
+            return idx !== -1 ? idx : 0;
+        }).join('-');
 
-        let encodedData = "";
-        try {
-            // Encodage Base64 UTF-8 sécurisé
-            const jsonStr = JSON.stringify(compactData);
-            encodedData = encodeURIComponent(btoa(encodeURIComponent(jsonStr).replace(/%([0-9A-F]{2})/g, (m, p1) => String.fromCharCode('0x' + p1))));
-        } catch(e) {
-            encodedData = encodeURIComponent(JSON.stringify(compactData));
+        // Détection de la catégorie
+        let cat = "MIX";
+        if (allSongs.length > 0) {
+            if (allSongs.every(s => s.type === "ED")) cat = "ED";
+            else if (allSongs.every(s => s.type === "OP")) cat = "OP";
         }
 
-        let currentUrl = window.location.href.split('?')[0];
+        // On nettoie le chemin pour garder juste le nom du fichier (sans "data/" ni ".json")
+        let fullPath = localStorage.getItem('currentSeasonPath') || "summer-2026-mix";
+        let fileName = fullPath.replace('data/', '').replace('.json', '');
+
+        let baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
         if (window.location.protocol === "file:") {
-            currentUrl = "https://c-s-sylla.github.io/tournoi/mode_top.html";
+            baseUrl = "https://c-s-sylla.github.io/tournoi";
         }
 
-        // Le lien contient désormais directement les données du top !
-        const shareUrl = `${currentUrl}?data=${encodedData}&play=1`;
+        // Lien clair et sans encodage barbare !
+        const shareUrl = `${baseUrl}/mode_top.html?file=${fileName}&top=${topIndices}&cat=${cat}&play=1`;
 
-        // Copie presse-papier
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(shareUrl).then(() => notifyCopySuccess());
-        } else {
+        // Copie simple
+        try {
             const ta = document.createElement("textarea");
             ta.value = shareUrl;
             ta.style.position = "fixed"; ta.style.top = "-9999px";
@@ -568,13 +580,8 @@
             ta.select();
             document.execCommand('copy');
             document.body.removeChild(ta);
-            notifyCopySuccess();
-        }
+        } catch(e) {}
 
-        prompt("✅ Voici le lien direct 100% fonctionnel de ton TOP :", shareUrl);
-    }
-
-    function notifyCopySuccess() {
         const btn = document.getElementById('share-top-btn');
         if (btn) {
             btn.innerText = "✅ Lien Copié !";
@@ -584,6 +591,19 @@
                 btn.style.background = "#10b981";
             }, 3000);
         }
+        prompt("✅ Lien simplifié (déjà copié) :", shareUrl);
+    }
+
+    function notifySuccess(btn, url) {
+        if (btn) {
+            btn.innerText = "✅ Lien Court Copié !";
+            btn.style.background = "#059669";
+            setTimeout(() => { 
+                btn.innerText = "🔗 Copier le Lien de ce TOP"; 
+                btn.style.background = "#10b981";
+            }, 3000);
+        }
+        prompt("✅ Voici ton lien court et propre :", url);
     }
 
     // Détection universelle de miniature
@@ -607,55 +627,37 @@
     // --- CHARGEMENT DU STUDIO ---
     window.onload = async () => {
         const urlParams = new URLSearchParams(window.location.search);
-        const sharedData = urlParams.get('data');
-        const sharedTop = urlParams.get('top');
+        const fileParam = urlParams.get('file'); // ex: summer-2026-mix
+        const sharedTop = urlParams.get('top');   // ex: 26-5-19 ou 26,5,19
+        const sharedCat = urlParams.get('cat') || 'MIX';
         const autoPlay = urlParams.get('play') === '1';
 
-        // CAS A : Lien autonome partagé (?data=...) -> AUCUN FICHIER JSON REQUIS
-        if (sharedData) {
-            try {
-                let decodedStr = "";
-                try {
-                    decodedStr = decodeURIComponent(atob(decodeURIComponent(sharedData)).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
-                } catch(e) {
-                    decodedStr = decodeURIComponent(sharedData);
-                }
-                const parsed = JSON.parse(decodedStr);
-                
-                allSongs = parsed.map((item, idx) => ({
-                    title: item.t || `Morceau ${idx+1}`,
-                    as: item.a || "",
-                    yt: item.y || "",
-                    thumb: item.th || "",
-                    type: item.tp || "OP",
-                    _poolIndex: idx
-                }));
-
-                topSize = allSongs.length;
-                timelineSlots = [...allSongs]; // Remplit immédiatement la timeline
-                renderTimeline();
-                renderPool();
-
-                if (autoPlay) {
-                    setTimeout(() => launchVideoMode(), 400);
-                }
-                return; // Chargement terminé avec succès !
-            } catch (err) {
-                console.error("Erreur lors de la lecture du TOP partagé :", err);
-            }
-        }
-
-        // CAS B : Mode normal depuis le menu local
         const storedCandidates = localStorage.getItem('topCandidates');
+
+        // 1. CAS A : On vient du Menu (Création normale)
         if (storedCandidates && !sharedTop) {
-            try { allSongs = JSON.parse(storedCandidates); } catch (e) {}
-        } else {
-            const dataPath = urlParams.get('path') || localStorage.getItem('currentSeasonPath') || "data/summer-2026-mix.json";
+            try { allSongs = JSON.parse(storedCandidates); } catch(e) {}
+        } 
+        // 2. CAS B : On ouvre un lien partagé
+        else {
+            let dataPath = "data/summer-2026-mix.json";
+            if (fileParam) {
+                dataPath = `data/${fileParam}.json`;
+            } else if (urlParams.get('path')) {
+                dataPath = decodeURIComponent(urlParams.get('path'));
+            }
+
             try {
                 const resp = await fetch(dataPath);
                 if (resp.ok) {
                     const json = await resp.json();
                     let entries = Array.isArray(json) ? json : (json.entries || json.items || json.data || []);
+                    
+                    // On filtre tout de suite selon la catégorie
+                    if (sharedCat !== 'MIX') {
+                        entries = entries.filter(e => (e.type || "OP").toUpperCase() === sharedCat.toUpperCase());
+                    }
+
                     allSongs = entries.map((e, idx) => ({
                         title: e.title || `Anime ${idx+1}`,
                         as: e.as || e.url || e.link || "",
@@ -664,14 +666,37 @@
                         type: (e.type || "OP").toUpperCase()
                     }));
                 }
-            } catch (err) { console.error("Erreur chargement:", err); }
+            } catch (err) {
+                console.error("Erreur de chargement du fichier :", err);
+            }
         }
 
-        topSize = parseInt(localStorage.getItem('topSize')) || 10;
-        timelineSlots = new Array(topSize).fill(null);
+        // 3. Reconstitution de la timeline sans bug
+        if (sharedTop && allSongs.length > 0) {
+            // Accepte les tirets (-) ou les virgules (,)
+            const indices = sharedTop.replace(/,/g, '-').split('-').map(Number);
+            topSize = indices.length;
+            timelineSlots = new Array(topSize).fill(null);
+
+            indices.forEach((songIdx, slotIdx) => {
+                if (allSongs[songIdx]) {
+                    timelineSlots[slotIdx] = { ...allSongs[songIdx], _poolIndex: songIdx };
+                }
+            });
+        } else {
+            topSize = parseInt(localStorage.getItem('topSize')) || 10;
+            timelineSlots = new Array(topSize).fill(null);
+        }
 
         renderTimeline();
         renderPool();
+
+        // 4. Lancement direct
+        if (autoPlay && sharedTop) {
+            setTimeout(() => {
+                launchVideoMode();
+            }, 600);
+        }
     };
 
     function swapSlots(fromSlot, toSlot) {
@@ -997,37 +1022,36 @@ function prepareDeck(song, isA) {
 
     // Réinitialisation complète de toutes les platines
     function resetAllDecks() {
-        clearInterval(timerInterval);
-        clearTimeout(ytTimeout);
-        clearTimeout(clipTimeout);
-        timerInterval = null;
-        ytTimeout = null;
+clearInterval(timerInterval);
+clearTimeout(ytTimeout);
+clearTimeout(clipTimeout);
+timerInterval = null;
+ytTimeout = null;
+['deck-a', 'deck-b'].forEach(id => {
+        const v = document.getElementById(id);
+        if (v) {
+            v.pause();
+            v.ontimeupdate = null;
+            v.onplaying = null;
+            v.onseeked = null;
+            v.onloadedmetadata = null;
+            v.classList.remove('active');
+            v.style.display = 'none';
+            v.src = "";
+        }
+    });
 
-        ['deck-a', 'deck-b'].forEach(id => {
-            const v = document.getElementById(id);
-            if (v) {
-                v.pause();
-                v.ontimeupdate = null;
-                v.onplaying = null;
-                v.onseeked = null;
-                v.onloadedmetadata = null;
-                v.classList.remove('active');
-                v.style.display = 'none';
-                v.src = "";
-            }
-        });
+    ['yt-deck-a', 'yt-deck-b'].forEach(id => {
+        const yt = document.getElementById(id);
+        if (yt) {
+            yt.classList.remove('active');
+            yt.style.display = 'none';
+            yt.innerHTML = "";
+        }
+    });
 
-        ['yt-deck-a', 'yt-deck-b'].forEach(id => {
-            const yt = document.getElementById(id);
-            if (yt) {
-                yt.classList.remove('active');
-                yt.style.display = 'none';
-                yt.innerHTML = "";
-            }
-        });
-
-        timerBar.style.width = '0%';
-    }
+    timerBar.style.width = '0%';
+}
 
     // ==========================================
     // PRÉPARATION PROPRE DE LA PLATINE SUIVANTE
@@ -1046,6 +1070,17 @@ function prepareDeck(song, isA) {
     // ==========================================
     // LECTURE DU CLIP AVEC CHANGEMENT GARANTI DU MORCEAU
     // ==========================================
+    // ====================================================
+    // MOTEUR DOUBLE PLATINE : TRANSITION CACHÉE (0ms ÉCRAN NOIR)
+    // ====================================================
+    let crossfadeInterval = null;
+
+    // ====================================================
+    // MOTEUR DOUBLE LECTEUR OPTIMISÉ 0ms (MÉMOIRE BUFFER FORCÉE)
+    // ====================================================
+    // =========================================================================
+    // MOTEUR DOUBLE LECTEUR AVEC ACCUSÉ DE RÉCEPTION D'ÉTAT (ZÉRO ÉCRAN NOIR)
+    // =========================================================================
     function runClip(playlist) {
         const currentList = playlist || activePlaylist;
         if (!currentList || playIndex >= currentList.length) {
@@ -1053,8 +1088,9 @@ function prepareDeck(song, isA) {
             return;
         }
 
-        // 1. Nettoyage de tous les anciens timers
+        // 1. Nettoyage strict des timers
         clearInterval(timerInterval);
+        clearInterval(crossfadeInterval);
         clearTimeout(ytTimeout);
         clearTimeout(clipTimeout);
         timerBar.style.width = '0%';
@@ -1062,212 +1098,143 @@ function prepareDeck(song, isA) {
         const currentSong = currentList[playIndex];
         const nextSong = currentList[playIndex + 1];
 
-        // 2. Mise à jour des textes et du badge de rang
+        // 2. Mise à jour de l'interface
         const rank = topSize - timelineSlots.indexOf(currentSong);
         rankBadge.innerText = rank > 0 ? rank : (currentList.length - playIndex);
         animeTitle.innerText = currentSong.title || "Morceau sans titre";
         songTitle.innerText = currentSong.type ? `[${currentSong.type.toUpperCase()}]` : "";
+        updateRankNav();
 
-        // 3. Attribution des platines (Deck A / Deck B)
-        const activeVid = isDeckAActive ? document.getElementById('deck-a') : document.getElementById('deck-b');
-        const standbyVid = isDeckAActive ? document.getElementById('deck-b') : document.getElementById('deck-a');
-        
-        const activeYt = isDeckAActive ? document.getElementById('yt-deck-a') : document.getElementById('yt-deck-b');
-        const standbyYt = isDeckAActive ? document.getElementById('yt-deck-b') : document.getElementById('yt-deck-a');
+        // 3. Identification des platines
+        const activeContainer = isDeckAActive ? document.getElementById('yt-deck-a') : document.getElementById('yt-deck-b');
+        const standbyContainer = isDeckAActive ? document.getElementById('yt-deck-b') : document.getElementById('yt-deck-a');
 
-        currentDeck = activeVid;
+        const activePlayer = isDeckAActive ? ytPlayerA : ytPlayerB;
+        const standbyPlayer = isDeckAActive ? ytPlayerB : ytPlayerA;
 
-        // On coupe impérativement la platine en attente
-        if (standbyVid) {
-            standbyVid.pause();
-            standbyVid.ontimeupdate = null;
-            standbyVid.classList.remove('active');
-            standbyVid.style.display = 'none';
-        }
-        if (standbyYt) {
-            standbyYt.classList.remove('active');
-            standbyYt.style.display = 'none';
-            standbyYt.innerHTML = "";
-        }
+        currentDeck = activeContainer;
 
-        const videoUrl = currentSong.blobUrl || currentSong.as || currentSong.url || currentSong.link;
-        let phase = 1; 
-        let phase2Start = null;
-        let hasSwitched = false;
+        // Positionnement visuel : le lecteur actif est seul visible à 100%
+        activeContainer.style.display = 'block';
+        activeContainer.style.zIndex = '2';
+        activeContainer.style.opacity = '1';
 
-        const nextTrack = () => {
-            if (hasSwitched) return;
-            hasSwitched = true;
+        standbyContainer.style.display = 'block';
+        standbyContainer.style.zIndex = '1';
+        standbyContainer.style.opacity = '0';
+
+        // ---------------------------------------------------------------------
+        // ÉTAPE 1 : LE PREMIER LECTEUR DÉMARRE ET ATTEND CONFIRMATION
+        // ---------------------------------------------------------------------
+        if (activePlayer && typeof activePlayer.loadVideoById === 'function') {
+            activePlayer.unMute();
+            activePlayer.setVolume(100);
             
-            // Stoppe la vidéo actuelle avant de basculer
-            activeVid.pause();
-            activeVid.ontimeupdate = null;
-
-            isDeckAActive = !isDeckAActive; // Bascule sur l'autre platine
-            playIndex++;
-            runClip(currentList);
-        };
-
-        // ----------------------------------------------------
-        // CAS 1 : VIDÉO DIRECTE (AnisongDB / WebM / MP4)
-        // ----------------------------------------------------
-        if (videoUrl) {
-            if (activeYt) activeYt.style.display = 'none';
-            activeVid.style.display = 'block';
-            activeVid.classList.add('active');
-            activeVid.muted = false;
-            activeVid.volume = 1.0;
-
-            // ⚠️ FORCE LE CHANGEMENT DE SOURCE SI C'EST UN NOUVEAU MORCEAU
-            if (activeVid.src !== videoUrl) {
-                activeVid.src = videoUrl;
-                activeVid.load();
+            // Si la vidéo ne tourne pas déjà, on la lance
+            if (activePlayer.getPlayerState() !== YT.PlayerState.PLAYING) {
+                activePlayer.loadVideoById({ videoId: currentSong.yt, startSeconds: 48 });
             }
-
-            activeVid.onended = () => nextTrack();
-
-            const setupAndSeek = () => {
-                activeVid.currentTime = START_OFFSET;
-                const p = activeVid.play();
-                if (p !== undefined) {
-                    p.catch(() => {
-                        activeVid.muted = true;
-                        activeVid.play().then(() => { activeVid.muted = false; });
-                    });
-                }
-            };
-
-            if (activeVid.readyState >= 1) {
-                setupAndSeek();
-            } else {
-                activeVid.onloadedmetadata = () => {
-                    activeVid.onloadedmetadata = null;
-                    setupAndSeek();
-                };
-            }
-
-            let clipStart = null;
-
-            activeVid.ontimeupdate = () => {
-                if (phase === "loading" || activeVid.paused || activeVid.seeking) return;
-
-                if (clipStart === null && activeVid.currentTime >= START_OFFSET - 0.5) {
-                    clipStart = activeVid.currentTime;
-                }
-                if (clipStart === null) return;
-
-                const elapsed = activeVid.currentTime - clipStart;
-
-                // --- PHASE 1 : Extrait de 10 secondes (48s -> 58s) ---
-                if (phase === 1) {
-                    const pct = Math.min((elapsed / 15.0) * 100, 66.66);
-                    timerBar.style.width = pct + '%';
-
-                    if (elapsed >= 10.0) {
-                        phase = "loading"; 
-                        timerBar.style.width = '66.66%'; 
-
-                        activeVid.currentTime = 71.0; // Saut à 1:11
-
-                        activeVid.onseeked = () => {
-                            activeVid.onseeked = null;
-                            activeVid.onplaying = () => {
-                                activeVid.onplaying = null;
-                                phase2Start = activeVid.currentTime; 
-                                phase = 2; 
-                            };
-                            activeVid.play().catch(() => {});
-                        };
-                    }
-                } 
-                // --- PHASE 2 : Refrain de 5 secondes (1:11 -> 1:16) ---
-                else if (phase === 2 && phase2Start !== null) {
-                    const elapsedP2 = activeVid.currentTime - phase2Start;
-                    const pct = Math.min(((10.0 + elapsedP2) / 15.0) * 100, 100);
-                    timerBar.style.width = pct + '%';
-
-                    if (elapsedP2 >= 5.0) {
-                        nextTrack();
-                    }
-                }
-            };
         }
-        
-        // ----------------------------------------------------
-        // CAS 2 : YOUTUBE (Via API Officielle)
-        // ----------------------------------------------------
-        else if (currentSong.yt) {
-            activeVid.style.display = 'none';
-            activeVid.pause();
 
-            currentDeck = activeYt; // Indique au bouton pause que le deck actif est YT
+        // ---------------------------------------------------------------------
+        // ÉTAPE 2 : LE LECTEUR INACTIF PRÉPARE LE SUIVANT EN SOURDINE
+        // ---------------------------------------------------------------------
+        let standbyReady = false;
 
-            if (activeYt) {
-                activeYt.style.display = 'block';
-                activeYt.classList.add('active');
+        if (nextSong && nextSong.yt && standbyPlayer && typeof standbyPlayer.loadVideoById === 'function') {
+            standbyPlayer.mute();       // En sourdine
+            standbyPlayer.setVolume(0);
+            standbyPlayer.loadVideoById({ videoId: nextSong.yt, startSeconds: 48 });
+
+            // On attend que YouTube confirme qu'il est RÉELLEMENT en lecture
+            let standbyChecker = setInterval(() => {
+                if (standbyPlayer.getPlayerState() === YT.PlayerState.PLAYING) {
+                    clearInterval(standbyChecker);
+                    standbyPlayer.pauseVideo();      // On le fige immédiatement
+                    standbyPlayer.seekTo(48, true);  // Calé sur 48s pile
+                    standbyReady = true;             // Prêt à bondir sans écran noir !
+                    console.log("✅ [STANDBY] Clip suivant verrouillé et prêt à bondir !");
+                }
+            }, 50);
+        }
+
+        // ---------------------------------------------------------------------
+        // ÉTAPE 3 & 4 : ATTENTE CONFIRMATION LECTEUR ACTUEL + CHRONO
+        // ---------------------------------------------------------------------
+        let totalElapsed = 0;
+        let hasJumpedToRefrain = false;
+        let transitionStarted = false;
+
+        timerInterval = setInterval(() => {
+            // Le chrono n'avance STRICTEMENT QUE quand YouTube confirme la lecture
+            if (!activePlayer || typeof activePlayer.getPlayerState !== 'function' || activePlayer.getPlayerState() !== YT.PlayerState.PLAYING) {
+                return;
             }
 
-            const activeYtPlayer = isDeckAActive ? ytPlayerA : ytPlayerB;
-            
-            // On s'assure que l'API est chargée
-            if (activeYtPlayer && typeof activeYtPlayer.loadVideoById === 'function') {
-                // On charge la vidéo sans recréer d'iframe !
-                activeYtPlayer.loadVideoById({
-                    videoId: currentSong.yt,
-                    startSeconds: 48
-                });
-                
-                let ytClipStart = null;
+            totalElapsed += 0.05; // Incrémente de 50ms réelles
 
-                timerInterval = setInterval(() => {
-                    if (phase === "loading" || activeYtPlayer.getPlayerState() !== YT.PlayerState.PLAYING) return;
+            // Progression de la barre
+            let pct = Math.min((totalElapsed / 15.0) * 100, 100);
+            timerBar.style.width = pct + '%';
 
-                    const currentTime = activeYtPlayer.getCurrentTime();
+            // --- A. Saut au refrain à 10.0s ---
+            if (totalElapsed >= 10.0 && !hasJumpedToRefrain) {
+                hasJumpedToRefrain = true;
+                activePlayer.seekTo(71, true);
+            }
 
-                    if (ytClipStart === null && currentTime >= 47.5) {
-                        ytClipStart = currentTime;
-                    }
-                    if (ytClipStart === null) return;
+            // --- B. Déclenchement de la transition à 13.5s ---
+            if (totalElapsed >= 13.5 && !transitionStarted && nextSong && nextSong.yt) {
+                transitionStarted = true;
 
-                    const elapsed = currentTime - ytClipStart;
+                // On relance le lecteur en attente
+                standbyPlayer.seekTo(48, true);
+                standbyPlayer.playVideo();
 
-                    // PHASE 1 (48s -> 58s)
-                    if (phase === 1) {
-                        const pct = Math.min((elapsed / 15.0) * 100, 66.66);
-                        timerBar.style.width = pct + '%';
+                // On attend LA CONFIRMATION qu'il tourne avant de lancer le fondu visuel
+                let confirmPlayCheck = setInterval(() => {
+                    if (standbyPlayer.getPlayerState() === YT.PlayerState.PLAYING) {
+                        clearInterval(confirmPlayCheck);
+                        console.log("🚀 [TRANSITION] Lecteur suivant confirmé en lecture ! Lancement du Crossfade.");
 
-                        if (elapsed >= 10.0) {
-                            phase = "loading";
-                            timerBar.style.width = '66.66%';
+                        // Ouvrir le son et superposer
+                        standbyPlayer.unMute();
+                        standbyPlayer.setVolume(0);
+                        standbyContainer.style.zIndex = '3'; // Passe au-dessus
+                        standbyContainer.style.opacity = '1'; // Le CSS gère la transition douce d'opacité
+
+                        // CHEVAUCHEMENT : Fondu audio croisé doux
+                        let step = 0;
+                        crossfadeInterval = setInterval(() => {
+                            step++;
+                            let progress = step / 15; // sur 1.5s
                             
-                            // LE SECRET EST ICI : On utilise seekTo au lieu de remplacer l'innerHTML !
-                            activeYtPlayer.seekTo(71, true);
-                            
-                            setTimeout(() => {
-                                phase = 2;
-                                ytClipStart = activeYtPlayer.getCurrentTime(); // Reset du point de départ pour la phase 2
-                            }, 500); // Petit délai pour laisser YouTube charger (Buffering)
-                        }
-                    }
-                    // PHASE 2 (71s -> 76s)
-                    else if (phase === 2) {
-                        const pct = Math.min(((10.0 + elapsed) / 15.0) * 100, 100);
-                        timerBar.style.width = pct + '%';
+                            // L'ancien baisse sans mourir complètement (reste à 25%), le nouveau monte à 100%
+                            activePlayer.setVolume(Math.floor(100 - (progress * 75)));
+                            standbyPlayer.setVolume(Math.floor(progress * 100));
 
-                        if (elapsed >= 5.0) {
-                            activeYtPlayer.pauseVideo();
-                            clearInterval(timerInterval);
-                            nextTrack();
-                        }
+                            if (step >= 15) {
+                                clearInterval(crossfadeInterval);
+                            }
+                        }, 100);
                     }
                 }, 50);
             }
-        }
-updateRankNav();
-        // 4. Préchargement du morceau suivant sur l'autre platine
-        if (nextSong) {
-            prepareDeck(nextSong, !isDeckAActive);
-        }
+
+            // --- C. Fin des 15 secondes réelles ---
+            if (totalElapsed >= 15.0) {
+                clearInterval(timerInterval);
+                clearInterval(crossfadeInterval);
+
+                // Échange des rôles & mise en pause de l'ancien
+                activePlayer.pauseVideo();
+                activePlayer.mute();
+
+                isDeckAActive = !isDeckAActive;
+                playIndex++;
+                runClip(currentList);
+            }
+        }, 50);
     }
 
     // ==========================================
@@ -1325,68 +1292,103 @@ updateRankNav();
         
         navBar.innerHTML = "";
         
-        // On récupère le vrai nombre de morceaux dans le top
-        const activePlaylist = timelineSlots.filter(s => s !== null);
-        const total = activePlaylist.length;
+        const currentList = timelineSlots.filter(s => s !== null);
+        const currentSong = currentList[playIndex];
 
-        for (let i = 1; i <= topSize; i++) {
+        // On crée les boutons pour chaque rang existant (du plus grand au rang 1)
+        for (let i = topSize; i >= 1; i--) {
+            const slotIndex = topSize - i;
+            const songInSlot = timelineSlots[slotIndex];
+
             const btn = document.createElement('div');
             btn.innerText = i;
             btn.style = `
                 padding: 8px 14px;
                 border-radius: 8px;
-                cursor: pointer;
+                cursor: ${songInSlot ? 'pointer' : 'not-allowed'};
                 font-weight: bold;
                 border: 1px solid #334155;
                 background: #1e293b;
-                color: #94a3b8;
+                color: ${songInSlot ? '#94a3b8' : '#475569'};
+                opacity: ${songInSlot ? '1' : '0.4'};
                 transition: 0.2s;
                 font-size: 0.9rem;
             `;
             
-            // Le rang actuel en cours de lecture (ex: 10, 9, 8...)
-            const currentRank = topSize - playIndex; 
-            
-            if (i === currentRank) {
+            // Si c'est le morceau actuellement en cours de lecture -> Bleu
+            if (currentSong && songInSlot && currentSong.title === songInSlot.title) {
                 btn.style.background = "#3b82f6";
                 btn.style.color = "white";
                 btn.style.borderColor = "#3b82f6";
                 btn.style.boxShadow = "0 0 10px rgba(59, 130, 246, 0.5)";
             }
 
-            // ACTION AU CLIC : Téléporte sur le rang choisi
-            btn.onclick = () => {
-                jumpToRank(i);
-            };
+            // Clic sur le bouton de rang
+            if (songInSlot) {
+                btn.onclick = () => jumpToRank(i);
+            }
             
             navBar.appendChild(btn);
         }
     }
 
     function jumpToRank(targetRank) {
-        // Convertit le rang (ex: 10 à 1) en index du tableau (ex: 0 à 9)
-        const targetIndex = topSize - targetRank;
-        
-        const activePlaylist = timelineSlots.filter(s => s !== null);
-        
-        // Vérifie si le rang demandé existe bien dans la playlist
-        if (targetIndex >= 0 && targetIndex < activePlaylist.length) {
-            // Arrête tous les timers et flux en cours
-            clearInterval(timerInterval);
-            clearTimeout(ytTimeout);
-            clearTimeout(clipTimeout);
-            
-            ['deck-a', 'deck-b'].forEach(id => {
-                const v = document.getElementById(id);
-                if (v) { v.pause(); v.ontimeupdate = null; }
-            });
+        // Trouve exactement la musique placée dans le slot correspondant au rang
+        // Le rang 10 est au slot 0, le rang 9 au slot 1, etc.
+        const slotIndex = topSize - targetRank;
+        const targetSong = timelineSlots[slotIndex];
 
-            // Change l'index de lecture et relance le clip instantanément
-            playIndex = targetIndex;
-            runClip(activePlaylist);
-        } else {
-            alert(`Le rang ${targetRank} est vide ! Place un morceau dedans d'abord.`);
+        if (!targetSong) {
+            return alert(`Le rang ${targetRank} est vide !`);
         }
+
+        // Récupère la playlist active et trouve l'index réel du morceau
+        const currentList = timelineSlots.filter(s => s !== null);
+        const targetIndex = currentList.findIndex(s => s.title === targetSong.title);
+
+        if (targetIndex === -1) return;
+
+        console.log(`🚀 [TÉLÉPORTATION] Rang ${targetRank} -> Morceau : "${targetSong.title}" (Index réel : ${targetIndex})`);
+
+        // 1. Coupe net TOUS les timers et fondus
+        clearInterval(timerInterval);
+        clearInterval(crossfadeInterval);
+        clearTimeout(ytTimeout);
+        clearTimeout(clipTimeout);
+        timerBar.style.width = '0%';
+
+        // 2. STOPPE IMMÉDIATEMENT les 2 lecteurs YouTube
+        if (ytPlayerA && typeof ytPlayerA.stopVideo === 'function') ytPlayerA.stopVideo();
+        if (ytPlayerB && typeof ytPlayerB.stopVideo === 'function') ytPlayerB.stopVideo();
+
+        // 3. Bascule forcée sur le Deck A
+        isDeckAActive = true;
+        playIndex = targetIndex;
+
+        // 4. 🔥 FORCE LE CHARGEMENT INSTANTANÉ SANS LATENCE
+        const activeContainer = document.getElementById('yt-deck-a');
+        const standbyContainer = document.getElementById('yt-deck-b');
+        
+        if (activeContainer) {
+            activeContainer.style.zIndex = '2';
+            activeContainer.style.opacity = '1';
+        }
+        if (standbyContainer) {
+            standbyContainer.style.zIndex = '1';
+            standbyContainer.style.opacity = '0';
+        }
+
+        if (ytPlayerA && typeof ytPlayerA.loadVideoById === 'function') {
+            ytPlayerA.unMute();
+            ytPlayerA.setVolume(100);
+            ytPlayerA.loadVideoById({
+                videoId: targetSong.yt,
+                startSeconds: 48
+            });
+        }
+
+        // 5. Relance le décompte propre
+        runClip(currentList);
     }
 </script>
 <!-- Barre de navigation des rangs -->
