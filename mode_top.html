@@ -1081,6 +1081,9 @@ ytTimeout = null;
     // =========================================================================
     // MOTEUR DOUBLE LECTEUR AVEC ACCUSÉ DE RÉCEPTION D'ÉTAT (ZÉRO ÉCRAN NOIR)
     // =========================================================================
+    // =========================================================================
+    // MOTEUR HYBRIDE PROPRE : SÉPARATION STRICTE AS (DIRECT) VS YOUTUBE
+    // =========================================================================
     function runClip(playlist) {
         const currentList = playlist || activePlaylist;
         if (!currentList || playIndex >= currentList.length) {
@@ -1105,16 +1108,110 @@ ytTimeout = null;
         songTitle.innerText = currentSong.type ? `[${currentSong.type.toUpperCase()}]` : "";
         updateRankNav();
 
-        // 3. Identification des platines
+        // 3. Détection du type de média
+        const directUrl = (currentSong.as && currentSong.as.trim()) || (currentSong.url && currentSong.url.trim()) || (currentSong.link && currentSong.link.trim());
+        const isDirect = Boolean(directUrl);
+
+        // Platines Vidéo Directe
+        const activeVid = isDeckAActive ? document.getElementById('deck-a') : document.getElementById('deck-b');
+        const standbyVid = isDeckAActive ? document.getElementById('deck-b') : document.getElementById('deck-a');
+
+        // Platines YouTube
         const activeContainer = isDeckAActive ? document.getElementById('yt-deck-a') : document.getElementById('yt-deck-b');
         const standbyContainer = isDeckAActive ? document.getElementById('yt-deck-b') : document.getElementById('yt-deck-a');
-
         const activePlayer = isDeckAActive ? ytPlayerA : ytPlayerB;
         const standbyPlayer = isDeckAActive ? ytPlayerB : ytPlayerA;
 
+        // =====================================================================
+        // CAS 1 : C'EST UN FICHIER DIRECT ANISONGDB (AS / WEBM / MP4)
+        // =====================================================================
+        if (isDirect) {
+            // Coupe YouTube
+            if (activeContainer) activeContainer.style.display = 'none';
+            if (standbyContainer) standbyContainer.style.display = 'none';
+            if (activePlayer && typeof activePlayer.pauseVideo === 'function') activePlayer.pauseVideo();
+
+            currentDeck = activeVid;
+
+            // Affiche la vidéo directe
+            activeVid.style.display = 'block';
+            activeVid.style.zIndex = '2';
+            activeVid.style.opacity = '1';
+            standbyVid.style.display = 'block';
+            standbyVid.style.zIndex = '1';
+            standbyVid.style.opacity = '0';
+
+            activeVid.muted = false;
+            activeVid.volume = 1.0;
+            if (activeVid.src !== directUrl) {
+                activeVid.src = directUrl;
+                activeVid.load();
+            }
+            activeVid.currentTime = START_OFFSET;
+            activeVid.play().catch(() => {});
+
+            // Préchargement en sourdine du suivant si direct
+            if (nextSong) {
+                const nextDirectUrl = (nextSong.as && nextSong.as.trim()) || (nextSong.url && nextSong.url.trim());
+                if (nextDirectUrl) {
+                    standbyVid.src = nextDirectUrl;
+                    standbyVid.currentTime = START_OFFSET;
+                    standbyVid.volume = 0;
+                    standbyVid.load();
+                }
+            }
+
+            let clipStart = null;
+            let phase = 1;
+
+            activeVid.ontimeupdate = () => {
+                if (phase === "loading" || activeVid.paused || activeVid.seeking) return;
+                if (clipStart === null && activeVid.currentTime >= START_OFFSET - 0.5) clipStart = activeVid.currentTime;
+                if (clipStart === null) return;
+
+                const elapsed = activeVid.currentTime - clipStart;
+
+                if (phase === 1) {
+                    timerBar.style.width = Math.min((elapsed / 15.0) * 100, 66.66) + '%';
+                    if (elapsed >= 10.0) {
+                        phase = "loading";
+                        timerBar.style.width = '66.66%';
+                        activeVid.currentTime = 71.0; // Saut au refrain
+                        activeVid.onseeked = () => {
+                            activeVid.onseeked = null;
+                            phase = 2;
+                            activeVid.play().catch(() => {});
+                            
+                            let p2Start = Date.now();
+                            const p2Int = setInterval(() => {
+                                const p2El = (Date.now() - p2Start) / 1000;
+                                timerBar.style.width = Math.min(((10.0 + p2El) / 15.0) * 100, 100) + '%';
+                                if (p2El >= 5.0) clearInterval(p2Int);
+                            }, 50);
+
+                            setTimeout(() => {
+                                activeVid.pause();
+                                activeVid.ontimeupdate = null;
+                                isDeckAActive = !isDeckAActive;
+                                playIndex++;
+                                runClip(currentList);
+                            }, 5000);
+                        };
+                    }
+                }
+            };
+            return;
+        }
+
+        // =====================================================================
+        // CAS 2 : C'EST UN LIEN YOUTUBE (TON CODE EXACT CONSERVÉ !)
+        // =====================================================================
+        // Coupe les vidéos directes
+        if (activeVid) { activeVid.style.display = 'none'; activeVid.pause(); }
+        if (standbyVid) { standbyVid.style.display = 'none'; standbyVid.pause(); }
+
         currentDeck = activeContainer;
 
-        // Positionnement visuel : le lecteur actif est seul visible à 100%
         activeContainer.style.display = 'block';
         activeContainer.style.zIndex = '2';
         activeContainer.style.opacity = '1';
@@ -1123,110 +1220,82 @@ ytTimeout = null;
         standbyContainer.style.zIndex = '1';
         standbyContainer.style.opacity = '0';
 
-        // ---------------------------------------------------------------------
-        // ÉTAPE 1 : LE PREMIER LECTEUR DÉMARRE ET ATTEND CONFIRMATION
-        // ---------------------------------------------------------------------
+        // ÉTAPE 1 : DÉMARRAGE YOUTUBE
         if (activePlayer && typeof activePlayer.loadVideoById === 'function') {
             activePlayer.unMute();
             activePlayer.setVolume(100);
-            
-            // Si la vidéo ne tourne pas déjà, on la lance
             if (activePlayer.getPlayerState() !== YT.PlayerState.PLAYING) {
                 activePlayer.loadVideoById({ videoId: currentSong.yt, startSeconds: 48 });
             }
         }
 
-        // ---------------------------------------------------------------------
-        // ÉTAPE 2 : LE LECTEUR INACTIF PRÉPARE LE SUIVANT EN SOURDINE
-        // ---------------------------------------------------------------------
+        // ÉTAPE 2 : PRÉCHARGEMENT SUIVANT EN SOURDINE
         let standbyReady = false;
-
-        if (nextSong && nextSong.yt && standbyPlayer && typeof standbyPlayer.loadVideoById === 'function') {
-            standbyPlayer.mute();       // En sourdine
+        if (nextSong && nextSong.yt && !nextSong.as && standbyPlayer && typeof standbyPlayer.loadVideoById === 'function') {
+            standbyPlayer.mute();
             standbyPlayer.setVolume(0);
             standbyPlayer.loadVideoById({ videoId: nextSong.yt, startSeconds: 48 });
 
-            // On attend que YouTube confirme qu'il est RÉELLEMENT en lecture
             let standbyChecker = setInterval(() => {
                 if (standbyPlayer.getPlayerState() === YT.PlayerState.PLAYING) {
                     clearInterval(standbyChecker);
-                    standbyPlayer.pauseVideo();      // On le fige immédiatement
-                    standbyPlayer.seekTo(48, true);  // Calé sur 48s pile
-                    standbyReady = true;             // Prêt à bondir sans écran noir !
+                    standbyPlayer.pauseVideo();
+                    standbyPlayer.seekTo(48, true);
+                    standbyReady = true;
                     console.log("✅ [STANDBY] Clip suivant verrouillé et prêt à bondir !");
                 }
             }, 50);
         }
 
-        // ---------------------------------------------------------------------
-        // ÉTAPE 3 & 4 : ATTENTE CONFIRMATION LECTEUR ACTUEL + CHRONO
-        // ---------------------------------------------------------------------
+        // ÉTAPE 3 & 4 : CHRONO ET TRANSITION
         let totalElapsed = 0;
         let hasJumpedToRefrain = false;
         let transitionStarted = false;
 
         timerInterval = setInterval(() => {
-            // Le chrono n'avance STRICTEMENT QUE quand YouTube confirme la lecture
             if (!activePlayer || typeof activePlayer.getPlayerState !== 'function' || activePlayer.getPlayerState() !== YT.PlayerState.PLAYING) {
                 return;
             }
 
-            totalElapsed += 0.05; // Incrémente de 50ms réelles
+            totalElapsed += 0.05;
+            timerBar.style.width = Math.min((totalElapsed / 15.0) * 100, 100) + '%';
 
-            // Progression de la barre
-            let pct = Math.min((totalElapsed / 15.0) * 100, 100);
-            timerBar.style.width = pct + '%';
-
-            // --- A. Saut au refrain à 10.0s ---
+            // Saut au refrain
             if (totalElapsed >= 10.0 && !hasJumpedToRefrain) {
                 hasJumpedToRefrain = true;
                 activePlayer.seekTo(71, true);
             }
 
-            // --- B. Déclenchement de la transition à 13.5s ---
-            if (totalElapsed >= 13.5 && !transitionStarted && nextSong && nextSong.yt) {
+            // Déclenchement de la transition à 13.5s
+            if (totalElapsed >= 13.5 && !transitionStarted && nextSong && nextSong.yt && !nextSong.as) {
                 transitionStarted = true;
-
-                // On relance le lecteur en attente
                 standbyPlayer.seekTo(48, true);
                 standbyPlayer.playVideo();
 
-                // On attend LA CONFIRMATION qu'il tourne avant de lancer le fondu visuel
                 let confirmPlayCheck = setInterval(() => {
                     if (standbyPlayer.getPlayerState() === YT.PlayerState.PLAYING) {
                         clearInterval(confirmPlayCheck);
-                        console.log("🚀 [TRANSITION] Lecteur suivant confirmé en lecture ! Lancement du Crossfade.");
-
-                        // Ouvrir le son et superposer
                         standbyPlayer.unMute();
                         standbyPlayer.setVolume(0);
-                        standbyContainer.style.zIndex = '3'; // Passe au-dessus
-                        standbyContainer.style.opacity = '1'; // Le CSS gère la transition douce d'opacité
+                        standbyContainer.style.zIndex = '3';
+                        standbyContainer.style.opacity = '1';
 
-                        // CHEVAUCHEMENT : Fondu audio croisé doux
                         let step = 0;
                         crossfadeInterval = setInterval(() => {
                             step++;
-                            let progress = step / 15; // sur 1.5s
-                            
-                            // L'ancien baisse sans mourir complètement (reste à 25%), le nouveau monte à 100%
+                            let progress = step / 15;
                             activePlayer.setVolume(Math.floor(100 - (progress * 75)));
                             standbyPlayer.setVolume(Math.floor(progress * 100));
-
-                            if (step >= 15) {
-                                clearInterval(crossfadeInterval);
-                            }
+                            if (step >= 15) clearInterval(crossfadeInterval);
                         }, 100);
                     }
                 }, 50);
             }
 
-            // --- C. Fin des 15 secondes réelles ---
+            // Fin des 15s
             if (totalElapsed >= 15.0) {
                 clearInterval(timerInterval);
                 clearInterval(crossfadeInterval);
-
-                // Échange des rôles & mise en pause de l'ancien
                 activePlayer.pauseVideo();
                 activePlayer.mute();
 
@@ -1333,61 +1402,27 @@ ytTimeout = null;
     }
 
     function jumpToRank(targetRank) {
-        // Trouve exactement la musique placée dans le slot correspondant au rang
-        // Le rang 10 est au slot 0, le rang 9 au slot 1, etc.
         const slotIndex = topSize - targetRank;
         const targetSong = timelineSlots[slotIndex];
 
-        if (!targetSong) {
-            return alert(`Le rang ${targetRank} est vide !`);
-        }
+        if (!targetSong) return alert(`Le rang ${targetRank} est vide !`);
 
-        // Récupère la playlist active et trouve l'index réel du morceau
         const currentList = timelineSlots.filter(s => s !== null);
         const targetIndex = currentList.findIndex(s => s.title === targetSong.title);
-
         if (targetIndex === -1) return;
 
-        console.log(`🚀 [TÉLÉPORTATION] Rang ${targetRank} -> Morceau : "${targetSong.title}" (Index réel : ${targetIndex})`);
-
-        // 1. Coupe net TOUS les timers et fondus
+        // Arrêt propre
         clearInterval(timerInterval);
         clearInterval(crossfadeInterval);
-        clearTimeout(ytTimeout);
-        clearTimeout(clipTimeout);
-        timerBar.style.width = '0%';
-
-        // 2. STOPPE IMMÉDIATEMENT les 2 lecteurs YouTube
+        ['deck-a', 'deck-b'].forEach(id => {
+            const v = document.getElementById(id);
+            if (v) { v.pause(); v.ontimeupdate = null; }
+        });
         if (ytPlayerA && typeof ytPlayerA.stopVideo === 'function') ytPlayerA.stopVideo();
         if (ytPlayerB && typeof ytPlayerB.stopVideo === 'function') ytPlayerB.stopVideo();
 
-        // 3. Bascule forcée sur le Deck A
         isDeckAActive = true;
         playIndex = targetIndex;
-
-        // 4. 🔥 FORCE LE CHARGEMENT INSTANTANÉ SANS LATENCE
-        const activeContainer = document.getElementById('yt-deck-a');
-        const standbyContainer = document.getElementById('yt-deck-b');
-        
-        if (activeContainer) {
-            activeContainer.style.zIndex = '2';
-            activeContainer.style.opacity = '1';
-        }
-        if (standbyContainer) {
-            standbyContainer.style.zIndex = '1';
-            standbyContainer.style.opacity = '0';
-        }
-
-        if (ytPlayerA && typeof ytPlayerA.loadVideoById === 'function') {
-            ytPlayerA.unMute();
-            ytPlayerA.setVolume(100);
-            ytPlayerA.loadVideoById({
-                videoId: targetSong.yt,
-                startSeconds: 48
-            });
-        }
-
-        // 5. Relance le décompte propre
         runClip(currentList);
     }
 </script>
