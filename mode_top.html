@@ -436,7 +436,17 @@
         <div class="timeline-section">
             <div class="timeline-title">
                 <span style="font-weight: bold; font-size: 1.1rem;">🎞️ AXE CHRONOLOGIQUE DU TOP (Ordre du Décompte) :</span>
-                <span id="slots-count" style="font-size: 0.9rem; color: #94a3b8;">0 / 10 placés</span>
+                
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <!-- SÉLECTEUR DE MODE DE DÉPLACEMENT -->
+                    <div style="display: flex; background: #1e293b; border: 1px solid #475569; border-radius: 8px; padding: 3px;">
+                        <button id="btn-mode-swap" onclick="setDropMode('swap')" style="padding: 6px 12px; font-size: 0.8rem; background: var(--accent); border-radius: 6px;">🔄 Échanger</button>
+                        <button id="btn-mode-shift" onclick="setDropMode('shift')" style="padding: 6px 12px; font-size: 0.8rem; background: transparent; color: #94a3b8; border-radius: 6px;">⏩ Décaler</button>
+                    </div>
+
+                    <span id="slots-count" style="font-size: 0.9rem; color: #94a3b8;">0 / 10 placés</span>
+                </div>
+           
             </div>
             <div class="timeline-track" id="timeline-track">
                 <!-- Les cases du Top (10, 9, 8... 1) générées en JS -->
@@ -560,6 +570,27 @@
             playerVars: playerVars,
             events: { 'onReady': () => ytReadyCount++ }
         });
+    }
+
+    // Mode de glisser-déposer sur la timeline ('swap' ou 'shift')
+    let dropMode = 'swap';
+
+    function setDropMode(mode) {
+        dropMode = mode;
+        const btnSwap = document.getElementById('btn-mode-swap');
+        const btnShift = document.getElementById('btn-mode-shift');
+
+        if (mode === 'swap') {
+            btnSwap.style.background = 'var(--accent)';
+            btnSwap.style.color = '#fff';
+            btnShift.style.background = 'transparent';
+            btnShift.style.color = '#94a3b8';
+        } else {
+            btnShift.style.background = 'var(--accent)';
+            btnShift.style.color = '#fff';
+            btnSwap.style.background = 'transparent';
+            btnSwap.style.color = '#94a3b8';
+        }
     }
 
     // GÉNÈRE LE LIEN DIRECT DE LA VIDÉO DU TOP
@@ -726,11 +757,33 @@
 
     function swapSlots(fromSlot, toSlot) {
         if (fromSlot === toSlot) return;
-        
-        // Échange les deux éléments (ou déplace vers la case vide)
-        const temp = timelineSlots[toSlot];
-        timelineSlots[toSlot] = timelineSlots[fromSlot];
-        timelineSlots[fromSlot] = temp;
+
+        // MODE 1 : ÉCHANGER SIMPLE (SWAP)
+        if (dropMode === 'swap') {
+            const temp = timelineSlots[toSlot];
+            timelineSlots[toSlot] = timelineSlots[fromSlot];
+            timelineSlots[fromSlot] = temp;
+        } 
+        // MODE 2 : DÉCALER EN CASCADE (SHIFT / INSERTION)
+        else if (dropMode === 'shift') {
+            const movedItem = timelineSlots[fromSlot];
+
+            // Si on déplace vers la droite (ex: slot 2 vers slot 4)
+            if (fromSlot < toSlot) {
+                for (let i = fromSlot; i < toSlot; i++) {
+                    timelineSlots[i] = timelineSlots[i + 1];
+                }
+            } 
+            // Si on déplace vers la gauche (ex: slot 4 vers slot 2)
+            else {
+                for (let i = fromSlot; i > toSlot; i--) {
+                    timelineSlots[i] = timelineSlots[i - 1];
+                }
+            }
+
+            // On pose l'élément à sa nouvelle place
+            timelineSlots[toSlot] = movedItem;
+        }
 
         renderTimeline();
         renderPool();
