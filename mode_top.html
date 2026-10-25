@@ -559,7 +559,14 @@
     firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
 
     function onYouTubeIframeAPIReady() {
-        const playerVars = { 'controls': 0, 'disablekb': 1, 'rel': 0, 'fs': 0, 'modestbranding': 1 };
+        const playerVars = { 
+            'controls': 0, 
+            'disablekb': 1, 
+            'rel': 0,               // Empêche les vidéos suggérées hors de la chaîne
+            'iv_load_policy': 3,    // 🔥 MASQUE LES ANNOTATIONS ET CARTES DE FIN
+            'fs': 0, 
+            'modestbranding': 1 
+        };
         
         ytPlayerA = new YT.Player('yt-deck-a', {
             playerVars: playerVars,
