@@ -600,11 +600,14 @@
     // ==========================================
     function copyTopVideoLink() {
         const finalPlaylist = timelineSlots.filter(s => s !== null);
-        if (!finalPlaylist.length) return alert("Ton TOP est vide ! Glisse des musiques sur l'axe.");
+        if (!finalPlaylist.length) return alert("Ton TOP est vide !");
 
-        // Récupère les index simples séparés par des tirets (ex: 26-5-19)
+        // 🔥 LE SECRET : On prend le vrai index unique (_poolIndex) de la musique !
+        // Fini la recherche par titre qui confondait les deux Naruto ou les deux Hunter x Hunter !
         const topIndices = finalPlaylist.map(s => {
-            const idx = allSongs.findIndex(item => item.title === s.title);
+            if (s._poolIndex !== undefined) return s._poolIndex;
+            // Sécurité de secours si jamais _poolIndex manquait
+            const idx = allSongs.indexOf(s);
             return idx !== -1 ? idx : 0;
         }).join('-');
 
@@ -615,7 +618,6 @@
             else if (allSongs.every(s => s.type === "OP")) cat = "OP";
         }
 
-        // On nettoie le chemin pour garder juste le nom du fichier (sans "data/" ni ".json")
         let fullPath = localStorage.getItem('currentSeasonPath') || "summer-2026-mix";
         let fileName = fullPath.replace('data/', '').replace('.json', '');
 
@@ -624,10 +626,8 @@
             baseUrl = "https://c-s-sylla.github.io/tournoi";
         }
 
-        // Lien clair et sans encodage barbare !
         const shareUrl = `${baseUrl}/mode_top.html?file=${fileName}&top=${topIndices}&cat=${cat}&play=1`;
 
-        // Copie simple
         try {
             const ta = document.createElement("textarea");
             ta.value = shareUrl;
@@ -647,7 +647,7 @@
                 btn.style.background = "#10b981";
             }, 3000);
         }
-        prompt("✅ Lien simplifié (déjà copié) :", shareUrl);
+        prompt("✅ Voici le lien propre de ton TOP (sans doublons de titre) :", shareUrl);
     }
 
     function notifySuccess(btn, url) {
