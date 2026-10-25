@@ -55,6 +55,14 @@
             box-shadow: 0 0 15px rgba(16, 185, 129, 0.4);
         }
 
+            #rank-nav-bar::-webkit-scrollbar {
+        height: 4px;
+    }
+    #rank-nav-bar::-webkit-scrollbar-thumb {
+        background: #334155;
+        border-radius: 4px;
+    }
+
         /* ======== VUE 1 : LE STUDIO DE MONTAGE ======== */
         #editor-view {
             max-width: 1200px;
@@ -270,15 +278,14 @@
 
         /* ======== VUE 2 : LE LECTEUR VIDÉO FINAL AUTOMATIQUE ======== */
         #player-view {
-    display: none;
-    flex-direction: column;
-    align-items: center;
-    width: 100%;
-    max-width: 1100px;
-    margin: 0 auto;
-    padding-bottom: 60px; /* Débloque le scroll vertical */
-    padding-bottom: 100px; 
-}
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 1100px;
+            margin: 0 auto;
+            padding-bottom: 60px; /* Espace juste suffisant pour que les boutons de contrôle restent au-dessus de la barre */
+        }
 
         #top-stage {
             position: relative;
@@ -454,17 +461,15 @@
     </div>
 
     <!-- ========================================== -->
-    <!-- 2. VUE LECTEUR FINAL 10 SECONDES (0ms LATENCE) -->
+    <!-- 2. VUE LECTEUR FINAL 10 SECONDES -->
     <!-- ========================================== -->
     <div id="player-view">
         <div id="top-stage">
             <video id="deck-a" class="video-deck" preload="auto" playsinline></video>
             <video id="deck-b" class="video-deck" preload="auto" playsinline></video>
-            <!-- L'API Google remplacera automatiquement ces divs par les vrais lecteurs ! -->
-<div id="yt-deck-a" class="video-deck hidden"></div>
-<div id="yt-deck-b" class="video-deck hidden"></div>
+            <div id="yt-deck-a" class="video-deck hidden"></div>
+            <div id="yt-deck-b" class="video-deck hidden"></div>
 
-            
             <div id="hud-overlay">
                 <div id="rank-badge">10</div>
                 <div id="song-details">
@@ -478,14 +483,34 @@
         </div>
 
         <div class="player-controls">
-    <button onclick="togglePlayPause()" id="pause-btn" style="background:#3b82f6;">⏸️ Pause</button>
+            <button onclick="togglePlayPause()" id="pause-btn" style="background:#3b82f6;">⏸️ Pause</button>
             <button onclick="backToStudio()" style="background:#475569;">✏️ Modifier le TOP</button>
-    <button onclick="toggleFullscreen()" style="background:#334155;">🖥️ Plein écran</button>
+            <button onclick="toggleFullscreen()" style="background:#334155;">🖥️ Plein écran</button>
+            <button id="share-top-btn" onclick="copyTopVideoLink()" style="background:#10b981;">🔗 Copier le Lien de ce TOP</button>
+        </div>
 
-    <!-- AJOUTE CE BOUTON DE PARTAGE : -->
-    <button id="share-top-btn" onclick="copyTopVideoLink()" style="background:#10b981;">🔗 Copier le Lien de ce TOP</button>
-</div>
-    </div>
+        <!-- 👉 METS LA BARRE ICI (SOUS LES CONTRÔLES) -->
+        <div id="rank-nav-bar" style="
+            position: relative;
+            margin-top: 25px;
+            max-width: 100%;
+            padding: 10px 15px;
+            background: #0f172a;
+            border: 2px solid #334155;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            overflow-x: auto;
+            overflow-y: hidden;
+            white-space: nowrap;
+            box-sizing: border-box;
+            scroll-behavior: smooth;
+        ">
+            <!-- Boutons générés en JS -->
+        </div>
+
+    </div> <!-- Fin de player-view -->
 
 <script>
     // Récupère les données préparées par le menu
@@ -921,14 +946,33 @@ function placeSongInSlot(songIdx, slotIdx) {
     // ====================================================
    
 
-    function backToStudio() {
-        clearTimeout(clipTimeout);
+        function backToStudio() {
+        // 1. Coupe immédiatement tous les chronomètres et fondus en cours
         clearInterval(timerInterval);
-        deckA.pause();
-        deckB.pause();
+        clearInterval(crossfadeInterval);
+        clearTimeout(ytTimeout);
+        clearTimeout(clipTimeout);
+        timerBar.style.width = '0%';
 
+        // 2. Met en pause physique tous les lecteurs (Vidéos directes et YouTube)
+        ['deck-a', 'deck-b'].forEach(id => {
+            const v = document.getElementById(id);
+            if (v) { 
+                v.pause(); 
+                v.ontimeupdate = null; 
+            }
+        });
+
+        if (ytPlayerA && typeof ytPlayerA.pauseVideo === 'function') ytPlayerA.pauseVideo();
+        if (ytPlayerB && typeof ytPlayerB.pauseVideo === 'function') ytPlayerB.pauseVideo();
+
+        // 3. Bascule l'affichage : Lecteur masqué (avec sa barre), Studio affiché
         document.getElementById('player-view').style.display = 'none';
         document.getElementById('editor-view').style.display = 'flex';
+
+        // 4. Remet le bouton pause sur son texte par défaut
+        const pauseBtn = document.getElementById('pause-btn');
+        if (pauseBtn) pauseBtn.innerText = "⏸️ Pause";
     }
 
 function prepareDeck(song, isA) {
@@ -981,29 +1025,31 @@ function prepareDeck(song, isA) {
     // 1. LANCEMENT DU MODE VIDÉO (AVEC DÉMARRAGE FORCÉ)
     // ==========================================
     function launchVideoMode() {
+        // 1. Récupère la liste des morceaux placés sur l'axe
         activePlaylist = timelineSlots.filter(s => s !== null);
 
         if (activePlaylist.length === 0) {
             return alert("⚠️ Ton TOP est vide ! Glisse au moins un morceau sur l'axe avant de lancer la vidéo.");
         }
 
-        // --- AJOUTE CES 3 LIGNES POUR COUPER LA PREVIEW ---
+        // 2. Coupe immédiatement le lecteur d'écoute (Preview) du studio
         const previewBox = document.getElementById('preview-player-box');
         if (previewBox) {
             previewBox.innerHTML = `<div style="height:100%; display:flex; align-items:center; justify-content:center; color:#64748b;">Clique sur "🎧 Écouter" pour tester</div>`;
         }
 
+        // 3. Bascule l'affichage du Studio vers le Lecteur (la barre en bas apparaît toute seule)
         document.getElementById('editor-view').style.display = 'none';
         document.getElementById('player-view').style.display = 'flex';
 
+        // 4. Réinitialisation des index
         playIndex = 0;
         isDeckAActive = true;
 
-        // Arrêt forcé de toute lecture antérieure
+        // Arrêt propre de toute lecture antérieure
         resetAllDecks();
 
-        // 🚀 TRUC ANTI-BLOCAGE NAVIGATEUR : On lance un coup de boost muet 
-        // pour déverrouiller l'audio du navigateur dès le clic sur le bouton
+        // 5. Déverrouillage audio du navigateur et lancement immédiat
         const dummyAudio = document.getElementById('deck-a');
         if (dummyAudio) {
             dummyAudio.muted = true;
@@ -1012,7 +1058,6 @@ function prepareDeck(song, isA) {
                 dummyAudio.muted = false;
                 runClip(activePlaylist);
             }).catch(() => {
-                // Si le navigateur est trop strict, on lance quand même le clip
                 runClip(activePlaylist);
             });
         } else {
@@ -1075,14 +1120,8 @@ ytTimeout = null;
     // ====================================================
     let crossfadeInterval = null;
 
-    // ====================================================
-    // MOTEUR DOUBLE LECTEUR OPTIMISÉ 0ms (MÉMOIRE BUFFER FORCÉE)
-    // ====================================================
     // =========================================================================
-    // MOTEUR DOUBLE LECTEUR AVEC ACCUSÉ DE RÉCEPTION D'ÉTAT (ZÉRO ÉCRAN NOIR)
-    // =========================================================================
-    // =========================================================================
-    // MOTEUR HYBRIDE PROPRE : SÉPARATION STRICTE AS (DIRECT) VS YOUTUBE
+    // MOTEUR COORDONNÉ 17s : 12s D'EXTRAIT + 5s DE REFRAIN + 2s DE FONDU
     // =========================================================================
     function runClip(playlist) {
         const currentList = playlist || activePlaylist;
@@ -1101,7 +1140,7 @@ ytTimeout = null;
         const currentSong = currentList[playIndex];
         const nextSong = currentList[playIndex + 1];
 
-        // 2. Mise à jour de l'interface
+        // 2. HUD & Rang
         const rank = topSize - timelineSlots.indexOf(currentSong);
         rankBadge.innerText = rank > 0 ? rank : (currentList.length - playIndex);
         animeTitle.innerText = currentSong.title || "Morceau sans titre";
@@ -1122,18 +1161,36 @@ ytTimeout = null;
         const activePlayer = isDeckAActive ? ytPlayerA : ytPlayerB;
         const standbyPlayer = isDeckAActive ? ytPlayerB : ytPlayerA;
 
+        let hasSwitched = false;
+        const nextTrack = () => {
+            if (hasSwitched) return;
+            hasSwitched = true;
+
+            clearInterval(timerInterval);
+            clearInterval(crossfadeInterval);
+
+            if (isDirect) {
+                activeVid.pause();
+                activeVid.ontimeupdate = null;
+            } else if (activePlayer && typeof activePlayer.pauseVideo === 'function') {
+                activePlayer.pauseVideo();
+            }
+
+            isDeckAActive = !isDeckAActive;
+            playIndex++;
+            runClip(currentList);
+        };
+
         // =====================================================================
-        // CAS 1 : C'EST UN FICHIER DIRECT ANISONGDB (AS / WEBM / MP4)
+        // CAS 1 : ANISONGDB (FICHIER DIRECT MP4 / WEBM)
         // =====================================================================
         if (isDirect) {
-            // Coupe YouTube
             if (activeContainer) activeContainer.style.display = 'none';
             if (standbyContainer) standbyContainer.style.display = 'none';
             if (activePlayer && typeof activePlayer.pauseVideo === 'function') activePlayer.pauseVideo();
 
             currentDeck = activeVid;
 
-            // Affiche la vidéo directe
             activeVid.style.display = 'block';
             activeVid.style.zIndex = '2';
             activeVid.style.opacity = '1';
@@ -1150,11 +1207,11 @@ ytTimeout = null;
             activeVid.currentTime = START_OFFSET;
             activeVid.play().catch(() => {});
 
-            // Préchargement en sourdine du suivant si direct
+            // Préchargement du suivant
             if (nextSong) {
-                const nextDirectUrl = (nextSong.as && nextSong.as.trim()) || (nextSong.url && nextSong.url.trim());
-                if (nextDirectUrl) {
-                    standbyVid.src = nextDirectUrl;
+                const nextDirect = (nextSong.as && nextSong.as.trim()) || (nextSong.url && nextSong.url.trim());
+                if (nextDirect) {
+                    standbyVid.src = nextDirect;
                     standbyVid.currentTime = START_OFFSET;
                     standbyVid.volume = 0;
                     standbyVid.load();
@@ -1171,31 +1228,48 @@ ytTimeout = null;
 
                 const elapsed = activeVid.currentTime - clipStart;
 
+                // PHASE 1 : Extrait de 10 secondes (atteint 58.8% à 10s)
                 if (phase === 1) {
-                    timerBar.style.width = Math.min((elapsed / 15.0) * 100, 66.66) + '%';
+                    timerBar.style.width = Math.min((elapsed / 17.0) * 100, 58.8) + '%';
+
                     if (elapsed >= 10.0) {
                         phase = "loading";
-                        timerBar.style.width = '66.66%';
-                        activeVid.currentTime = 71.0; // Saut au refrain
+                        timerBar.style.width = '58.8%';
+                        activeVid.currentTime = 71.0; // Saut au refrain (1:11)
+
                         activeVid.onseeked = () => {
                             activeVid.onseeked = null;
                             phase = 2;
                             activeVid.play().catch(() => {});
-                            
+
                             let p2Start = Date.now();
                             const p2Int = setInterval(() => {
-                                const p2El = (Date.now() - p2Start) / 1000;
-                                timerBar.style.width = Math.min(((10.0 + p2El) / 15.0) * 100, 100) + '%';
-                                if (p2El >= 5.0) clearInterval(p2Int);
+                                const p2Elapsed = (Date.now() - p2Start) / 1000;
+                                timerBar.style.width = Math.min(((10.0 + p2Elapsed) / 17.0) * 100, 100) + '%';
+                                if (p2Elapsed >= 7.0) clearInterval(p2Int);
                             }, 50);
 
+                            // 🔥 Fondu 1.5s avant la fin du refrain (à 5.5s du refrain de 7s)
                             setTimeout(() => {
-                                activeVid.pause();
-                                activeVid.ontimeupdate = null;
-                                isDeckAActive = !isDeckAActive;
-                                playIndex++;
-                                runClip(currentList);
-                            }, 5000);
+                                if (nextSong && standbyVid.src) {
+                                    standbyVid.play().catch(() => {});
+                                    standbyVid.style.opacity = '1';
+                                    standbyVid.style.zIndex = '3';
+                                    let step = 0;
+                                    crossfadeInterval = setInterval(() => {
+                                        step++;
+                                        let p = step / 15; // 1.5s
+                                        activeVid.volume = Math.max(0.25, 1.0 - (p * 0.75));
+                                        standbyVid.volume = Math.min(1.0, p);
+                                        if (step >= 15) clearInterval(crossfadeInterval);
+                                    }, 100);
+                                }
+                            }, 5500);
+
+                            // Fin exacte à 7 secondes de refrain (10s + 7s = 17s)
+                            setTimeout(() => {
+                                nextTrack();
+                            }, 7000);
                         };
                     }
                 }
@@ -1204,9 +1278,8 @@ ytTimeout = null;
         }
 
         // =====================================================================
-        // CAS 2 : C'EST UN LIEN YOUTUBE (TON CODE EXACT CONSERVÉ !)
+        // CAS 2 : YOUTUBE (AVEC RELANCE DE LECTURE RÉTABLIE !)
         // =====================================================================
-        // Coupe les vidéos directes
         if (activeVid) { activeVid.style.display = 'none'; activeVid.pause(); }
         if (standbyVid) { standbyVid.style.display = 'none'; standbyVid.pause(); }
 
@@ -1215,12 +1288,10 @@ ytTimeout = null;
         activeContainer.style.display = 'block';
         activeContainer.style.zIndex = '2';
         activeContainer.style.opacity = '1';
-
         standbyContainer.style.display = 'block';
         standbyContainer.style.zIndex = '1';
         standbyContainer.style.opacity = '0';
 
-        // ÉTAPE 1 : DÉMARRAGE YOUTUBE
         if (activePlayer && typeof activePlayer.loadVideoById === 'function') {
             activePlayer.unMute();
             activePlayer.setVolume(100);
@@ -1229,8 +1300,7 @@ ytTimeout = null;
             }
         }
 
-        // ÉTAPE 2 : PRÉCHARGEMENT SUIVANT EN SOURDINE
-        let standbyReady = false;
+        // Préchargement en sourdine du suivant
         if (nextSong && nextSong.yt && !nextSong.as && standbyPlayer && typeof standbyPlayer.loadVideoById === 'function') {
             standbyPlayer.mute();
             standbyPlayer.setVolume(0);
@@ -1241,15 +1311,14 @@ ytTimeout = null;
                     clearInterval(standbyChecker);
                     standbyPlayer.pauseVideo();
                     standbyPlayer.seekTo(48, true);
-                    standbyReady = true;
-                    console.log("✅ [STANDBY] Clip suivant verrouillé et prêt à bondir !");
+                    console.log("✅ [STANDBY] Clip suivant calé à 48s !");
                 }
             }, 50);
         }
 
-        // ÉTAPE 3 & 4 : CHRONO ET TRANSITION
+        // CHRONOMÈTRE MAÎTRE (10s + 7s = 17s)
         let totalElapsed = 0;
-        let hasJumpedToRefrain = false;
+        let hasJumpedRefrain = false;
         let transitionStarted = false;
 
         timerInterval = setInterval(() => {
@@ -1258,50 +1327,52 @@ ytTimeout = null;
             }
 
             totalElapsed += 0.05;
-            timerBar.style.width = Math.min((totalElapsed / 15.0) * 100, 100) + '%';
 
-            // Saut au refrain
-            if (totalElapsed >= 10.0 && !hasJumpedToRefrain) {
-                hasJumpedToRefrain = true;
+            // Barre de progression fluide de 0 à 17s
+            let pct = Math.min((totalElapsed / 17.0) * 100, 100);
+            timerBar.style.width = pct + '%';
+
+            // A. Saut au refrain à 10.0s
+            if (totalElapsed >= 10.0 && !hasJumpedRefrain) {
+                hasJumpedRefrain = true;
                 activePlayer.seekTo(71, true);
             }
 
-            // Déclenchement de la transition à 13.5s
-            if (totalElapsed >= 13.5 && !transitionStarted && nextSong && nextSong.yt && !nextSong.as) {
+            // B. 🔥 LE SECRET CORRIGÉ : DÉMARRAGE EFFECTIF DE LA VIDÉO À 15.5s (-1.5s avant la fin)
+            if (totalElapsed >= 15.5 && !transitionStarted && nextSong && nextSong.yt && !nextSong.as) {
                 transitionStarted = true;
-                standbyPlayer.seekTo(48, true);
-                standbyPlayer.playVideo();
+                console.log("🔥 [FONDU 1.5s] Démarrage effectif du lecteur B en superposition !");
 
-                let confirmPlayCheck = setInterval(() => {
+                // 👉 C'ÉTAIT CES LIGNES QUI MANQUAIENT :
+                standbyPlayer.seekTo(48, true);
+                standbyPlayer.playVideo(); // On relance la lecture !
+
+                let confirmCheck = setInterval(() => {
                     if (standbyPlayer.getPlayerState() === YT.PlayerState.PLAYING) {
-                        clearInterval(confirmPlayCheck);
+                        clearInterval(confirmCheck);
                         standbyPlayer.unMute();
                         standbyPlayer.setVolume(0);
                         standbyContainer.style.zIndex = '3';
                         standbyContainer.style.opacity = '1';
 
+                        // Fondu sur 1.5s (15 étapes de 100ms)
                         let step = 0;
                         crossfadeInterval = setInterval(() => {
                             step++;
                             let progress = step / 15;
-                            activePlayer.setVolume(Math.floor(100 - (progress * 75)));
-                            standbyPlayer.setVolume(Math.floor(progress * 100));
+                            activePlayer.setVolume(Math.floor(100 - (progress * 75))); // descend à 25%
+                            standbyPlayer.setVolume(Math.floor(progress * 100)); // monte à 100%
                             if (step >= 15) clearInterval(crossfadeInterval);
                         }, 100);
                     }
                 }, 50);
             }
 
-            // Fin des 15s
-            if (totalElapsed >= 15.0) {
+            // C. Fin des 17.0s
+            if (totalElapsed >= 17.0) {
                 clearInterval(timerInterval);
                 clearInterval(crossfadeInterval);
-                activePlayer.pauseVideo();
-                activePlayer.mute();
-
-                isDeckAActive = !isDeckAActive;
-                playIndex++;
-                runClip(currentList);
+                nextTrack();
             }
         }, 50);
     }
@@ -1363,8 +1434,9 @@ ytTimeout = null;
         
         const currentList = timelineSlots.filter(s => s !== null);
         const currentSong = currentList[playIndex];
+        let activeButton = null;
 
-        // On crée les boutons pour chaque rang existant (du plus grand au rang 1)
+        // Génère les boutons de topSize à 1
         for (let i = topSize; i >= 1; i--) {
             const slotIndex = topSize - i;
             const songInSlot = timelineSlots[slotIndex];
@@ -1372,32 +1444,49 @@ ytTimeout = null;
             const btn = document.createElement('div');
             btn.innerText = i;
             btn.style = `
-                padding: 8px 14px;
+                flex: 0 0 auto;
+                padding: 6px 14px;
                 border-radius: 8px;
                 cursor: ${songInSlot ? 'pointer' : 'not-allowed'};
                 font-weight: bold;
-                border: 1px solid #334155;
-                background: #1e293b;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                background: rgba(30, 41, 59, 0.85);
                 color: ${songInSlot ? '#94a3b8' : '#475569'};
-                opacity: ${songInSlot ? '1' : '0.4'};
+                opacity: ${songInSlot ? '1' : '0.3'};
                 transition: 0.2s;
                 font-size: 0.9rem;
+                user-select: none;
             `;
             
-            // Si c'est le morceau actuellement en cours de lecture -> Bleu
+            // Bouton du rang actif en cours de lecture
             if (currentSong && songInSlot && currentSong.title === songInSlot.title) {
                 btn.style.background = "#3b82f6";
                 btn.style.color = "white";
-                btn.style.borderColor = "#3b82f6";
-                btn.style.boxShadow = "0 0 10px rgba(59, 130, 246, 0.5)";
+                btn.style.borderColor = "#38bdf8";
+                btn.style.boxShadow = "0 0 10px rgba(56, 189, 248, 0.6)";
+                activeButton = btn;
             }
 
-            // Clic sur le bouton de rang
             if (songInSlot) {
                 btn.onclick = () => jumpToRank(i);
             }
             
             navBar.appendChild(btn);
+        }
+
+        // 🎯 DÉFILEMENT FORCÉ : Calcule la position exacte du bouton bleu et centre la barre dessus
+        if (activeButton) {
+            setTimeout(() => {
+                const navWidth = navBar.clientWidth;
+                const btnLeft = activeButton.offsetLeft;
+                const btnWidth = activeButton.clientWidth;
+
+                // Formule de centrage exact
+                navBar.scrollTo({
+                    left: btnLeft - (navWidth / 2) + (btnWidth / 2),
+                    behavior: 'smooth'
+                });
+            }, 50);
         }
     }
 
@@ -1411,35 +1500,56 @@ ytTimeout = null;
         const targetIndex = currentList.findIndex(s => s.title === targetSong.title);
         if (targetIndex === -1) return;
 
-        // Arrêt propre
+        console.log(`🚀 [TÉLÉPORTATION IMMÉDIATE] Rang ${targetRank} : "${targetSong.title}"`);
+
+        // 1. Coupe immédiatement TOUS les timers et fondus en cours
         clearInterval(timerInterval);
         clearInterval(crossfadeInterval);
+        clearTimeout(ytTimeout);
+        clearTimeout(clipTimeout);
+        timerBar.style.width = '0%';
+
+        // 2. STOPPE PHYSIQUEMENT tous les lecteurs
         ['deck-a', 'deck-b'].forEach(id => {
             const v = document.getElementById(id);
             if (v) { v.pause(); v.ontimeupdate = null; }
         });
+
         if (ytPlayerA && typeof ytPlayerA.stopVideo === 'function') ytPlayerA.stopVideo();
         if (ytPlayerB && typeof ytPlayerB.stopVideo === 'function') ytPlayerB.stopVideo();
 
+        // 3. Bascule sur la platine active (Deck A)
         isDeckAActive = true;
         playIndex = targetIndex;
+
+        // 4. 🔥 LE POINT CLÉ : ON FORCE LE CHARGEMENT DU NOUVEAU MORCEAU ICI !
+        const directUrl = (targetSong.as && targetSong.as.trim()) || (targetSong.url && targetSong.url.trim()) || (targetSong.link && targetSong.link.trim());
+        
+        if (directUrl) {
+            // Si c'est un fichier direct WebM/MP4
+            const vidA = document.getElementById('deck-a');
+            if (vidA) {
+                vidA.src = directUrl;
+                vidA.currentTime = START_OFFSET;
+            }
+        } else if (targetSong.yt && ytPlayerA && typeof ytPlayerA.loadVideoById === 'function') {
+            // Si c'est YouTube : ON FORCE LA NOUVELLE VIDÉO OBLIGATOIREMENT !
+            ytPlayerA.unMute();
+            ytPlayerA.setVolume(100);
+            ytPlayerA.loadVideoById({
+                videoId: targetSong.yt,
+                startSeconds: 48
+            });
+        }
+
+        // 5. Réinitialise le bouton pause
+        const pauseBtn = document.getElementById('pause-btn');
+        if (pauseBtn) pauseBtn.innerText = "⏸️ Pause";
+
+        // 6. Lance le nouveau clip avec la barre et les timers
         runClip(currentList);
     }
 </script>
-<!-- Barre de navigation des rangs -->
-<div id="rank-nav-bar" style="
-    bottom: 0; 
-    left: 0; 
-    width: 100%; 
-    padding: 15px; 
-    background: #090d16; 
-    display: flex; 
-    justify-content: center; 
-    gap: 8px; 
-    border-top: 1px solid #334155;
-    z-index: 100;
-">
-    <!-- Les cases seront générées par le JS -->
-</div>
+
 </body>
 </html>
