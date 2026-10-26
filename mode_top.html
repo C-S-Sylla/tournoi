@@ -1332,13 +1332,30 @@ ytTimeout = null;
             activeVid.play().catch(() => {});
 
             // Préchargement du suivant
+            // --- PRÉCHARGEMENT UNIVERSEL DU SUIVANT SOUS LE FICHIER AS ---
             if (nextSong) {
-                const nextDirect = nextSong.blobUrl || (nextSong.as && nextSong.as.trim()) || (nextSong.url && nextSong.url.trim());
+                const nextDirect = (nextSong.as && nextSong.as.trim()) || (nextSong.url && nextSong.url.trim());
+                
+                // Si le suivant est un AS : on prépare la platine vidéo directe
                 if (nextDirect) {
                     standbyVid.src = nextDirect;
                     standbyVid.currentTime = START_OFFSET;
                     standbyVid.volume = 0;
                     standbyVid.load();
+                } 
+                // 🔥 SI LE SUIVANT EST UN YOUTUBE : On le précharge en sous-marin sous le WebM !
+                else if (nextSong.yt && standbyPlayer && typeof standbyPlayer.loadVideoById === 'function') {
+                    standbyPlayer.mute();
+                    standbyPlayer.setVolume(0);
+                    standbyPlayer.loadVideoById({ videoId: nextSong.yt, startSeconds: 48 });
+                    let ytPreCheck = setInterval(() => {
+                        if (standbyPlayer.getPlayerState() === YT.PlayerState.PLAYING) {
+                            clearInterval(ytPreCheck);
+                            standbyPlayer.pauseVideo();
+                            standbyPlayer.seekTo(48, true);
+                            console.log("🔒 [AS ➔ YT] YouTube préchargé sous le WebM sans écran noir !");
+                        }
+                    }, 50);
                 }
             }
 
@@ -1373,20 +1390,48 @@ ytTimeout = null;
                                 if (p2Elapsed >= 7.0) clearInterval(p2Int);
                             }, 50);
 
-                            // 🔥 Fondu 1.5s avant la fin du refrain (à 5.5s du refrain de 7s)
+                            // 🔥 FONDU 1.5s AVANT LA FIN (GÈRE LE PASSAGE VERS AS OU VERS YOUTUBE !)
                             setTimeout(() => {
-                                if (nextSong && standbyVid.src) {
+                                if (!nextSong) return;
+                                const nextDirect = (nextSong.as && nextSong.as.trim()) || (nextSong.url && nextSong.url.trim());
+
+                                // A. Si le suivant est un AS : fondu WebM ➔ WebM
+                                if (nextDirect && standbyVid.src) {
                                     standbyVid.play().catch(() => {});
-                                    standbyVid.style.opacity = '1';
                                     standbyVid.style.zIndex = '3';
+                                    standbyVid.style.opacity = '1';
                                     let step = 0;
                                     crossfadeInterval = setInterval(() => {
                                         step++;
-                                        let p = step / 15; // 1.5s
+                                        let p = step / 15;
                                         activeVid.volume = Math.max(0.25, 1.0 - (p * 0.75));
                                         standbyVid.volume = Math.min(1.0, p);
                                         if (step >= 15) clearInterval(crossfadeInterval);
                                     }, 100);
+                                }
+                                // B. 🔥 Si le suivant est un YOUTUBE : fondu WebM ➔ YouTube !
+                                else if (nextSong.yt && standbyPlayer) {
+                                    standbyPlayer.seekTo(48, true);
+                                    standbyPlayer.playVideo();
+                                    let confirmYT = setInterval(() => {
+                                        if (standbyPlayer.getPlayerState() === YT.PlayerState.PLAYING) {
+                                            clearInterval(confirmYT);
+                                            standbyPlayer.unMute();
+                                            standbyPlayer.setVolume(0);
+                                            standbyContainer.style.display = 'block';
+                                            standbyContainer.style.zIndex = '3';
+                                            standbyContainer.style.opacity = '1';
+
+                                            let step = 0;
+                                            crossfadeInterval = setInterval(() => {
+                                                step++;
+                                                let p = step / 15;
+                                                activeVid.volume = Math.max(0.25, 1.0 - (p * 0.75)); // Baisse le WebM
+                                                standbyPlayer.setVolume(Math.floor(p * 100));        // Monte YouTube
+                                                if (step >= 15) clearInterval(crossfadeInterval);
+                                            }, 100);
+                                        }
+                                    }, 50);
                                 }
                             }, 5500);
 
