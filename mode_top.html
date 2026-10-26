@@ -1092,6 +1092,8 @@ function prepareDeck(song, isA) {
             return alert("⚠️ Ton TOP est vide ! Glisse au moins un morceau sur l'axe avant de lancer la vidéo.");
         }
 
+        startTopPreloadAllBlob();
+
         // 2. Coupe immédiatement le lecteur d'écoute (Preview) du studio
         const previewBox = document.getElementById('preview-player-box');
         if (previewBox) {
@@ -1158,6 +1160,68 @@ ytTimeout = null;
     timerBar.style.width = '0%';
 }
 
+    // =========================================================================
+    // PRÉCHARGEMENT BLOB 100% EN MÉMOIRE RAM (ZÉRO LATENCE SUR LES 'AS')
+    // =========================================================================
+    async function startTopPreloadAllBlob() {
+        console.log("🚀 [AnisongDB] Téléchargement en cache Blob de tout le Top...");
+
+        // On ne précharge que les morceaux qui sont RÉELLEMENT placés dans le Top
+        const playlistToLoad = timelineSlots.filter(s => s !== null);
+
+        for (let i = 0; i < playlistToLoad.length; i++) {
+            const item = playlistToLoad[i];
+            const videoUrl = item.as || item.url || item.link;
+
+            // Ne télécharge que si c'est un fichier direct (WebM/MP4) et pas encore en Blob
+            if (videoUrl && typeof videoUrl === 'string' && videoUrl.trim() !== "" && !item.blobUrl && !item.isDownloading) {
+                item.isDownloading = true;
+
+                try {
+                    const cleanUrl = videoUrl.trim();
+                    console.log(`📥 [Préchargement Blob] Début téléchargement : ${item.title}`);
+                    
+                    const response = await fetch(cleanUrl);
+                    if (!response.ok) throw new Error("Erreur HTTP Fetch");
+                    const blob = await response.blob();
+
+                    // Création de l'URL Blob locale instantanée
+                    item.blobUrl = URL.createObjectURL(blob);
+                    item.isDownloaded = true;
+                    console.log(`✅ [100% en RAM !] : ${item.title}`);
+
+                    // Si ce morceau est actuellement en train de jouer sur l'URL distante, on fait le Hot-Swap !
+                    refreshTopVideoIfBlobReady(item);
+                } catch (e) {
+                    console.warn(`⚠️ Échec Blob pour ${item.title}, reste en flux direct :`, e);
+                } finally {
+                    item.isDownloading = false;
+                }
+            }
+        }
+    }
+
+    // HOT-SWAP : Bascule le lecteur sur le Blob local en direct sans couper la musique
+    function refreshTopVideoIfBlobReady(item) {
+        if (!item || !item.blobUrl) return;
+
+        ['deck-a', 'deck-b'].forEach(deckId => {
+            const vid = document.getElementById(deckId);
+            // Si la vidéo joue ce morceau mais n'utilise pas encore son Blob
+            if (vid && vid.src && !vid.src.startsWith('blob:') && vid.src.includes(item.as)) {
+                const currentTime = vid.currentTime;
+                const isPaused = vid.paused;
+
+                vid.src = item.blobUrl;
+                vid.currentTime = currentTime;
+                if (!isPaused) {
+                    vid.play().catch(() => {});
+                }
+                console.log(`⚡ [Hot-Swap Blob Réussi] Vidéo passée en local sans coupure : ${item.title}`);
+            }
+        });
+    }
+
     // ==========================================
     // PRÉPARATION PROPRE DE LA PLATINE SUIVANTE
     // ==========================================
@@ -1208,7 +1272,7 @@ ytTimeout = null;
         updateRankNav();
 
         // 3. Détection du type de média
-        const directUrl = (currentSong.as && currentSong.as.trim()) || (currentSong.url && currentSong.url.trim()) || (currentSong.link && currentSong.link.trim());
+        const directUrl = currentSong.blobUrl || (currentSong.as && currentSong.as.trim()) || (currentSong.url && currentSong.url.trim());
         const isDirect = Boolean(directUrl);
 
         // Platines Vidéo Directe
@@ -1269,7 +1333,7 @@ ytTimeout = null;
 
             // Préchargement du suivant
             if (nextSong) {
-                const nextDirect = (nextSong.as && nextSong.as.trim()) || (nextSong.url && nextSong.url.trim());
+                const nextDirect = nextSong.blobUrl || (nextSong.as && nextSong.as.trim()) || (nextSong.url && nextSong.url.trim());
                 if (nextDirect) {
                     standbyVid.src = nextDirect;
                     standbyVid.currentTime = START_OFFSET;
