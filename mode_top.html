@@ -1293,6 +1293,15 @@ ytTimeout = null;
             clearInterval(timerInterval);
             clearInterval(crossfadeInterval);
 
+            // 🔥 SI ON VIENT DE FINIR LE DERNIER MORCEAU (LE TOP 1) :
+            // ON NE COUPE PAS LA MUSIQUE ! On la laisse jouer jusqu'à sa fin naturelle !
+            if (playIndex >= currentList.length - 1) {
+                playIndex++;
+                endFinalVideo();
+                return;
+            }
+
+            // Pour tous les autres rangs (10, 9, 8...), on coupe normalement
             if (isDirect) {
                 activeVid.pause();
                 activeVid.ontimeupdate = null;
@@ -1309,8 +1318,13 @@ ytTimeout = null;
         // CAS 1 : ANISONGDB (FICHIER DIRECT MP4 / WEBM)
         // =====================================================================
         if (isDirect) {
+            // Cache la platine YouTube précédente mais laisse la platine de secours prête
             if (activeContainer) activeContainer.style.display = 'none';
-            if (standbyContainer) standbyContainer.style.display = 'none';
+            if (standbyContainer) {
+                standbyContainer.style.display = 'block';
+                standbyContainer.style.opacity = '0';
+                standbyContainer.style.zIndex = '1';
+            }
             if (activePlayer && typeof activePlayer.pauseVideo === 'function') activePlayer.pauseVideo();
 
             currentDeck = activeVid;
@@ -1581,13 +1595,29 @@ ytTimeout = null;
 
     
     function endFinalVideo() {
-        deckA.classList.remove('active');
-        deckB.classList.remove('active');
+        console.log("🏆 [VICTOIRE] Top 1 terminé ! Le morceau continue jusqu'à sa fin naturelle.");
+
+        // Affiche l'écran de victoire sur le HUD
         rankBadge.innerText = "🏆";
         animeTitle.innerText = "FIN DU CLASSEMENT";
         songTitle.innerText = "Votre Top personnalisé est terminé !";
         timerBar.style.width = '100%';
-         updateRankNav();
+
+        // Remet le volume à 100% au cas où il avait commencé à baisser
+        if (currentDeck) {
+            if (currentDeck.tagName === "VIDEO") {
+                currentDeck.volume = 1.0;
+            } else {
+                const activePlayer = isDeckAActive ? ytPlayerA : ytPlayerB;
+                if (activePlayer && typeof activePlayer.setVolume === 'function') {
+                    activePlayer.unMute();
+                    activePlayer.setVolume(100);
+                }
+            }
+        }
+
+        // Met à jour la barre en bas
+        updateRankNav();
     }
 
     function toggleFullscreen() {
