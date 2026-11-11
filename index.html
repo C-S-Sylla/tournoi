@@ -333,24 +333,21 @@
         const catInput = document.querySelector('input[name="category"]:checked');
         const cat = catInput ? catInput.value : "MIX";
 
-        // Condition : Uniquement en mode YEARS ET catégorie MIX
+        // Condition pour le 128
         const allow128 = (currentMode === 'YEARS' && cat === 'MIX');
-
         let opt128 = sizeSelect.querySelector('option[value="128"]');
 
         if (allow128) {
             if (!opt128) {
-                opt128 = new Option("128 Participants (64 vs 64)", "128");
-                sizeSelect.add(opt128, 0); // Ajoute 128 tout en haut
+                const newOpt = new Option("128 Participants (64 vs 64)", "128");
+                sizeSelect.add(newOpt, 0);
+                sizeSelect.value = "128"; // Auto-sélection
             }
-            // SÉLECTION AUTOMATIQUE DE 128 !
-            sizeSelect.value = "128"; 
         } else {
+            // Si on n'est plus en YEARS+MIX, on vire le 128 s'il est là
             if (opt128) {
-                if (sizeSelect.value === "128") {
-                    sizeSelect.value = "64"; // Repasse automatiquement à 64 si 128 n'est plus disponible
-                }
-                opt128.remove(); // Masque l'option 128
+                if (sizeSelect.value === "128") sizeSelect.value = "64";
+                opt128.remove();
             }
         }
     }
@@ -381,26 +378,26 @@
 
         const sizeSelect = document.getElementById('tournament-size-select');
         sizeSelect.innerHTML = `
-            <option value="10">Top 10</option>
             <option value="5">Top 5</option>
+            <option value="10" selected>Top 10</option>
             <option value="15">Top 15</option>
             <option value="20">Top 20</option>
-    <option value="30">Top 30</option>
-    <option value="50">Top 50</option>
-    <option value="100">Top 100</option>
+            <option value="30">Top 30</option>
+            <option value="50">Top 50</option>
+            <option value="100">Top 100</option>
         `;
 
         const select = document.getElementById('season-select');
         select.innerHTML = '';
         
-        // FILTRE : On exclut les fichiers male_vs_female
+        // FILTRE : On n'affiche que les saisons "classiques" (ni Gender, ni Years)
         presetSeasons.forEach(season => {
-            if (!season.id.startsWith('male_vs_female')) {
+            if (!season.id.startsWith('male_vs_female') && !isYearFile(season)) {
                 select.add(new Option(season.name, season.id));
             }
         });
+        
         onSeasonChange();
-        return;
     }
         // Affichage conditionnel de la catégorie
         categoryGroup.style.display = (mode === 'GENDER') ? 'none' : 'block';
