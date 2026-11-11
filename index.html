@@ -356,85 +356,78 @@
     function selectMode(mode) {
         currentMode = mode;
         
-        // Activer la carte choisie
-        document.getElementById('card-STANDARD').classList.remove('active');
-        document.getElementById('card-GENDER').classList.remove('active');
-        document.getElementById('card-YEARS').classList.remove('active');
-                const topCard = document.getElementById('card-TOP');
-    if (topCard) topCard.classList.remove('active');
+        // 1. Sauvegarde la sélection actuelle avant de changer le menu
+        const select = document.getElementById('season-select');
+        const savedValue = select.value; 
+
+        // UI Active Class
+        document.querySelectorAll('.mode-card').forEach(c => c.classList.remove('active'));
         document.getElementById(`card-${mode}`).classList.add('active');
-
-
 
         const singleGroup = document.getElementById('single-select-group');
         const yearGroup = document.getElementById('year-vs-year-group');
         const categoryGroup = document.getElementById('category-group');
-
-         // Si on clique sur TOP, on configure le menu déroulant avec des formats de Top (5, 10, 15, 20)
-    if (mode === 'TOP') {
-        singleGroup.style.display = 'block';
-        yearGroup.style.display = 'none';
-        categoryGroup.style.display = 'block';
-
         const sizeSelect = document.getElementById('tournament-size-select');
-        sizeSelect.innerHTML = `
-            <option value="5">Top 5</option>
-            <option value="10" selected>Top 10</option>
-            <option value="15">Top 15</option>
-            <option value="20">Top 20</option>
-            <option value="30">Top 30</option>
-            <option value="50">Top 50</option>
-            <option value="100">Top 100</option>
-        `;
 
-        const select = document.getElementById('season-select');
-        select.innerHTML = '';
-        
-        // FILTRE : On n'affiche que les saisons "classiques" (ni Gender, ni Years)
-        presetSeasons.forEach(season => {
-            if (!season.id.startsWith('male_vs_female') && !isYearFile(season)) {
-                select.add(new Option(season.name, season.id));
-            }
-        });
-        
-        onSeasonChange();
-    }
-        // Affichage conditionnel de la catégorie
-        categoryGroup.style.display = (mode === 'GENDER') ? 'none' : 'block';
-
-        if (mode === 'YEARS') {
-            // MODE ANNÉE VS ANNÉE : On bascule en mode split (Gauche / Droite)
-            singleGroup.style.display = 'none';
-            yearGroup.style.display = 'block';
-
-            populateYearVsYearSelects();
-            onYearVsYearChange();
-        } else {
-            // MODES STANDARD ET GENDER : Sélection simple
+        // 2. Logique de contenu
+        if (mode === 'TOP') {
             singleGroup.style.display = 'block';
             yearGroup.style.display = 'none';
+            categoryGroup.style.display = 'block';
 
-            const select = document.getElementById('season-select');
-            select.innerHTML = '';
+            sizeSelect.innerHTML = `
+                <option value="10">Top 10</option>
+                <option value="15">Top 15</option>
+                <option value="20">Top 20</option>
+                <option value="30">Top 30</option>
+                <option value="50">Top 50</option>
+                <option value="100">Top 100</option>
+            `;
             
-            const filteredSeasons = presetSeasons.filter(s => {
-                if (mode === 'GENDER') return s.id.startsWith('male_vs_female');
-                // En mode standard, on masque les fichiers de duel spécifique
-                return !s.id.startsWith('male_vs_female');
+            select.innerHTML = '';
+            presetSeasons.filter(s => !s.id.startsWith('male_vs_female')).forEach(season => {
+                select.add(new Option(season.name, season.id));
             });
-
-            filteredSeasons.forEach(season => {
-                const opt = document.createElement('option');
-                opt.value = season.id;
-                opt.innerText = season.name;
-                select.appendChild(opt);
+        } 
+        else if (mode === 'YEARS') {
+            singleGroup.style.display = 'none';
+            yearGroup.style.display = 'block';
+            categoryGroup.style.display = 'block';
+            sizeSelect.innerHTML = `<option value="64">64 Participants</option><option value="32">32 Participants</option><option value="16">16 Participants</option>`;
+            populateYearVsYearSelects();
+        } 
+        else if (mode === 'GENDER') {
+            singleGroup.style.display = 'block';
+            yearGroup.style.display = 'none';
+            categoryGroup.style.display = 'none';
+            sizeSelect.innerHTML = `<option value="64">64 Participants</option><option value="32">32 Participants</option><option value="16">16 Participants</option>`;
+            
+            select.innerHTML = '';
+            presetSeasons.filter(s => s.id.startsWith('male_vs_female')).forEach(season => {
+                select.add(new Option(season.name, season.id));
             });
-
+        } 
+        else { // STANDARD
+            singleGroup.style.display = 'block';
+            yearGroup.style.display = 'none';
+            categoryGroup.style.display = 'block';
+            sizeSelect.innerHTML = `<option value="64">64 Participants</option><option value="32">32 Participants</option><option value="16">16 Participants</option>`;
+            
+            select.innerHTML = '';
+            presetSeasons.filter(s => !s.id.startsWith('male_vs_female') && !isYearFile(s)).forEach(season => {
+                select.add(new Option(season.name, season.id));
+            });
             select.add(new Option("Uploader votre fichier JSON", "custom"));
-            onSeasonChange();
         }
-                updateTournamentSizeOptions();
 
+        // 3. RESTAURATION : Si l'ancienne valeur est toujours dans la liste, on la remet
+        if (select.querySelector(`option[value="${savedValue}"]`)) {
+            select.value = savedValue;
+        }
+
+        updateTournamentSizeOptions();
+        onSeasonChange(); // Force la mise à jour des données
+        updateCountLabel();
     }
 
     // Helper : Vérifie si un fichier commence par "année" ou "annee"

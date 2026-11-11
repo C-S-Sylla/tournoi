@@ -458,7 +458,12 @@
         <div class="pool-section">
             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;">
                 <h3 style="margin: 0; color: #38bdf8;">RÉSERVE DES MUSIQUES DE LA SAISON</h3>
-                <input 
+                
+                <button onclick="fillRandomly()" style="background:#f59e0b; padding: 8px 12px; font-size: 0.9rem; border-radius: 6px; cursor: pointer;">
+                        🎲 Remplir au hasard
+                    </button>
+
+                    <input 
                     type="text" 
                     id="pool-search" 
                     placeholder="🔍 Rechercher un anime ou une musique..." 
@@ -598,6 +603,32 @@
             btnSwap.style.background = 'transparent';
             btnSwap.style.color = '#94a3b8';
         }
+    }
+
+    function fillRandomly() {
+        // 1. Récupère tous les indices des morceaux non placés
+        const availableIndices = allSongs
+            .map((s, idx) => ({ song: s, idx: idx }))
+            .filter(({ song }) => !timelineSlots.some(s => s && s.title === song.title))
+            .sort(() => Math.random() - 0.5); // Mélange aléatoire
+
+        // 2. Trouve les slots vides
+        let currentSlot = 0;
+        for (let i = 0; i < timelineSlots.length; i++) {
+            if (timelineSlots[i] === null) {
+                // S'il reste des morceaux dispo dans la réserve mélangée
+                if (currentSlot < availableIndices.length) {
+                    const songObj = availableIndices[currentSlot].song;
+                    const songIdx = availableIndices[currentSlot].idx;
+                    
+                    timelineSlots[i] = { ...songObj, _poolIndex: songIdx };
+                    currentSlot++;
+                }
+            }
+        }
+
+        renderTimeline();
+        renderPool();
     }
 
     // GÉNÈRE LE LIEN DIRECT DE LA VIDÉO DU TOP
