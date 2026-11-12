@@ -1545,7 +1545,7 @@ ytTimeout = null;
                             }, 50);
 
                             // 🔥 FONDU 1.5s AVANT LA FIN (GÈRE LE PASSAGE VERS AS OU VERS YOUTUBE !)
-                            setTimeout(() => {
+                            fadeTimeout = setTimeout(() => {
                                 if (!nextSong) return;
                                 const nextDirect = nextSong.blobUrl || (nextSong.as && nextSong.as.trim()) || (nextSong.url && nextSong.url.trim()) || (nextSong.link && nextSong.link.trim());
 
@@ -1590,7 +1590,7 @@ ytTimeout = null;
                             }, 5500);
 
                             // Fin exacte à 7 secondes de refrain (10s + 7s = 17s)
-                            setTimeout(() => {
+                            clipTimeout = setTimeout(() => {
                                 nextTrack();
                             }, 7000);
                         };
