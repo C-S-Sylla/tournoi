@@ -543,6 +543,8 @@
     let isDeckAActive = true;
     let timerInterval = null;
     let clipTimeout = null;
+    let ytPreloadInterval = null;
+    let fadeTimeout = null;
 
     
 
@@ -629,6 +631,7 @@
 
         renderTimeline();
         renderPool();
+        startTopPreloadAllBlob(timelineSlots.filter(s => s !== null));
     }
 
     // GÉNÈRE LE LIEN DIRECT DE LA VIDÉO DU TOP
@@ -1009,6 +1012,7 @@ function placeSongInSlot(songIdx, slotIdx) {
         
         renderTimeline();
         renderPool();
+        startTopPreloadAllBlob(timelineSlots.filter(s => s !== null));
     }
 
     function placeInFirstEmptySlot(songIdx) {
@@ -1044,8 +1048,10 @@ function placeSongInSlot(songIdx, slotIdx) {
         clearTimeout(ytTimeout);
         clearTimeout(clipTimeout);
         timerBar.style.width = '0%';
+        clearInterval(ytPreloadInterval);
+    clearTimeout(fadeTimeout);
 
-        clearAllTopBlobs(false);
+        preloadSessionId++; 
 
         // 2. Met en pause physique tous les lecteurs (Vidéos directes et YouTube)
         ['deck-a', 'deck-b'].forEach(id => {
@@ -1142,6 +1148,7 @@ function prepareDeck(song, isA) {
 
         // Arrêt propre de toute lecture antérieure
         resetAllDecks();
+        startTopPreloadAllBlob(activePlaylist);
 
         // 5. Déverrouillage audio du navigateur et lancement immédiat
         const dummyAudio = document.getElementById('deck-a');
@@ -1164,6 +1171,8 @@ function prepareDeck(song, isA) {
 clearInterval(timerInterval);
 clearTimeout(ytTimeout);
 clearTimeout(clipTimeout);
+clearInterval(ytPreloadInterval);
+clearTimeout(fadeTimeout);
 timerInterval = null;
 ytTimeout = null;
 ['deck-a', 'deck-b'].forEach(id => {
@@ -1198,92 +1207,125 @@ ytTimeout = null;
     // =========================================================================
     // PRÉCHARGEMENT PAR FENÊTRE GLISSANTE (3 PROCHAINS MORCEAUX + LIBÉRATION RAM)
     // =========================================================================
-    const TOP_PRELOAD_AHEAD = 3;
-    let preloadRunId = 0;
-    const preloadAbortControllers = new Map();
+// =========================================================================
+    // PRÉCHARGEMENT 100% EN RAM DES 'AS' DÈS LE LANCEMENT (3 EN PARALLÈLE)
+    // =========================================================================
+    let preloadSessionId = 0;
+    const preloadAbortMap = new Map();
 
-    async function syncTopPreloadWindow(playlist) {
-        const list = playlist || activePlaylist;
-        if (!list || !list.length) return;
+    async function startTopPreloadAllBlob(playlist) {
+        const list = playlist || timelineSlots.filter(s => s !== null);
+        if (!list.length) return;
 
-        const myRunId = ++preloadRunId;
-        const minKeep = Math.max(0, playIndex - 1);
-        const maxLoad = Math.min(list.length - 1, playIndex + TOP_PRELOAD_AHEAD);
+        const sessionId = ++preloadSessionId;
+        const globalStart = performance.now();
 
-        // 1. Annule les téléchargements hors fenêtre et libère la RAM
-        list.forEach((item, i) => {
-            if (!item) return;
-            if (i < minKeep || i > maxLoad) {
-                const ctrl = preloadAbortControllers.get(item);
-                if (ctrl) {
-                    ctrl.abort();
-                    preloadAbortControllers.delete(item);
-                    item.isDownloading = false;
+        // Commence par 1, 2, 3... (car 0 joue déjà en direct au lancement), puis 0 à la fin
+        const queue = [];
+        for (let i = 1; i < list.length; i++) queue.push({ item: list[i], idx: i });
+        if (list[0]) queue.push({ item: list[0], idx: 0 });
+
+        const asCount = queue.filter(q => (q.item?.as || q.item?.url || q.item?.link || "").trim()).length;
+        console.log(`🚀 [PRELOAD START] ${asCount} vidéos 'as' à précharger (sur ${list.length} morceaux).`);
+
+        let cursor = 0;
+        let doneCount = 0;
+        const CONCURRENCY = 3;
+
+        async function worker(workerId) {
+            while (cursor < queue.length) {
+                if (sessionId !== preloadSessionId) {
+                    console.log(`🛑 [Worker ${workerId}] Arrêté (nouvelle session).`);
+                    return;
+                }
+
+                const { item, idx } = queue[cursor++];
+                if (!item) continue;
+
+                const videoUrl = (item.as || item.url || item.link || "").trim();
+                if (!videoUrl) {
+                    console.log(`⏭️ [Worker ${workerId}] [${idx}] "${item.title}" ignoré (pas de lien 'as', YouTube).`);
+                    continue;
                 }
                 if (item.blobUrl) {
-                    URL.revokeObjectURL(item.blobUrl);
-                    item.blobUrl = null;
+                    console.log(`💾 [Worker ${workerId}] [${idx}] "${item.title}" déjà en RAM !`);
+                    continue;
                 }
-            }
-        });
+                if (item.isDownloading) {
+                    console.log(`⏳ [Worker ${workerId}] [${idx}] "${item.title}" déjà en cours ailleurs.`);
+                    continue;
+                }
 
-        // 2. Précharge uniquement de playIndex + 1 jusqu'à playIndex + 3
-        // (Le morceau actuel à playIndex est déjà géré directement par le <video>)
-        for (let i = playIndex + 1; i <= maxLoad; i++) {
-            if (myRunId !== preloadRunId) return;
+                const controller = new AbortController();
+                preloadAbortMap.set(item, controller);
+                item.isDownloading = true;
 
-            const item = list[i];
-            if (!item) continue;
+                const t0 = performance.now();
+                console.log(`📥 [Worker ${workerId}] [${idx}] Début fetch : "${item.title}" -> ${videoUrl}`);
 
-            const videoUrl = (item.as || item.url || item.link || "").trim();
-            if (!videoUrl || item.blobUrl || item.isDownloading) continue;
+                try {
+                    const response = await fetch(videoUrl, { signal: controller.signal });
+                    if (!response.ok) throw new Error(`HTTP ${response.status} ${response.statusText}`);
 
-            const controller = new AbortController();
-            preloadAbortControllers.set(item, controller);
-            item.isDownloading = true;
+                    const contentLength = response.headers.get('content-length');
+                    const sizeMB = contentLength ? (parseInt(contentLength, 10) / 1048576).toFixed(1) + " Mo" : "taille inconnue";
+                    console.log(`📡 [Worker ${workerId}] [${idx}] Connexion OK (${sizeMB}) en ${((performance.now() - t0)/1000).toFixed(2)}s : "${item.title}"`);
 
-            try {
-                const response = await fetch(videoUrl, { signal: controller.signal });
-                if (!response.ok) throw new Error("Erreur HTTP Fetch");
-                const blob = await response.blob();
+                    const blob = await response.blob();
+                    const totalSec = ((performance.now() - t0) / 1000).toFixed(2);
+                    const realMB = (blob.size / 1048576).toFixed(1);
 
-                const currentMin = Math.max(0, playIndex - 1);
-                const currentMax = Math.min(list.length - 1, playIndex + TOP_PRELOAD_AHEAD);
-                const playerVisible = document.getElementById('player-view').style.display !== 'none';
-
-                if (playerVisible && i >= currentMin && i <= currentMax) {
                     item.blobUrl = URL.createObjectURL(blob);
-                }
-            } catch (e) {
-                if (e.name !== 'AbortError') {
-                    console.warn(`⚠️ Échec Blob pour ${item.title}, reste en flux direct.`);
-                }
-            } finally {
-                item.isDownloading = false;
-                if (preloadAbortControllers.get(item) === controller) {
-                    preloadAbortControllers.delete(item);
+                    item.isDownloaded = true;
+                    if (item._poolIndex !== undefined && allSongs[item._poolIndex]) {
+                        allSongs[item._poolIndex].blobUrl = item.blobUrl;
+                    }
+                    doneCount++;
+
+                    console.log(`✅ [Worker ${workerId}] [${idx}] 100% EN RAM (${realMB} Mo en ${totalSec}s) : "${item.title}"`);
+
+                    refreshStandbyDeckIfBlobReady(item);
+                } catch (e) {
+                    const failSec = ((performance.now() - t0) / 1000).toFixed(2);
+                    if (e.name === 'AbortError') {
+                        console.log(`🛑 [Worker ${workerId}] [${idx}] Fetch annulé après ${failSec}s pour laisser 100% du débit au lecteur : "${item.title}"`);
+                    } else {
+                        console.error(`❌ [Worker ${workerId}] [${idx}] ÉCHEC après ${failSec}s sur "${item.title}" :`, e.message || e);
+                    }
+                } finally {
+                    item.isDownloading = false;
+                    if (preloadAbortMap.get(item) === controller) {
+                        preloadAbortMap.delete(item);
+                    }
                 }
             }
         }
+
+        await Promise.all(
+            Array.from({ length: Math.min(CONCURRENCY, queue.length) }, (_, i) => worker(i + 1))
+        );
+
+        if (sessionId === preloadSessionId) {
+            const totalTime = ((performance.now() - globalStart) / 1000).toFixed(2);
+            console.log(`🏁 [PRELOAD TERMINÉ] ${doneCount}/${asCount} vidéos 'as' stockées en RAM en ${totalTime}s.`);
+        }
     }
 
-    function clearAllTopBlobs(keepLast = false) {
-        preloadRunId++;
-        preloadAbortControllers.forEach(ctrl => ctrl.abort());
-        preloadAbortControllers.clear();
+    function refreshStandbyDeckIfBlobReady(item) {
+        if (!item || !item.blobUrl) return;
+        const standbyVid = isDeckAActive ? document.getElementById('deck-b') : document.getElementById('deck-a');
+        if (!standbyVid) return;
 
-        const list = activePlaylist.length ? activePlaylist : timelineSlots;
-        const lastIdx = list.length - 1;
-
-        list.forEach((item, idx) => {
-            if (!item) return;
-            item.isDownloading = false;
-            if (keepLast && idx === lastIdx) return; // Garde le Top 1 s'il finit de jouer
-            if (item.blobUrl) {
-                URL.revokeObjectURL(item.blobUrl);
-                item.blobUrl = null;
-            }
-        });
+        const rawUrl = (item.as || item.url || item.link || "").trim();
+        if (standbyVid.paused && standbyVid.src && !standbyVid.src.startsWith('blob:') && standbyVid.src === rawUrl) {
+            console.log(`🔄 [HOT-SWAP STANDBY] Platine suivante passée sur le Blob RAM pour "${item.title}"`);
+            standbyVid.src = item.blobUrl;
+            standbyVid.onloadedmetadata = () => {
+                standbyVid.onloadedmetadata = null;
+                standbyVid.currentTime = START_OFFSET;
+            };
+            standbyVid.load();
+        }
     }
 
     // ==========================================
@@ -1317,13 +1359,14 @@ ytTimeout = null;
             endFinalVideo();
             return;
         }
-        syncTopPreloadWindow(currentList);
 
         // 1. Nettoyage strict des timers
         clearInterval(timerInterval);
         clearInterval(crossfadeInterval);
         clearTimeout(ytTimeout);
         clearTimeout(clipTimeout);
+        clearInterval(ytPreloadInterval);
+    clearTimeout(fadeTimeout);
         timerBar.style.width = '0%';
 
         const currentSong = currentList[playIndex];
@@ -1368,6 +1411,7 @@ ytTimeout = null;
 
             // Pour tous les autres rangs (10, 9, 8...), on coupe normalement
             if (isDirect) {
+
                 activeVid.pause();
                 activeVid.ontimeupdate = null;
             } else if (activePlayer && typeof activePlayer.pauseVideo === 'function') {
@@ -1383,6 +1427,11 @@ ytTimeout = null;
         // CAS 1 : ANISONGDB (FICHIER DIRECT MP4 / WEBM)
         // =====================================================================
         if (isDirect) {
+            console.log(`🎬 [RUNCLIP #${playIndex}] "${currentSong.title}" -> Source utilisée : ${currentSong.blobUrl ? '⚡ BLOB EN RAM (instantané)' : '🌐 URL INTERNET (pas encore préchargé)'}`);
+             if (!currentSong.blobUrl && preloadAbortMap.has(currentSong)) {
+                console.log(`⚡ [Bande passante] Annule le fetch de "${currentSong.title}" pour laisser 100% du débit au lecteur !`);
+                preloadAbortMap.get(currentSong).abort();
+            }
             // Cache la platine YouTube précédente mais laisse la platine de secours prête
             if (activeContainer) activeContainer.style.display = 'none';
             if (standbyContainer) {
@@ -1403,11 +1452,30 @@ ytTimeout = null;
 
             activeVid.muted = false;
             activeVid.volume = 1.0;
-            if (activeVid.src !== directUrl) {
+
+            const alreadyPlayingThisTrack =
+                activeVid.dataset.songIndex === String(playIndex) && !activeVid.paused;
+
+            if (!alreadyPlayingThisTrack && activeVid.src !== directUrl) {
                 activeVid.src = directUrl;
                 activeVid.load();
             }
-            activeVid.currentTime = START_OFFSET;
+            activeVid.dataset.songIndex = String(playIndex);
+
+            if (activeVid.readyState >= 1) {
+                activeVid.currentTime = START_OFFSET;
+            } else {
+                activeVid.onloadedmetadata = () => {
+                    activeVid.onloadedmetadata = null;
+                    activeVid.currentTime = START_OFFSET;
+                };
+            }
+
+            const playWaitStart = performance.now();
+            activeVid.onplaying = () => {
+                activeVid.onplaying = null;
+                console.log(`▶️ [PLAY #${playIndex}] Démarré en ${((performance.now() - playWaitStart)/1000).toFixed(2)}s : "${currentSong.title}"`);
+            };
             activeVid.play().catch(() => {});
 
             // Préchargement du suivant
@@ -1417,19 +1485,26 @@ ytTimeout = null;
                 
                 // Si le suivant est un AS : on prépare la platine vidéo directe
                 if (nextDirect) {
+                    console.log(`⏭️ [STANDBY #${playIndex + 1}] Prépare "${nextSong.title}" via : ${nextSong.blobUrl ? '⚡ BLOB EN RAM' : '🌐 URL INTERNET'}`);
+                    standbyVid.dataset.songIndex = String(playIndex + 1);
                     standbyVid.src = nextDirect;
-                    standbyVid.currentTime = START_OFFSET;
                     standbyVid.volume = 0;
+                    standbyVid.onloadedmetadata = () => {
+                        standbyVid.onloadedmetadata = null;
+                        standbyVid.currentTime = START_OFFSET;
+                        console.log(`🎯 [STANDBY #${playIndex + 1}] Calé à ${START_OFFSET}s : "${nextSong.title}"`);
+                    };
                     standbyVid.load();
-                } 
+                }
                 // 🔥 SI LE SUIVANT EST UN YOUTUBE : On le précharge en sous-marin sous le WebM !
                 else if (nextSong.yt && standbyPlayer && typeof standbyPlayer.loadVideoById === 'function') {
                     standbyPlayer.mute();
-                    standbyPlayer.setVolume(0);
                     standbyPlayer.loadVideoById({ videoId: nextSong.yt, startSeconds: 48 });
-                    let ytPreCheck = setInterval(() => {
+                    clearInterval(ytPreloadInterval);
+                    ytPreloadInterval = setInterval(() => {
+                        standbyPlayer.mute();
                         if (standbyPlayer.getPlayerState() === YT.PlayerState.PLAYING) {
-                            clearInterval(ytPreCheck);
+                            clearInterval(ytPreloadInterval);
                             standbyPlayer.pauseVideo();
                             standbyPlayer.seekTo(48, true);
                             console.log("🔒 [AS ➔ YT] YouTube préchargé sous le WebM sans écran noir !");
@@ -1551,12 +1626,13 @@ ytTimeout = null;
         // Préchargement en sourdine du suivant
         if (nextSong && nextSong.yt && !nextSong.as && standbyPlayer && typeof standbyPlayer.loadVideoById === 'function') {
             standbyPlayer.mute();
-            standbyPlayer.setVolume(0);
             standbyPlayer.loadVideoById({ videoId: nextSong.yt, startSeconds: 48 });
 
-            let standbyChecker = setInterval(() => {
+            clearInterval(ytPreloadInterval);
+            ytPreloadInterval = setInterval(() => {
+                standbyPlayer.mute();
                 if (standbyPlayer.getPlayerState() === YT.PlayerState.PLAYING) {
-                    clearInterval(standbyChecker);
+                    clearInterval(ytPreloadInterval);
                     standbyPlayer.pauseVideo();
                     standbyPlayer.seekTo(48, true);
                     console.log("✅ [STANDBY] Clip suivant calé à 48s !");
@@ -1772,6 +1848,8 @@ ytTimeout = null;
         clearInterval(timerInterval);
         clearInterval(crossfadeInterval);
         clearTimeout(ytTimeout);
+        clearInterval(ytPreloadInterval);
+    clearTimeout(fadeTimeout);
         clearTimeout(clipTimeout);
         timerBar.style.width = '0%';
 
