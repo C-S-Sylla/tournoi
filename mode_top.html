@@ -1045,6 +1045,8 @@ function placeSongInSlot(songIdx, slotIdx) {
         clearTimeout(clipTimeout);
         timerBar.style.width = '0%';
 
+        clearAllTopBlobs(false);
+
         // 2. Met en pause physique tous les lecteurs (Vidéos directes et YouTube)
         ['deck-a', 'deck-b'].forEach(id => {
             const v = document.getElementById(id);
@@ -1123,7 +1125,6 @@ function prepareDeck(song, isA) {
             return alert("⚠️ Ton TOP est vide ! Glisse au moins un morceau sur l'axe avant de lancer la vidéo.");
         }
 
-        startTopPreloadAllBlob();
 
         // 2. Coupe immédiatement le lecteur d'écoute (Preview) du studio
         const previewBox = document.getElementById('preview-player-box');
@@ -1194,61 +1195,93 @@ ytTimeout = null;
     // =========================================================================
     // PRÉCHARGEMENT BLOB 100% EN MÉMOIRE RAM (ZÉRO LATENCE SUR LES 'AS')
     // =========================================================================
-    async function startTopPreloadAllBlob() {
-        console.log("🚀 [AnisongDB] Téléchargement en cache Blob de tout le Top...");
+    // =========================================================================
+    // PRÉCHARGEMENT PAR FENÊTRE GLISSANTE (3 PROCHAINS MORCEAUX + LIBÉRATION RAM)
+    // =========================================================================
+    const TOP_PRELOAD_AHEAD = 3;
+    let preloadRunId = 0;
+    const preloadAbortControllers = new Map();
 
-        // On ne précharge que les morceaux qui sont RÉELLEMENT placés dans le Top
-        const playlistToLoad = timelineSlots.filter(s => s !== null);
+    async function syncTopPreloadWindow(playlist) {
+        const list = playlist || activePlaylist;
+        if (!list || !list.length) return;
 
-        for (let i = 0; i < playlistToLoad.length; i++) {
-            const item = playlistToLoad[i];
-            const videoUrl = item.as || item.url || item.link;
+        const myRunId = ++preloadRunId;
+        const minKeep = Math.max(0, playIndex - 1);
+        const maxLoad = Math.min(list.length - 1, playIndex + TOP_PRELOAD_AHEAD);
 
-            // Ne télécharge que si c'est un fichier direct (WebM/MP4) et pas encore en Blob
-            if (videoUrl && typeof videoUrl === 'string' && videoUrl.trim() !== "" && !item.blobUrl && !item.isDownloading) {
-                item.isDownloading = true;
-
-                try {
-                    const cleanUrl = videoUrl.trim();
-                    console.log(`📥 [Préchargement Blob] Début téléchargement : ${item.title}`);
-                    
-                    const response = await fetch(cleanUrl);
-                    if (!response.ok) throw new Error("Erreur HTTP Fetch");
-                    const blob = await response.blob();
-
-                    // Création de l'URL Blob locale instantanée
-                    item.blobUrl = URL.createObjectURL(blob);
-                    item.isDownloaded = true;
-                    console.log(`✅ [100% en RAM !] : ${item.title}`);
-
-                    // Si ce morceau est actuellement en train de jouer sur l'URL distante, on fait le Hot-Swap !
-                    refreshTopVideoIfBlobReady(item);
-                } catch (e) {
-                    console.warn(`⚠️ Échec Blob pour ${item.title}, reste en flux direct :`, e);
-                } finally {
+        // 1. Annule les téléchargements hors fenêtre et libère la RAM
+        list.forEach((item, i) => {
+            if (!item) return;
+            if (i < minKeep || i > maxLoad) {
+                const ctrl = preloadAbortControllers.get(item);
+                if (ctrl) {
+                    ctrl.abort();
+                    preloadAbortControllers.delete(item);
                     item.isDownloading = false;
+                }
+                if (item.blobUrl) {
+                    URL.revokeObjectURL(item.blobUrl);
+                    item.blobUrl = null;
+                }
+            }
+        });
+
+        // 2. Précharge uniquement de playIndex + 1 jusqu'à playIndex + 3
+        // (Le morceau actuel à playIndex est déjà géré directement par le <video>)
+        for (let i = playIndex + 1; i <= maxLoad; i++) {
+            if (myRunId !== preloadRunId) return;
+
+            const item = list[i];
+            if (!item) continue;
+
+            const videoUrl = (item.as || item.url || item.link || "").trim();
+            if (!videoUrl || item.blobUrl || item.isDownloading) continue;
+
+            const controller = new AbortController();
+            preloadAbortControllers.set(item, controller);
+            item.isDownloading = true;
+
+            try {
+                const response = await fetch(videoUrl, { signal: controller.signal });
+                if (!response.ok) throw new Error("Erreur HTTP Fetch");
+                const blob = await response.blob();
+
+                const currentMin = Math.max(0, playIndex - 1);
+                const currentMax = Math.min(list.length - 1, playIndex + TOP_PRELOAD_AHEAD);
+                const playerVisible = document.getElementById('player-view').style.display !== 'none';
+
+                if (playerVisible && i >= currentMin && i <= currentMax) {
+                    item.blobUrl = URL.createObjectURL(blob);
+                }
+            } catch (e) {
+                if (e.name !== 'AbortError') {
+                    console.warn(`⚠️ Échec Blob pour ${item.title}, reste en flux direct.`);
+                }
+            } finally {
+                item.isDownloading = false;
+                if (preloadAbortControllers.get(item) === controller) {
+                    preloadAbortControllers.delete(item);
                 }
             }
         }
     }
 
-    // HOT-SWAP : Bascule le lecteur sur le Blob local en direct sans couper la musique
-    function refreshTopVideoIfBlobReady(item) {
-        if (!item || !item.blobUrl) return;
+    function clearAllTopBlobs(keepLast = false) {
+        preloadRunId++;
+        preloadAbortControllers.forEach(ctrl => ctrl.abort());
+        preloadAbortControllers.clear();
 
-        ['deck-a', 'deck-b'].forEach(deckId => {
-            const vid = document.getElementById(deckId);
-            // Si la vidéo joue ce morceau mais n'utilise pas encore son Blob
-            if (vid && vid.src && !vid.src.startsWith('blob:') && vid.src.includes(item.as)) {
-                const currentTime = vid.currentTime;
-                const isPaused = vid.paused;
+        const list = activePlaylist.length ? activePlaylist : timelineSlots;
+        const lastIdx = list.length - 1;
 
-                vid.src = item.blobUrl;
-                vid.currentTime = currentTime;
-                if (!isPaused) {
-                    vid.play().catch(() => {});
-                }
-                console.log(`⚡ [Hot-Swap Blob Réussi] Vidéo passée en local sans coupure : ${item.title}`);
+        list.forEach((item, idx) => {
+            if (!item) return;
+            item.isDownloading = false;
+            if (keepLast && idx === lastIdx) return; // Garde le Top 1 s'il finit de jouer
+            if (item.blobUrl) {
+                URL.revokeObjectURL(item.blobUrl);
+                item.blobUrl = null;
             }
         });
     }
@@ -1284,6 +1317,7 @@ ytTimeout = null;
             endFinalVideo();
             return;
         }
+        syncTopPreloadWindow(currentList);
 
         // 1. Nettoyage strict des timers
         clearInterval(timerInterval);
@@ -1379,7 +1413,7 @@ ytTimeout = null;
             // Préchargement du suivant
             // --- PRÉCHARGEMENT UNIVERSEL DU SUIVANT SOUS LE FICHIER AS ---
             if (nextSong) {
-                const nextDirect = (nextSong.as && nextSong.as.trim()) || (nextSong.url && nextSong.url.trim());
+                const nextDirect = nextSong.blobUrl || (nextSong.as && nextSong.as.trim()) || (nextSong.url && nextSong.url.trim()) || (nextSong.link && nextSong.link.trim());
                 
                 // Si le suivant est un AS : on prépare la platine vidéo directe
                 if (nextDirect) {
@@ -1438,7 +1472,7 @@ ytTimeout = null;
                             // 🔥 FONDU 1.5s AVANT LA FIN (GÈRE LE PASSAGE VERS AS OU VERS YOUTUBE !)
                             setTimeout(() => {
                                 if (!nextSong) return;
-                                const nextDirect = (nextSong.as && nextSong.as.trim()) || (nextSong.url && nextSong.url.trim());
+                                const nextDirect = nextSong.blobUrl || (nextSong.as && nextSong.as.trim()) || (nextSong.url && nextSong.url.trim()) || (nextSong.link && nextSong.link.trim());
 
                                 // A. Si le suivant est un AS : fondu WebM ➔ WebM
                                 if (nextDirect && standbyVid.src) {
@@ -1755,7 +1789,7 @@ ytTimeout = null;
         playIndex = targetIndex;
 
         // 4. Force le chargement de ce Naruto spécifique
-        const directUrl = (targetSong.as && targetSong.as.trim()) || (targetSong.url && targetSong.url.trim()) || (targetSong.link && targetSong.link.trim());
+        const directUrl = targetSong.blobUrl || (targetSong.as && targetSong.as.trim()) || (targetSong.url && targetSong.url.trim()) || (targetSong.link && targetSong.link.trim());
         
         if (directUrl) {
             const vidA = document.getElementById('deck-a');
