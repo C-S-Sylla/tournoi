@@ -1,0 +1,1117 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Comparateur Groupe A vs Groupe B (YT + AS)</title>
+<style>
+    * { box-sizing: border-box; }
+    body {
+        margin: 0;
+        padding: 20px;
+        background: #0f172a;
+        color: #f8fafc;
+        font-family: system-ui, -apple-system, sans-serif;
+    }
+    .container { max-width: 1350px; margin: 0 auto; }
+    h1 { margin: 0 0 6px 0; color: #38bdf8; }
+    .subtitle { color: #94a3b8; margin: 0 0 18px 0; font-size: 0.95rem; }
+
+    .groups-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+        margin-bottom: 14px;
+    }
+    @media (max-width: 850px) { .groups-grid { grid-template-columns: 1fr; } }
+
+    .panel {
+        background: #1e293b;
+        border: 1px solid #334155;
+        border-radius: 12px;
+        padding: 15px;
+        margin-bottom: 16px;
+    }
+    .panel-a { border-top: 4px solid #38bdf8; }
+    .panel-b { border-top: 4px solid #a855f7; }
+
+    .group-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+        font-weight: bold;
+        font-size: 1.05rem;
+    }
+    textarea {
+        width: 100%;
+        height: 95px;
+        margin-top: 8px;
+        background: #0f172a;
+        color: #e2e8f0;
+        border: 1px solid #475569;
+        border-radius: 8px;
+        padding: 8px;
+        font-family: monospace;
+        font-size: 0.8rem;
+        resize: vertical;
+    }
+    input[type="file"] {
+        width: 100%;
+        background: #0f172a;
+        padding: 8px;
+        border-radius: 8px;
+        border: 1px solid #475569;
+        color: #cbd5e1;
+    }
+
+    .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+    button {
+        border: none;
+        border-radius: 8px;
+        padding: 9px 14px;
+        font-weight: 600;
+        cursor: pointer;
+        color: white;
+        background: #3b82f6;
+        transition: 0.15s;
+    }
+    button:hover { filter: brightness(1.12); }
+    button:disabled { opacity: 0.45; cursor: not-allowed; }
+    .btn-green { background: #10b981; }
+    .btn-orange { background: #f59e0b; color: #0f172a; }
+    .btn-red { background: #ef4444; }
+    .btn-purple { background: #9333ea; }
+    .btn-gray { background: #475569; }
+
+    .progress-wrap {
+        margin-top: 12px;
+        background: #0f172a;
+        border-radius: 999px;
+        height: 14px;
+        overflow: hidden;
+        border: 1px solid #334155;
+    }
+    .progress-bar {
+        height: 100%;
+        width: 0%;
+        background: linear-gradient(90deg, #38bdf8, #a855f7, #10b981);
+        transition: width 0.2s;
+    }
+    .stats { margin-top: 10px; font-size: 0.9rem; color: #cbd5e1; }
+
+    .tabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 16px;
+    }
+    .tab-btn {
+        background: #1e293b;
+        border: 1px solid #334155;
+        color: #cbd5e1;
+        padding: 8px 13px;
+        font-size: 0.88rem;
+    }
+    .tab-btn.active {
+        background: #38bdf8;
+        color: #0f172a;
+        border-color: #38bdf8;
+    }
+
+    /* Dock d'écoute comparée */
+    .listen-dock {
+        position: sticky;
+        top: 10px;
+        z-index: 100;
+        background: #0b1120;
+        border: 2px solid #38bdf8;
+        border-radius: 12px;
+        padding: 12px;
+        margin-bottom: 18px;
+        display: none;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.65);
+    }
+    .listen-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+    }
+    @media (max-width: 850px) { .listen-grid { grid-template-columns: 1fr; } }
+    .listen-box {
+        background: #1e293b;
+        border-radius: 8px;
+        padding: 10px;
+    }
+    .listen-title {
+        font-size: 0.85rem;
+        font-weight: bold;
+        margin-bottom: 6px;
+        color: #e2e8f0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .listen-media {
+        width: 100%;
+        height: 185px;
+        background: #000;
+        border-radius: 6px;
+        overflow: hidden;
+    }
+    .listen-media iframe, .listen-media video {
+        width: 100%;
+        height: 100%;
+        border: 0;
+        object-fit: cover;
+    }
+
+    /* Cartes de doublons */
+    .dup-card {
+        background: #1e293b;
+        border: 1px solid #334155;
+        border-left: 5px solid #f59e0b;
+        border-radius: 10px;
+        padding: 14px;
+        margin-bottom: 12px;
+    }
+    .dup-card.lvl-exact { border-left-color: #ef4444; }
+    .dup-card.lvl-high { border-left-color: #f97316; }
+    .dup-card.lvl-nomenclature { border-left-color: #eab308; }
+    .dup-card.lvl-sameanime { border-left-color: #38bdf8; }
+
+    .dup-reason {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 10px;
+        font-size: 0.9rem;
+        font-weight: bold;
+    }
+    .pair-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+    }
+    @media (max-width: 850px) { .pair-grid { grid-template-columns: 1fr; } }
+    .entry-box {
+        background: #0f172a;
+        border: 1px solid #334155;
+        border-radius: 8px;
+        padding: 10px;
+        font-size: 0.85rem;
+    }
+    .entry-box.side-a { border-top: 2px solid #38bdf8; }
+    .entry-box.side-b { border-top: 2px solid #a855f7; }
+    .entry-box.marked-delete {
+        opacity: 0.45;
+        border-color: #ef4444;
+        background: rgba(239, 68, 68, 0.08);
+    }
+    .tag {
+        display: inline-block;
+        padding: 2px 7px;
+        border-radius: 5px;
+        font-size: 0.75rem;
+        font-weight: bold;
+        background: #334155;
+        margin-right: 5px;
+    }
+    .tag-a { background: #0284c7; color: #fff; }
+    .tag-b { background: #9333ea; color: #fff; }
+    .yt-real { color: #38bdf8; font-weight: 600; margin: 5px 0; }
+    .muted { color: #94a3b8; }
+    .actions-mini { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .actions-mini button { padding: 5px 10px; font-size: 0.78rem; }
+
+    #yt-worker-pool {
+        position: fixed;
+        left: -9999px;
+        top: -9999px;
+        width: 200px;
+        height: 200px;
+        opacity: 0;
+        pointer-events: none;
+    }
+</style>
+</head>
+<body>
+<div class="container">
+    <h1>⚔️ Comparateur de Doublons : Groupe A vs Groupe B</h1>
+    <p class="subtitle">Charge ou colle deux JSON (Groupe A et Groupe B) : l'outil compare chaque morceau de A contre chaque morceau de B.</p>
+
+    <!-- ZONE GROUPE A & GROUPE B -->
+    <div class="groups-grid">
+        <div class="panel panel-a" style="margin-bottom:0;">
+            <div class="group-header">
+                <span style="color:#38bdf8;">📘 GROUPE A</span>
+                <span id="status-a" class="muted" style="font-size:0.85rem;">0 morceaux</span>
+            </div>
+            <input type="file" id="file-a" accept=".json" onchange="handleFileUpload('A', event)">
+            <textarea id="paste-a" placeholder="...ou colle le JSON du Groupe A ici" oninput="handlePaste('A')"></textarea>
+        </div>
+
+        <div class="panel panel-b" style="margin-bottom:0;">
+            <div class="group-header">
+                <span style="color:#c084fc;">📕 GROUPE B</span>
+                <span id="status-b" class="muted" style="font-size:0.85rem;">0 morceaux</span>
+            </div>
+            <input type="file" id="file-b" accept=".json" onchange="handleFileUpload('B', event)">
+            <textarea id="paste-b" placeholder="...ou colle le JSON du Groupe B ici" oninput="handlePaste('B')"></textarea>
+        </div>
+    </div>
+
+    <!-- BARRE D'ACTIONS -->
+    <div class="panel">
+        <div class="row">
+            <button id="btn-scan" onclick="startFastScan()" disabled>⚡ Scanner les titres YT (A + B)</button>
+            <button id="btn-stop" class="btn-orange" onclick="stopScan()" disabled>⏹️ Stopper</button>
+            <button id="btn-analyze" class="btn-green" onclick="runComparison()" disabled>🧠 Comparer A vs B</button>
+            <button id="btn-export-a" onclick="exportCleaned('A')" disabled>⬇️ Exporter A nettoyé (<span id="del-count-a">0</span> retirés)</button>
+            <button id="btn-export-b" class="btn-purple" onclick="exportCleaned('B')" disabled>⬇️ Exporter B nettoyé (<span id="del-count-b">0</span> retirés)</button>
+        </div>
+
+        <div class="progress-wrap">
+            <div class="progress-bar" id="progress-bar"></div>
+        </div>
+        <div class="stats" id="stats-text">
+            Charge ou colle les deux groupes A et B pour commencer.
+        </div>
+    </div>
+
+    <!-- DOCK D'ÉCOUTE COMPARÉE -->
+    <div class="listen-dock" id="listen-dock">
+        <div class="row" style="justify-content: space-between; margin-bottom: 8px;">
+            <strong style="color:#38bdf8;">🎧 Comparateur d'écoute A vs B</strong>
+            <div class="row">
+                <button class="btn-gray" onclick="setListenStart(0)" id="btn-start-0">Début (0s)</button>
+                <button class="btn-gray" onclick="setListenStart(48)" id="btn-start-48" style="background:#3b82f6;">Refrain (48s)</button>
+                <button class="btn-red" onclick="closeListenDock()">✕ Fermer</button>
+            </div>
+        </div>
+        <div class="listen-grid">
+            <div class="listen-box">
+                <div class="listen-title" id="listen-title-a">Groupe A</div>
+                <div class="listen-media" id="listen-media-a"></div>
+            </div>
+            <div class="listen-box">
+                <div class="listen-title" id="listen-title-b">Groupe B</div>
+                <div class="listen-media" id="listen-media-b"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ONGLETS -->
+    <div class="tabs" id="tabs-bar" style="display:none;">
+        <button class="tab-btn active" onclick="setFilter('all', this)">Tous suspects (<span id="cnt-all">0</span>)</button>
+        <button class="tab-btn" onclick="setFilter('exact', this)">🔴 Liens identiques (<span id="cnt-exact">0</span>)</button>
+        <button class="tab-btn" onclick="setFilter('high', this)">🟠 Même chanson / N° (<span id="cnt-high">0</span>)</button>
+        <button class="tab-btn" onclick="setFilter('nomenclature', this)">🟡 Saison/Arc vs Global (<span id="cnt-nomenclature">0</span>)</button>
+        <button class="tab-btn" onclick="setFilter('sameanime', this)">🔵 Même Animé+Type (<span id="cnt-sameanime">0</span>)</button>
+        <button class="tab-btn" onclick="setFilter('dead', this)">💀 YT morts/bloqués (<span id="cnt-dead">0</span>)</button>
+    </div>
+
+    <div id="results-container"></div>
+</div>
+
+<div id="yt-worker-pool"></div>
+
+<script>
+// =========================================================================
+// 1. ÉTAT DES GROUPES A & B + CACHE YT
+// =========================================================================
+const groups = {
+    A: { root: null, raw: [], entries: [], deleted: new Set(), name: "groupe_A.json" },
+    B: { root: null, raw: [], entries: [], deleted: new Set(), name: "groupe_B.json" }
+};
+
+let ytTitleCache = {};
+try {
+    ytTitleCache = JSON.parse(localStorage.getItem('ytTitleScannerCache_v1') || '{}');
+} catch(e) { ytTitleCache = {}; }
+
+let detectedPairs = [];
+let deadYtEntries = [];
+let currentFilter = 'all';
+let listenStartSec = 48;
+let currentPairListen = { a: null, b: null };
+
+let isScanning = false;
+let scanAbortFlag = false;
+let ytApiReady = false;
+const WORKER_COUNT = 8;
+const workerPool = [];
+
+const ytScript = document.createElement('script');
+ytScript.src = "https://www.youtube.com/iframe_api";
+document.head.appendChild(ytScript);
+
+function onYouTubeIframeAPIReady() {
+    ytApiReady = true;
+    const poolDiv = document.getElementById('yt-worker-pool');
+    for (let i = 0; i < WORKER_COUNT; i++) {
+        const div = document.createElement('div');
+        div.id = `yt-worker-${i}`;
+        poolDiv.appendChild(div);
+
+        const state = { id: i, player: null, resolveCurrent: null };
+        state.player = new YT.Player(div.id, {
+            width: '200',
+            height: '200',
+            playerVars: { controls: 0, autoplay: 0, mute: 1, rel: 0, iv_load_policy: 3 },
+            events: {
+                onReady: (ev) => { ev.target.mute(); },
+                onError: (ev) => {
+                    if (state.resolveCurrent) state.resolveCurrent({ ok: false, errorCode: ev.data });
+                }
+            }
+        });
+        workerPool.push(state);
+    }
+}
+
+function saveCache() {
+    try { localStorage.setItem('ytTitleScannerCache_v1', JSON.stringify(ytTitleCache)); } catch(e) {}
+}
+
+// =========================================================================
+// 2. LECTURE DES JSON (FICHIER OU TEXTE COLLÉ)
+// =========================================================================
+function parseFlexibleJson(text) {
+    const trimmed = text.trim();
+    if (!trimmed) return null;
+    try {
+        return JSON.parse(trimmed);
+    } catch(e) {
+        // Permet de coller directement des lignes d'entrées {...}, {...} sans crochets []
+        const noTrailingComma = trimmed.replace(/,\s*$/, '');
+        return JSON.parse(`[${noTrailingComma}]`);
+    }
+}
+
+function handleFileUpload(side, event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    groups[side].name = file.name.replace(/\.json$/i, '') + '_clean.json';
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+        try {
+            const json = parseFlexibleJson(ev.target.result);
+            document.getElementById(`paste-${side.toLowerCase()}`).value = "";
+            setGroupData(side, json);
+        } catch(err) {
+            alert(`JSON invalide pour le Groupe ${side} : ` + err.message);
+        }
+    };
+    reader.readAsText(file);
+}
+
+function handlePaste(side) {
+    const text = document.getElementById(`paste-${side.toLowerCase()}`).value;
+    if (!text.trim()) {
+        groups[side].raw = [];
+        groups[side].entries = [];
+        updateGroupUI(side);
+        return;
+    }
+    try {
+        const json = parseFlexibleJson(text);
+        if (json) setGroupData(side, json);
+    } catch(e) {
+        document.getElementById(`status-${side.toLowerCase()}`).innerText = "⏳ JSON incomplet...";
+    }
+}
+
+function setGroupData(side, json) {
+    const g = groups[side];
+    g.root = json;
+    g.raw = Array.isArray(json) ? json : (json.entries || json.items || json.data || []);
+    g.deleted.clear();
+
+    g.entries = g.raw.map((e, idx) => {
+        const yt = (e.yt || e.youtube || e.youtubeId || "").trim();
+        return {
+            side,
+            idx,
+            title: e.title || `Entrée ${idx + 1}`,
+            yt,
+            as: (e.as || e.url || e.link || "").trim(),
+            thumb: (e.thumb || "").trim(),
+            type: (e.type || "OP").toUpperCase(),
+            ytTitle: ytTitleCache[yt]?.title || "",
+            ytAuthor: ytTitleCache[yt]?.author || "",
+            ytDead: Boolean(ytTitleCache[yt]?.dead)
+        };
+    });
+
+    updateGroupUI(side);
+    updateDeleteCounts();
+
+    if (groups.A.entries.length > 0 && groups.B.entries.length > 0) {
+        runComparison();
+    }
+}
+
+function updateGroupUI(side) {
+    const g = groups[side];
+    const ytCount = g.entries.filter(e => e.yt).length;
+    const asCount = g.entries.filter(e => e.as).length;
+    document.getElementById(`status-${side.toLowerCase()}`).innerText =
+        `${g.entries.length} morceaux (${ytCount} YT | ${asCount} AS)`;
+
+    const readyBoth = groups.A.entries.length > 0 && groups.B.entries.length > 0;
+    const hasAnyYt = groups.A.entries.some(e => e.yt) || groups.B.entries.some(e => e.yt);
+
+    document.getElementById('btn-scan').disabled = !hasAnyYt;
+    document.getElementById('btn-analyze').disabled = !readyBoth;
+    document.getElementById('btn-export-a').disabled = groups.A.entries.length === 0;
+    document.getElementById('btn-export-b').disabled = groups.B.entries.length === 0;
+
+    const allYt = [...groups.A.entries, ...groups.B.entries].filter(e => e.yt);
+    const cached = allYt.filter(e => e.ytTitle || e.ytDead).length;
+    updateProgress(cached, allYt.length);
+}
+
+// =========================================================================
+// 3. SCAN ULTRA-RAPIDE DES TITRES YT (A + B)
+// =========================================================================
+async function startFastScan() {
+    if (!ytApiReady) return alert("L'API YouTube charge encore, réessaie dans 1 seconde.");
+    if (isScanning) return;
+
+    const allEntries = [...groups.A.entries, ...groups.B.entries];
+    const uniqueYtIds = [...new Set(
+        allEntries
+            .filter(e => e.yt && !ytTitleCache[e.yt]?.title && !ytTitleCache[e.yt]?.dead)
+            .map(e => e.yt)
+    )];
+
+    if (uniqueYtIds.length === 0) {
+        alert("Tous les titres YouTube de A et B sont déjà en cache !");
+        if (groups.A.entries.length && groups.B.entries.length) runComparison();
+        return;
+    }
+
+    isScanning = true;
+    scanAbortFlag = false;
+    document.getElementById('btn-scan').disabled = true;
+    document.getElementById('btn-stop').disabled = false;
+
+    let cursor = 0;
+    let processed = 0;
+    const totalUnique = uniqueYtIds.length;
+    const tStart = performance.now();
+
+    function fetchOneWithWorker(worker, ytId) {
+        return new Promise((resolve) => {
+            const p = worker.player;
+            if (!p || typeof p.loadVideoById !== 'function') return resolve({ ok: false, errorCode: 'not_ready' });
+
+            let finished = false;
+            let pollInt = null;
+            let timeoutId = null;
+
+            const done = (res) => {
+                if (finished) return;
+                finished = true;
+                clearInterval(pollInt);
+                clearTimeout(timeoutId);
+                worker.resolveCurrent = null;
+                try { p.mute(); p.stopVideo(); } catch(e) {}
+                resolve(res);
+            };
+            worker.resolveCurrent = done;
+
+            try {
+                p.mute();
+                p.loadVideoById({ videoId: ytId, startSeconds: 0 });
+            } catch(e) {
+                return done({ ok: false, errorCode: 'load_err' });
+            }
+
+            pollInt = setInterval(() => {
+                if (scanAbortFlag) return done({ ok: false, aborted: true });
+                try {
+                    p.mute();
+                    const data = p.getVideoData ? p.getVideoData() : null;
+                    if (data && data.video_id === ytId && data.title && data.title.trim() !== "") {
+                        done({ ok: true, title: data.title.trim(), author: (data.author || "").trim() });
+                    }
+                } catch(e) {}
+            }, 50);
+
+            timeoutId = setTimeout(() => done({ ok: false, errorCode: 'timeout' }), 3500);
+        });
+    }
+
+    async function runWorker(worker) {
+        while (cursor < uniqueYtIds.length && !scanAbortFlag) {
+            const ytId = uniqueYtIds[cursor++];
+            const res = await fetchOneWithWorker(worker, ytId);
+
+            if (!res.aborted) {
+                if (res.ok) {
+                    ytTitleCache[ytId] = { title: res.title, author: res.author, dead: false };
+                } else {
+                    const fb = await fallbackNoembed(ytId);
+                    if (fb) {
+                        ytTitleCache[ytId] = { title: fb.title, author: fb.author, dead: false };
+                    } else {
+                        ytTitleCache[ytId] = { title: "", author: "", dead: true, errorCode: res.errorCode };
+                    }
+                }
+
+                [...groups.A.entries, ...groups.B.entries].forEach(entry => {
+                    if (entry.yt === ytId) {
+                        entry.ytTitle = ytTitleCache[ytId].title || "";
+                        entry.ytAuthor = ytTitleCache[ytId].author || "";
+                        entry.ytDead = Boolean(ytTitleCache[ytId].dead);
+                    }
+                });
+
+                processed++;
+                if (processed % 8 === 0 || processed === totalUnique) {
+                    saveCache();
+                    const sec = ((performance.now() - tStart) / 1000).toFixed(1);
+                    const allYt = [...groups.A.entries, ...groups.B.entries].filter(e => e.yt);
+                    const readyYt = allYt.filter(e => e.ytTitle || e.ytDead).length;
+                    updateProgress(readyYt, allYt.length);
+                    document.getElementById('stats-text').innerHTML =
+                        `⚡ Scan : <b>${processed} / ${totalUnique}</b> IDs (${sec}s) — <i>${escapeHtml(ytTitleCache[ytId].title || 'Indisponible')}</i>`;
+                }
+            }
+        }
+    }
+
+    await Promise.all(workerPool.map(w => runWorker(w)));
+
+    saveCache();
+    isScanning = false;
+    document.getElementById('btn-scan').disabled = false;
+    document.getElementById('btn-stop').disabled = true;
+
+    const totalSec = ((performance.now() - tStart) / 1000).toFixed(1);
+    const allYt = [...groups.A.entries, ...groups.B.entries].filter(e => e.yt);
+    const readyYt = allYt.filter(e => e.ytTitle || e.ytDead).length;
+    updateProgress(readyYt, allYt.length);
+    document.getElementById('stats-text').innerHTML =
+        `✅ Scan terminé en <b>${totalSec}s</b> ! <b>${readyYt} / ${allYt.length}</b> vidéos vérifiées.`;
+
+    if (groups.A.entries.length && groups.B.entries.length) runComparison();
+}
+
+async function fallbackNoembed(ytId) {
+    try {
+        const ctrl = new AbortController();
+        const tid = setTimeout(() => ctrl.abort(), 2000);
+        const r = await fetch(`https://noembed.com/embed?url=https://www.youtube.com/watch?v=${ytId}`, { signal: ctrl.signal });
+        clearTimeout(tid);
+        if (!r.ok) return null;
+        const j = await r.json();
+        if (j && j.title) return { title: j.title, author: j.author_name || "" };
+    } catch(e) {}
+    return null;
+}
+
+function stopScan() {
+    scanAbortFlag = true;
+    document.getElementById('btn-stop').disabled = true;
+}
+
+function updateProgress(done, total) {
+    const pct = total > 0 ? Math.min(100, Math.round((done / total) * 100)) : 0;
+    document.getElementById('progress-bar').style.width = pct + '%';
+}
+
+// =========================================================================
+// 4. ALGORITHME DE COMPARAISON GROUPE A VS GROUPE B
+// =========================================================================
+const FRANCHISE_ALIASES = [
+    [/\b(boku no hero academia|my hero academia|bnha|mha)\b/g, "my hero academia"],
+    [/\b(shingeki no kyojin|attack on titan|aot|snk)\b/g, "attack on titan"],
+    [/\b(kimetsu no yaiba|demon slayer)\b/g, "demon slayer"],
+    [/\b(sousou no frieren|frieren beyond journey s end|frieren)\b/g, "frieren"],
+    [/\b(tensei shitara slime datta ken|that time i got reincarnated as a slime|tensura)\b/g, "tensura"],
+    [/\b(kusuriya no hitorigoto|the apothecary diaries|apothecary diaries)\b/g, "apothecary diaries"],
+    [/\b(jigokuraku|hell s paradise|hells paradise)\b/g, "hells paradise"],
+    [/\b(yakusoku no neverland|the promised neverland|the promise neverland|promised neverland)\b/g, "promised neverland"],
+    [/\b(mirai nikki|the future diary|future diary)\b/g, "mirai nikki"],
+    [/\b(kiseijuu|parasyte the maxim|parasite the maxim|parasyte|parasite)\b/g, "parasyte"],
+    [/\b(zankyou no terror|terror in resonance)\b/g, "terror in resonance"],
+    [/\b(tengoku daimakyo|tengoku daimakyou|heavenly delusion)\b/g, "heavenly delusion"],
+    [/\b(3 gatsu no lion|sangatsu no lion|march comes in like a lion)\b/g, "march comes in like a lion"],
+    [/\b(shigatsu wa kimi no uso|your lie in april)\b/g, "your lie in april"],
+    [/\b(nanatsu no taizai|the seven deadly sins|seven deadly sins)\b/g, "seven deadly sins"],
+    [/\b(tate no yuusha no nariagari|the rising of the shield hero|rising of the shield hero|shield hero)\b/g, "shield hero"],
+    [/\b(vanitas no carte|the case study of vanitas|case study of vanitas)\b/g, "vanitas"],
+    [/\b(yofukashi no uta|call of the night)\b/g, "call of the night"],
+    [/\b(sono bisque doll wa koi wo suru|sono bisque doll|my dress up darling)\b/g, "my dress up darling"],
+    [/\b(kawaii dake ja nai shikimori san|shikimori s not just a cutie|shikimori)\b/g, "shikimori"],
+    [/\b(boku no kokoro no yabai yatsu|the dangers in my heart|dangers in my heart)\b/g, "dangers in my heart"],
+    [/\b(kuroko no basket|kuroko s basketball|kuroko basketball)\b/g, "kuroko basketball"],
+    [/\b(ao no exorcist|blue exorcist)\b/g, "blue exorcist"],
+    [/\b(rurouni kenshin|samurai x)\b/g, "rurouni kenshin"],
+    [/\b(yuukoku no moriarty|moriarty the patriot)\b/g, "moriarty the patriot"],
+    [/\b(shokugeki no souma|food wars)\b/g, "food wars"],
+    [/\b(mahoutsukai no yome|the ancient magus bride|ancient magus bride)\b/g, "ancient magus bride"],
+    [/\b(kage no jitsuryokusha ni naritakute|the eminence in shadow|eminence in shadow)\b/g, "eminence in shadow"],
+    [/\b(en en no shouboutai|fire force)\b/g, "fire force"],
+    [/\b(honzuki no gekokujou|ascendance of a bookworm)\b/g, "ascendance of a bookworm"],
+    [/\b(shinchou yuusha|cautious hero)\b/g, "cautious hero"],
+    [/\b(dungeon meshi|delicious in dungeon)\b/g, "delicious in dungeon"],
+    [/\b(youkoso jitsuryoku shijou shugi no kyoushitsu e|classroom of the elite)\b/g, "classroom of the elite"],
+    [/\b(hoshiai no sora|stars align)\b/g, "stars align"],
+    [/\b(saraiya goyou|house of five leaves)\b/g, "house of five leaves"],
+    [/\b(dan da dan|dandadan)\b/g, "dandadan"],
+    [/\b(haikyuu|haikyu)\b/g, "haikyuu"],
+    [/\b(bungou stray dogs|bungo stray dogs)\b/g, "bungo stray dogs"],
+    [/\b(kaguya sama love is war|kaguya sama)\b/g, "kaguya sama"],
+    [/\b(makeine too many losing heroines|makeine)\b/g, "makeine"],
+    [/\b(shoushimin how to become ordinary|shoshimin how to become ordinary|shoushimin|shoshimin)\b/g, "shoshimin"],
+    [/\b(re zero starting life in another world|re zero|rezero)\b/g, "re zero"],
+    [/\b(sword art online|sao)\b/g, "sword art online"],
+    [/\b(yu yu hakusho|yuyu hakusho)\b/g, "yu yu hakusho"],
+    [/\b(hunter x hunter|hxh)\b/g, "hunter x hunter"],
+    [/\b(odd taxi|oddtaxi)\b/g, "oddtaxi"],
+    [/\b(kaiju no 8|kaiju n 8|kaiju 8)\b/g, "kaiju no 8"],
+    [/\b(fullmetal alchemist brotherhood|fmab)\b/g, "fmab"],
+    [/\b(komi can t communicate|komi san)\b/g, "komi"],
+    [/\b(mushoku tensei jobless reincarnation|mushoku tensei)\b/g, "mushoku tensei"],
+    [/\b(naruto shippuuden|naruto shippuden)\b/g, "naruto shippuden"],
+    [/\b(boruto naruto next generations|boruto)\b/g, "boruto"],
+    [/\b(hanyou no yashahime|hanyo no yashahime|yashahime princess half demon|yashahime)\b/g, "yashahime"],
+    [/\b(kindaichi shounen no jikenbo|kindaichi case files)\b/g, "kindaichi"],
+    [/\b(chi chikyuu no undou ni tsuite|orb on the movements of the earth)\b/g, "orb movements of earth"],
+    [/\b(kimi no koto ga daidaidaidaidaisuki na 100 nin no kanojo|100 girlfriends|hyakkano)\b/g, "100 girlfriends"],
+    [/\b(genjitsu shugi yuusha no oukoku saikenki|how a realist hero rebuilt the kingdom)\b/g, "realist hero"],
+    [/\b(you and i are complete opposites|you and i are polar opposites)\b/g, "you and i are polar opposites"]
+];
+
+function cleanBaseText(str) {
+    if (!str) return "";
+    return str
+        .normalize('NFKC')
+        .toLowerCase()
+        .replace(/[’'`]/g, "'")
+        .replace(/×/g, "x")
+        .replace(/['":!?.,/|\\~*☆♥∞\-_]+/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+}
+
+function romanToArabicInText(text) {
+    return text
+        .replace(/\bii\b/g, "2")
+        .replace(/\biii\b/g, "3")
+        .replace(/\biv\b/g, "4")
+        .replace(/\bv\b/g, "5")
+        .replace(/\bvi\b/g, "6");
+}
+
+function extractMeta(entry) {
+    const combinedRaw = [entry.title, entry.ytTitle].filter(Boolean).join(" | ");
+    const ytOrJsonRaw = entry.ytTitle || entry.title;
+
+    const quotedSongs = [];
+    const quoteRegex = /[「『"“]([^」』"”]{3,45})[」』"”]/g;
+    let qm;
+    while ((qm = quoteRegex.exec(ytOrJsonRaw)) !== null) {
+        const cleanedQ = cleanBaseText(qm[1]);
+        if (cleanedQ && !/^(op|ed|opening|ending|hd|4k|60fps|creditless|official|tv size)$/.test(cleanedQ)) {
+            quotedSongs.push(cleanedQ);
+        }
+    }
+
+    let fullNorm = romanToArabicInText(cleanBaseText(combinedRaw));
+
+    let asNum = null;
+    if (entry.as && entry.as.includes("animethemes.moe")) {
+        const am = entry.as.match(/\/(op|ed)(\d+)/i);
+        if (am) asNum = parseInt(am[2], 10);
+    }
+
+    let seasonNum = null;
+    let hasArcOrSequelTag = false;
+    const seasonPatterns = [
+        /\bseason\s*(\d+)\b/,
+        /\bs(\d+)\b(?=\s*(?:op|ed|opening|ending|part|cour))/,
+        /\b(\d+)(?:st|nd|rd|th)\s*season\b/,
+        /\bpart\s*(\d+)\b/,
+        /\bcour\s*(\d+)\b/
+    ];
+    for (const rx of seasonPatterns) {
+        const m = fullNorm.match(rx);
+        if (m) {
+            const val = parseInt(m[1], 10);
+            if (!isNaN(val)) {
+                seasonNum = seasonNum || val;
+                if (val >= 2) hasArcOrSequelTag = true;
+            }
+        }
+    }
+
+    if (/\b(shippuden|yuukaku|entertainment district|swordsmith|hashira|mugen train|thousand year blood war|tybw|alicization|war of underworld|stone ocean|golden wind|diamond is unbreakable|stardust crusaders|final season|the final|new world|science future|redial|sotsu|brotherhood|2nd|3rd|4th|5th|6th|7th)\b/.test(fullNorm)) {
+        hasArcOrSequelTag = true;
+    }
+
+    const opEdNums = [];
+    const opEdRegex = /\b(?:opening|ending|op|ed)\s*#?\s*(\d{1,2})\b/g;
+    let om;
+    while ((om = opEdRegex.exec(fullNorm)) !== null) {
+        opEdNums.push(parseInt(om[1], 10));
+    }
+    if (asNum !== null && !opEdNums.includes(asNum)) opEdNums.push(asNum);
+
+    let themeNum = opEdNums.length > 0 ? opEdNums[opEdNums.length - 1] : null;
+    if (entry.ytTitle) {
+        const ytNorm = romanToArabicInText(cleanBaseText(entry.ytTitle));
+        const ym = ytNorm.match(/\b(?:opening|ending|op|ed)\s*#?\s*(\d{1,2})\b/);
+        if (ym) themeNum = parseInt(ym[1], 10);
+    }
+
+    let animeClean = romanToArabicInText(cleanBaseText(entry.title))
+        .replace(/\b(opening|ending|op|ed)\s*\d*\b/g, " ")
+        .replace(/\b(season|saison|part|cour|ep|episode)\s*\d*\b/g, " ")
+        .replace(/\b\d+(st|nd|rd|th)\s*(season|saison)?\b/g, " ")
+        .replace(/\b(the animation|tv size|full|official|creditless|s\d+)\b/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+
+    for (const [rx, canonical] of FRANCHISE_ALIASES) {
+        animeClean = animeClean.replace(rx, canonical);
+    }
+    for (const [, canonical] of FRANCHISE_ALIASES) {
+        if (animeClean.startsWith(canonical + " ") || animeClean.includes(" " + canonical + " ")) {
+            animeClean = canonical;
+            break;
+        }
+    }
+    const franchise = animeClean
+        .replace(/\b(yuukaku hen|entertainment district|thousand year blood war|war of underworld|to the top|science future|new world|final season|the final|2|3|4|5)\b/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+
+    let songTokens = [];
+    if (entry.ytTitle) {
+        let ytClean = romanToArabicInText(cleanBaseText(entry.ytTitle));
+        for (const [rx] of FRANCHISE_ALIASES) ytClean = ytClean.replace(rx, " ");
+        const animeWords = franchise.split(" ").filter(w => w.length > 2);
+        let ytWords = ytClean
+            .replace(/\b(opening|ending|op|ed|theme|song|ost|season|saison|part|cour|creditless|ncop|nced|4k|60fps|1080p|720p|hd|uhd|official|music|video|mv|pv|lyric|lyrics|sub|eng|english|romaji|kanji|vostfr|tv|size|full|ver|version|anime|clean|audio|by|feat|ft|with|from|the|and|no|wa|ga|wo|ni|de|to)\b/g, " ")
+            .replace(/\b\d+\b/g, " ")
+            .split(/\s+/)
+            .filter(w => w.length >= 3 && !animeWords.includes(w));
+        songTokens = [...new Set(ytWords)];
+    }
+
+    return { franchise, type: entry.type, seasonNum, themeNum, hasArcOrSequelTag, quotedSongs, songTokens };
+}
+
+function tokenSimilarity(arrA, arrB) {
+    if (!arrA.length || !arrB.length) return { count: 0, ratio: 0, common: [] };
+    const setB = new Set(arrB);
+    const common = arrA.filter(x => setB.has(x));
+    const minLen = Math.min(arrA.length, arrB.length);
+    return { count: common.length, ratio: common.length / minLen, common };
+}
+
+function runComparison() {
+    if (!groups.A.entries.length || !groups.B.entries.length) {
+        return alert("Il faut remplir les deux groupes (A et B) !");
+    }
+
+    detectedPairs = [];
+    deadYtEntries = [...groups.A.entries, ...groups.B.entries].filter(e => e.yt && e.ytDead);
+
+    const metasA = groups.A.entries.map(e => extractMeta(e));
+    const metasB = groups.B.entries.map(e => extractMeta(e));
+
+    for (let i = 0; i < groups.A.entries.length; i++) {
+        const a = groups.A.entries[i];
+        const ma = metasA[i];
+
+        for (let j = 0; j < groups.B.entries.length; j++) {
+            const b = groups.B.entries[j];
+            const mb = metasB[j];
+
+            // 1. DOUBLON EXACT
+            if (a.yt && b.yt && a.yt === b.yt) {
+                detectedPairs.push({ level: 'exact', score: 100, reason: `🔴 Même ID YouTube (${a.yt})`, a, b });
+                continue;
+            }
+            if (a.as && b.as && a.as === b.as) {
+                detectedPairs.push({ level: 'exact', score: 100, reason: `🔴 Même lien AS (${a.as})`, a, b });
+                continue;
+            }
+
+            const sameFranchise =
+                ma.franchise && mb.franchise && (
+                    ma.franchise === mb.franchise ||
+                    (ma.franchise.length >= 5 && mb.franchise.length >= 5 &&
+                        (ma.franchise.includes(mb.franchise) || mb.franchise.includes(ma.franchise)))
+                );
+
+            if (!sameFranchise) {
+                if (ma.quotedSongs.length && mb.quotedSongs.length) {
+                    const commonQuote = ma.quotedSongs.find(q => mb.quotedSongs.includes(q));
+                    if (commonQuote && a.type === b.type) {
+                        detectedPairs.push({ level: 'high', score: 90, reason: `🟠 Même titre de chanson détecté : "${commonQuote}"`, a, b });
+                    }
+                }
+                continue;
+            }
+
+            if (a.type !== b.type) continue;
+
+            const sim = tokenSimilarity(ma.songTokens, mb.songTokens);
+            const commonQuote = ma.quotedSongs.find(q => mb.quotedSongs.includes(q));
+
+            if (commonQuote || (sim.count >= 2 && sim.ratio >= 0.5) || (sim.count === 1 && sim.ratio === 1 && sim.common[0].length >= 6)) {
+                const label = commonQuote || sim.common.join(" ");
+                detectedPairs.push({ level: 'high', score: 95, reason: `🟠 Même animé + même chanson détectée ("${label}")`, a, b });
+                continue;
+            }
+
+            if (ma.themeNum !== null && mb.themeNum !== null) {
+                const sameSeason = (!ma.seasonNum && !mb.seasonNum) || (ma.seasonNum === mb.seasonNum);
+                if (ma.themeNum === mb.themeNum && sameSeason) {
+                    detectedPairs.push({
+                        level: 'high',
+                        score: 92,
+                        reason: `🟠 Même numéro détecté (${a.type} ${ma.themeNum}${ma.seasonNum ? ' S' + ma.seasonNum : ''})`,
+                        a, b
+                    });
+                    continue;
+                }
+
+                const aIsSeasonal = Boolean((ma.seasonNum && ma.seasonNum >= 2) || ma.hasArcOrSequelTag);
+                const bIsSeasonal = Boolean((mb.seasonNum && mb.seasonNum >= 2) || mb.hasArcOrSequelTag);
+
+                if (
+                    (aIsSeasonal && !bIsSeasonal && mb.themeNum > ma.themeNum) ||
+                    (bIsSeasonal && !aIsSeasonal && ma.themeNum > mb.themeNum)
+                ) {
+                    const sLabelA = `${ma.seasonNum ? 'S' + ma.seasonNum + ' ' : (ma.hasArcOrSequelTag ? 'Arc/Suite ' : '')}${a.type} ${ma.themeNum}`;
+                    const sLabelB = `${mb.seasonNum ? 'S' + mb.seasonNum + ' ' : (mb.hasArcOrSequelTag ? 'Arc/Suite ' : '')}${b.type} ${mb.themeNum}`;
+                    detectedPairs.push({
+                        level: 'nomenclature',
+                        score: 82,
+                        reason: `🟡 Nomenclature Saison/Arc vs Global possible (${sLabelA} ≈ ${sLabelB})`,
+                        a, b
+                    });
+                    continue;
+                }
+                continue;
+            }
+
+            const oneHasSeasonOrNum = (ma.themeNum !== null || mb.themeNum !== null || ma.hasArcOrSequelTag || mb.hasArcOrSequelTag);
+            detectedPairs.push({
+                level: oneHasSeasonOrNum ? 'nomenclature' : 'sameanime',
+                score: oneHasSeasonOrNum ? 70 : 55,
+                reason: oneHasSeasonOrNum
+                    ? `🟡 Même animé (${ma.franchise}) + ${a.type}, numéro manquant sur l'un des deux`
+                    : `🔵 Même animé (${ma.franchise}) + même type (${a.type}) — à vérifier à l'oreille`,
+                a, b
+            });
+        }
+    }
+
+    detectedPairs.sort((x, y) => y.score - x.score);
+    renderResults();
+}
+
+// =========================================================================
+// 5. AFFICHAGE, ÉCOUTE & EXPORT SÉPARÉ A / B
+// =========================================================================
+function setFilter(filter, btn) {
+    currentFilter = filter;
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    renderResults();
+}
+
+function renderResults() {
+    document.getElementById('tabs-bar').style.display = 'flex';
+
+    document.getElementById('cnt-all').innerText = detectedPairs.length;
+    document.getElementById('cnt-exact').innerText = detectedPairs.filter(p => p.level === 'exact').length;
+    document.getElementById('cnt-high').innerText = detectedPairs.filter(p => p.level === 'high').length;
+    document.getElementById('cnt-nomenclature').innerText = detectedPairs.filter(p => p.level === 'nomenclature').length;
+    document.getElementById('cnt-sameanime').innerText = detectedPairs.filter(p => p.level === 'sameanime').length;
+    document.getElementById('cnt-dead').innerText = deadYtEntries.length;
+
+    const container = document.getElementById('results-container');
+    container.innerHTML = "";
+
+    if (currentFilter === 'dead') {
+        if (!deadYtEntries.length) {
+            container.innerHTML = `<div class="panel muted">Aucune vidéo YouTube morte détectée (lance d'abord le scan).</div>`;
+            return;
+        }
+        deadYtEntries.forEach(entry => {
+            const isDel = groups[entry.side].deleted.has(entry.idx);
+            const div = document.createElement('div');
+            div.className = 'dup-card lvl-exact';
+            div.innerHTML = `
+                <div class="dup-reason">
+                    <span>💀 Groupe ${entry.side} #${entry.idx + 1} — Vidéo YT inaccessible</span>
+                    <button class="${isDel ? 'btn-gray' : 'btn-red'}" onclick="toggleDelete('${entry.side}', ${entry.idx})">
+                        ${isDel ? `↩️ Garder dans ${entry.side}` : `🗑️ Retirer de ${entry.side}`}
+                    </button>
+                </div>
+                <div><b>${escapeHtml(entry.title)}</b> <span class="tag">${entry.type}</span> <span class="muted">yt: ${escapeHtml(entry.yt)}</span></div>
+            `;
+            container.appendChild(div);
+        });
+        return;
+    }
+
+    const list = currentFilter === 'all' ? detectedPairs : detectedPairs.filter(p => p.level === currentFilter);
+    if (!list.length) {
+        container.innerHTML = `<div class="panel muted">Aucun doublon trouvé entre Groupe A et Groupe B dans cette catégorie.</div>`;
+        return;
+    }
+
+    list.forEach(pair => {
+        const delA = groups.A.deleted.has(pair.a.idx);
+        const delB = groups.B.deleted.has(pair.b.idx);
+
+        const card = document.createElement('div');
+        card.className = `dup-card lvl-${pair.level}`;
+        card.innerHTML = `
+            <div class="dup-reason">
+                <span>${escapeHtml(pair.reason)}</span>
+                <button class="btn-gray" style="padding:5px 10px; font-size:0.78rem;" onclick="listenPair(${pair.a.idx}, ${pair.b.idx})">🎧 Écouter A & B</button>
+            </div>
+            <div class="pair-grid">
+                ${renderEntryBox(pair.a, 'A', delA)}
+                ${renderEntryBox(pair.b, 'B', delB)}
+            </div>
+        `;
+        container.appendChild(card);
+    });
+}
+
+function renderEntryBox(e, side, isDel) {
+    const mediaTag = e.yt ? `<span class="tag">YT: ${escapeHtml(e.yt)}</span>` : `<span class="tag">AS</span>`;
+    const ytText = e.yt
+        ? (e.ytTitle ? `<div class="yt-real">📺 YT : ${escapeHtml(e.ytTitle)}</div>` : `<div class="muted">📺 Titre YT non encore scanné</div>`)
+        : `<div class="muted" style="word-break:break-all;">🎞️ ${escapeHtml(e.as)}</div>`;
+
+    return `
+        <div class="entry-box side-${side.toLowerCase()} ${isDel ? 'marked-delete' : ''}">
+            <div>
+                <span class="tag tag-${side.toLowerCase()}">Groupe ${side} #${e.idx + 1}</span>
+                <span class="tag">${e.type}</span>
+                ${mediaTag}
+                <b>${escapeHtml(e.title)}</b>
+            </div>
+            ${ytText}
+            <div class="actions-mini">
+                <button onclick="listenSingle('${side}', ${e.idx})">▶ Écouter ${side}</button>
+                <button class="${isDel ? 'btn-gray' : 'btn-red'}" onclick="toggleDelete('${side}', ${e.idx})">
+                    ${isDel ? `↩️ Garder dans ${side}` : `🗑️ Supprimer de ${side}`}
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+function toggleDelete(side, idx) {
+    const set = groups[side].deleted;
+    if (set.has(idx)) set.delete(idx);
+    else set.add(idx);
+    updateDeleteCounts();
+    renderResults();
+}
+
+function updateDeleteCounts() {
+    document.getElementById('del-count-a').innerText = groups.A.deleted.size;
+    document.getElementById('del-count-b').innerText = groups.B.deleted.size;
+}
+
+// =========================================================================
+// 6. ÉCOUTE COMPARÉE A vs B
+// =========================================================================
+function setListenStart(sec) {
+    listenStartSec = sec;
+    document.getElementById('btn-start-0').style.background = sec === 0 ? '#3b82f6' : '#475569';
+    document.getElementById('btn-start-48').style.background = sec === 48 ? '#3b82f6' : '#475569';
+    if (currentPairListen.a !== null) renderListenSlot('A', groups.A.entries[currentPairListen.a]);
+    if (currentPairListen.b !== null) renderListenSlot('B', groups.B.entries[currentPairListen.b]);
+}
+
+function listenPair(idxA, idxB) {
+    currentPairListen = { a: idxA, b: idxB };
+    document.getElementById('listen-dock').style.display = 'block';
+    renderListenSlot('A', groups.A.entries[idxA]);
+    renderListenSlot('B', groups.B.entries[idxB]);
+}
+
+function listenSingle(side, idx) {
+    currentPairListen[side.toLowerCase()] = idx;
+    document.getElementById('listen-dock').style.display = 'block';
+    renderListenSlot(side, groups[side].entries[idx]);
+}
+
+function renderListenSlot(side, entry) {
+    if (!entry) return;
+    const sLower = side.toLowerCase();
+    document.getElementById(`listen-title-${sLower}`).innerText =
+        `[Groupe ${side} #${entry.idx + 1}] ${entry.title}${entry.ytTitle ? ' — ' + entry.ytTitle : ''}`;
+    const box = document.getElementById(`listen-media-${sLower}`);
+
+    if (entry.yt) {
+        box.innerHTML = `<iframe src="https://www.youtube.com/embed/${encodeURIComponent(entry.yt)}?autoplay=1&start=${listenStartSec}&rel=0" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
+    } else if (entry.as) {
+        box.innerHTML = `<video src="${escapeHtml(entry.as)}" controls autoplay onloadedmetadata="this.currentTime=${listenStartSec}"></video>`;
+    } else {
+        box.innerHTML = `<div style="padding:20px; color:#ef4444;">Aucun média</div>`;
+    }
+}
+
+function closeListenDock() {
+    document.getElementById('listen-dock').style.display = 'none';
+    document.getElementById('listen-media-a').innerHTML = '';
+    document.getElementById('listen-media-b').innerHTML = '';
+    currentPairListen = { a: null, b: null };
+}
+
+// =========================================================================
+// 7. EXPORT SÉPARÉ DU GROUPE A OU DU GROUPE B
+// =========================================================================
+function exportCleaned(side) {
+    const g = groups[side];
+    if (!g.raw.length) return;
+    const cleaned = g.raw.filter((_, idx) => !g.deleted.has(idx));
+
+    let out;
+    if (Array.isArray(g.root)) {
+        out = cleaned;
+    } else {
+        out = { ...g.root };
+        if (Array.isArray(g.root.entries)) out.entries = cleaned;
+        else if (Array.isArray(g.root.items)) out.items = cleaned;
+        else if (Array.isArray(g.root.data)) out.data = cleaned;
+    }
+
+    const blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = g.name;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+function escapeHtml(str) {
+    return String(str || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+}
+</script>
+</body>
+</html>
