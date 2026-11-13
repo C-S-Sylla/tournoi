@@ -1921,7 +1921,7 @@ ytTimeout = null;
     }
 
     // ==========================================
-    // CONTRÔLES CLIC VIDÉO + CLAVIER (ESPACE / K)
+    // CONTRÔLES : PETIT CARRÉ AU CENTRE + CLAVIER (ESPACE / K)
     // ==========================================
     // 1. Empêche les lecteurs <video> et <iframe> de voler les clics et le clavier
     ['deck-a', 'deck-b', 'yt-deck-a', 'yt-deck-b'].forEach(id => {
@@ -1929,13 +1929,30 @@ ytTimeout = null;
         if (el) el.style.pointerEvents = 'none';
     });
 
-    // 2. Cliquer n'importe où sur l'écran vidéo met en Pause / Reprend
+    // 2. Crée uniquement un petit carré cliquable de 10px au centre de la vidéo
     const topStageEl = document.getElementById('top-stage');
     if (topStageEl) {
-        topStageEl.style.cursor = 'pointer';
-        topStageEl.addEventListener('click', () => {
+        if (getComputedStyle(topStageEl).position === 'static') {
+            topStageEl.style.position = 'relative';
+        }
+        const centerZone = document.createElement('div');
+        centerZone.id = 'center-pause-zone';
+        centerZone.style.cssText = `
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 70px;
+            height: 70px;
+            z-index: 50;
+            cursor: pointer;
+            background: transparent;
+        `;
+        centerZone.addEventListener('click', (e) => {
+            e.stopPropagation();
             togglePlayPause();
         });
+        topStageEl.appendChild(centerZone);
     }
 
     // 3. Touches Espace et K pour Pause / Reprendre
@@ -1943,12 +1960,11 @@ ytTimeout = null;
         const playerView = document.getElementById('player-view');
         if (!playerView || playerView.style.display === 'none' || playerView.style.display === '') return;
 
-        // Ignore si on tape dans la barre de recherche
         const tag = document.activeElement?.tagName;
         if (tag === 'INPUT' || tag === 'TEXTAREA') return;
 
         if (e.code === 'Space' || e.key.toLowerCase() === 'k') {
-            e.preventDefault(); // Empêche la page de scroller ou de re-cliquer un bouton
+            e.preventDefault();
             if (tag === 'BUTTON') document.activeElement.blur();
             togglePlayPause();
         }
