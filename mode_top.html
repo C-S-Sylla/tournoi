@@ -539,6 +539,30 @@
     const START_OFFSET = 48.0; // Démarre à 48 secondes
     const CLIP_DURATION = 10.0; // 10 secondes
 
+    let ytConfirmInterval = null;
+    let p2Interval = null;
+
+    function clearAllClipTimers() {
+        clearInterval(timerInterval);
+        clearInterval(crossfadeInterval);
+        clearInterval(p2Interval);
+        clearInterval(ytPreloadInterval);
+        clearInterval(ytConfirmInterval);
+        clearTimeout(ytTimeout);
+        clearTimeout(clipTimeout);
+        clearTimeout(fadeTimeout);
+
+        ['deck-a', 'deck-b'].forEach(id => {
+            const v = document.getElementById(id);
+            if (v) {
+                v.ontimeupdate = null;
+                v.onseeked = null;
+                v.onloadedmetadata = null;
+                v.onplaying = null;
+            }
+        });
+    }
+
     let playIndex = 0;
     let isDeckAActive = true;
     let timerInterval = null;
@@ -1048,8 +1072,7 @@ function placeSongInSlot(songIdx, slotIdx) {
         clearTimeout(ytTimeout);
         clearTimeout(clipTimeout);
         timerBar.style.width = '0%';
-        clearInterval(ytPreloadInterval);
-    clearTimeout(fadeTimeout);
+        clearAllClipTimers();
 
         preloadSessionId++; 
 
@@ -1365,8 +1388,8 @@ ytTimeout = null;
         clearInterval(crossfadeInterval);
         clearTimeout(ytTimeout);
         clearTimeout(clipTimeout);
-        clearInterval(ytPreloadInterval);
-    clearTimeout(fadeTimeout);
+        clearAllClipTimers();
+
         timerBar.style.width = '0%';
 
         const currentSong = currentList[playIndex];
@@ -1397,6 +1420,7 @@ ytTimeout = null;
         const nextTrack = () => {
             if (hasSwitched) return;
             hasSwitched = true;
+            clearAllClipTimers();
 
             clearInterval(timerInterval);
             clearInterval(crossfadeInterval);
@@ -1538,14 +1562,16 @@ ytTimeout = null;
                             activeVid.play().catch(() => {});
 
                             let p2Start = Date.now();
-                            const p2Int = setInterval(() => {
+                            clearInterval(p2Interval);
+                            p2Interval = setInterval(() => {
                                 const p2Elapsed = (Date.now() - p2Start) / 1000;
                                 timerBar.style.width = Math.min(((10.0 + p2Elapsed) / 17.0) * 100, 100) + '%';
-                                if (p2Elapsed >= 7.0) clearInterval(p2Int);
+                                if (p2Elapsed >= 7.0) clearInterval(p2Interval);
                             }, 50);
 
                             // 🔥 FONDU 1.5s AVANT LA FIN (GÈRE LE PASSAGE VERS AS OU VERS YOUTUBE !)
                             fadeTimeout = setTimeout(() => {
+                                if (hasSwitched || !nextSong) return;
                                 if (!nextSong) return;
                                 const nextDirect = nextSong.blobUrl || (nextSong.as && nextSong.as.trim()) || (nextSong.url && nextSong.url.trim()) || (nextSong.link && nextSong.link.trim());
 
@@ -1567,9 +1593,11 @@ ytTimeout = null;
                                 else if (nextSong.yt && standbyPlayer) {
                                     standbyPlayer.seekTo(48, true);
                                     standbyPlayer.playVideo();
-                                    let confirmYT = setInterval(() => {
+                                    clearInterval(ytConfirmInterval);
+                                    ytConfirmInterval = setInterval(() => {
+                                        if (hasSwitched) { clearInterval(ytConfirmInterval); return; }
                                         if (standbyPlayer.getPlayerState() === YT.PlayerState.PLAYING) {
-                                            clearInterval(confirmYT);
+                                            clearInterval(ytConfirmInterval);
                                             standbyPlayer.unMute();
                                             standbyPlayer.setVolume(0);
                                             standbyContainer.style.display = 'block';
@@ -1671,9 +1699,11 @@ ytTimeout = null;
                 standbyPlayer.seekTo(48, true);
                 standbyPlayer.playVideo(); // On relance la lecture !
 
-                let confirmCheck = setInterval(() => {
+                clearInterval(ytConfirmInterval);
+                ytConfirmInterval = setInterval(() => {
+                    if (hasSwitched) { clearInterval(ytConfirmInterval); return; }
                     if (standbyPlayer.getPlayerState() === YT.PlayerState.PLAYING) {
-                        clearInterval(confirmCheck);
+                        clearInterval(ytConfirmInterval);
                         standbyPlayer.unMute();
                         standbyPlayer.setVolume(0);
                         standbyContainer.style.zIndex = '3';
@@ -1848,8 +1878,7 @@ ytTimeout = null;
         clearInterval(timerInterval);
         clearInterval(crossfadeInterval);
         clearTimeout(ytTimeout);
-        clearInterval(ytPreloadInterval);
-    clearTimeout(fadeTimeout);
+        clearAllClipTimers();
         clearTimeout(clipTimeout);
         timerBar.style.width = '0%';
 
@@ -1890,6 +1919,40 @@ ytTimeout = null;
         // 5. Lance la lecture
         runClip(currentList);
     }
+
+    // ==========================================
+    // CONTRÔLES CLIC VIDÉO + CLAVIER (ESPACE / K)
+    // ==========================================
+    // 1. Empêche les lecteurs <video> et <iframe> de voler les clics et le clavier
+    ['deck-a', 'deck-b', 'yt-deck-a', 'yt-deck-b'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.pointerEvents = 'none';
+    });
+
+    // 2. Cliquer n'importe où sur l'écran vidéo met en Pause / Reprend
+    const topStageEl = document.getElementById('top-stage');
+    if (topStageEl) {
+        topStageEl.style.cursor = 'pointer';
+        topStageEl.addEventListener('click', () => {
+            togglePlayPause();
+        });
+    }
+
+    // 3. Touches Espace et K pour Pause / Reprendre
+    document.addEventListener('keydown', (e) => {
+        const playerView = document.getElementById('player-view');
+        if (!playerView || playerView.style.display === 'none' || playerView.style.display === '') return;
+
+        // Ignore si on tape dans la barre de recherche
+        const tag = document.activeElement?.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+
+        if (e.code === 'Space' || e.key.toLowerCase() === 'k') {
+            e.preventDefault(); // Empêche la page de scroller ou de re-cliquer un bouton
+            if (tag === 'BUTTON') document.activeElement.blur();
+            togglePlayPause();
+        }
+    });
 </script>
 
 </body>
