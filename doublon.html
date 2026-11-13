@@ -627,6 +627,129 @@ function updateProgress(done, total) {
 // =========================================================================
 // 4. ALGORITHME DE COMPARAISON GROUPE A VS GROUPE B
 // =========================================================================
+// 1) Équivalences Japonais (Kanji / Katakana / Hiragana) -> Nom canonique
+// (Sans \b car \b ne fonctionne pas sur les caractères japonais)
+const JAPANESE_FRANCHISE_MAP = [
+    [/僕のヒーローアカデミア|ヒロアカ/g, " my hero academia "],
+    [/進撃の巨人/g, " attack on titan "],
+    [/鬼滅の刃/g, " demon slayer "],
+    [/葬送のフリーレン/g, " frieren "],
+    [/転生したらスライムだった件|転スラ/g, " tensura "],
+    [/薬屋のひとりごと/g, " apothecary diaries "],
+    [/地獄楽/g, " hells paradise "],
+    [/約束のネバーランド|約ネバ/g, " promised neverland "],
+    [/未来日記/g, " mirai nikki "],
+    [/寄生獣/g, " parasyte "],
+    [/残響のテロル/g, " terror in resonance "],
+    [/天国大魔境/g, " heavenly delusion "],
+    [/[3三]月のライオン/g, " march comes in like a lion "],
+    [/四月は君の嘘/g, " your lie in april "],
+    [/七つの大罪/g, " seven deadly sins "],
+    [/盾の勇者の成り上がり/g, " shield hero "],
+    [/ヴァニタスの手記/g, " vanitas "],
+    [/よふかしのうた/g, " call of the night "],
+    [/その着せ替え人形は恋をする|着せ恋/g, " my dress up darling "],
+    [/可愛いだけじゃない式守さん/g, " shikimori "],
+    [/僕の心のヤバイやつ|僕ヤバ/g, " dangers in my heart "],
+    [/黒子のバスケ/g, " kuroko basketball "],
+    [/青の祓魔師/g, " blue exorcist "],
+    [/るろうに剣心/g, " rurouni kenshin "],
+    [/憂国のモリアーティ/g, " moriarty the patriot "],
+    [/食戟のソーマ/g, " food wars "],
+    [/魔法使いの嫁/g, " ancient magus bride "],
+    [/陰の実力者になりたくて/g, " eminence in shadow "],
+    [/炎炎ノ消防隊/g, " fire force "],
+    [/本好きの下剋上/g, " ascendance of a bookworm "],
+    [/慎重勇者/g, " cautious hero "],
+    [/ダンジョン飯/g, " delicious in dungeon "],
+    [/ようこそ実力至上主義の教室へ|よう実/g, " classroom of the elite "],
+    [/星合の空/g, " stars align "],
+    [/さらい屋五葉/g, " house of five leaves "],
+    [/ダンダダン/g, " dandadan "],
+    [/ハイキュー/g, " haikyuu "],
+    [/文豪ストレイドッグス|文スト/g, " bungo stray dogs "],
+    [/かぐや様は告らせたい/g, " kaguya sama "],
+    [/負けヒロインが多すぎる|マケイン/g, " makeine "],
+    [/小市民シリーズ|小市民/g, " shoshimin "],
+    [/ゼロから始める異世界生活|リゼロ/g, " re zero "],
+    [/ソードアート・オンライン|ソードアートオンライン/g, " sword art online "],
+    [/幽☆遊☆白書|幽遊白書/g, " yu yu hakusho "],
+    [/ハンター×ハンター|ハンターハンター/g, " hunter x hunter "],
+    [/オッドタクシー/g, " oddtaxi "],
+    [/怪獣8号|怪獣８号/g, " kaiju no 8 "],
+    [/鋼の錬金術師/g, " fmab "],
+    [/古見さんは、コミュ症です|古見さん/g, " komi "],
+    [/無職転生/g, " mushoku tensei "],
+    [/ナルト疾風伝|ナルト/g, " naruto shippuden "],
+    [/ボルト/g, " boruto "],
+    [/半妖の夜叉姫/g, " yashahime "],
+    [/犬夜叉/g, " inuyasha "],
+    [/金田一少年の事件簿/g, " kindaichi "],
+    [/地球の運動について/g, " orb movements of earth "],
+    [/君のことが大大大大大好きな100人の彼女|100カノ/g, " 100 girlfriends "],
+    [/現実主義勇者の王国再建記/g, " realist hero "],
+    [/呪術廻戦/g, " jujutsu kaisen "],
+    [/チェンソーマン/g, " chainsaw man "],
+    [/スパイファミリー/g, " spy x family "],
+    [/ぼっち・ざ・ろっく|ぼっちざろっく/g, " bocchi the rock "],
+    [/推しの子/g, " oshi no ko "],
+    [/銀魂/g, " gintama "],
+    [/ブリーチ/g, " bleach "],
+    [/ワンピース/g, " one piece "],
+    [/フェアリーテイル/g, " fairy tail "],
+    [/東京喰種|東京グール/g, " tokyo ghoul "],
+    [/東京リベンジャーズ|東リベ/g, " tokyo revengers "],
+    [/ブラッククローバー|ブラクロ/g, " black clover "],
+    [/ドラゴンボール超/g, " dragon ball super "],
+    [/ドクターストーン/g, " dr stone "],
+    [/ブルーロック/g, " blue lock "],
+    [/シャングリラ・フロンティア|シャンフロ/g, " shangri la frontier "],
+    [/マッシュル/g, " mashle "],
+    [/アンデッドアンラック|アンデラ/g, " undead unluck "],
+    [/俺だけレベルアップな件|俺レベ/g, " solo leveling "],
+    [/ダンジョンに出会いを求めるのは間違っているだろうか|ダンまち/g, " danmachi "],
+    [/からかい上手の高木さん/g, " takagi san "],
+    [/薫る花は凛と咲く/g, " fragrant flower "],
+    [/光が死んだ夏/g, " summer hikaru died "],
+    [/杖と剣のウィストリア/g, " wistoria "],
+    [/治癒魔法の間違った使い方/g, " wrong way to use healing magic "],
+    [/メダリスト/g, " medalist "],
+    [/ガチアクタ/g, " gachiakuta "],
+    [/桃源暗鬼/g, " tougen anki "],
+    [/ウィッチウォッチ/g, " witch watch "],
+    [/サイレント・ウィッチ|沈黙の魔女/g, " silent witch "],
+    [/異国日記/g, " ikoku nikki "],
+    [/時光代理人/g, " link click "],
+    [/メイドインアビス/g, " made in abyss "],
+    [/モブサイコ100/g, " mob psycho 100 "],
+    [/幼女戦記/g, " saga of tanya the evil "],
+    [/オーバーロード/g, " overlord "],
+    [/コードギアス/g, " code geass "],
+    [/エヴァンゲリオン/g, " neon genesis evangelion "],
+    [/天元突破グレンラガン|グレンラガン/g, " gurren lagann "],
+    [/ジョジョの奇妙な冒険/g, " jojo "],
+    [/カウボーイビバップ/g, " cowboy bebop "],
+    [/サムライチャンプルー/g, " samurai champloo "],
+    [/はじめの一歩/g, " hajime no ippo "],
+    [/トライガン/g, " trigun "],
+    [/ベルセルク/g, " berserk "],
+    [/ヴィンランド・サガ|ヴィンランドサガ/g, " vinland saga "],
+    [/ノーゲーム・ノーライフ|ノゲノラ/g, " no game no life "],
+    [/ひぐらしのなく頃に/g, " higurashi "],
+    [/タコピーの原罪/g, " takopi "],
+    [/ゴールデンカムイ/g, " golden kamuy "],
+    [/坂道のアポロン/g, " sakamichi no apollon "],
+    [/クズの本懐/g, " kuzu no honkai "],
+    [/好きっていいなよ/g, " sukitte ii na yo "],
+    [/絶園のテンペスト/g, " zetsuen no tempest "],
+    [/曇天に笑う/g, " donten ni warau "],
+    [/地縛少年花子くん/g, " hanako kun "],
+    [/夏目友人帳/g, " natsume yuujinchou "],
+    [/ダイヤのa/g, " diamond no ace "],
+    [/けいおん/g, " k on "]
+];
+
+// 2) Équivalences Romaji <-> Anglais <-> Diminutifs (avec \b)
 const FRANCHISE_ALIASES = [
     [/\b(boku no hero academia|my hero academia|bnha|mha)\b/g, "my hero academia"],
     [/\b(shingeki no kyojin|attack on titan|aot|snk)\b/g, "attack on titan"],
@@ -685,13 +808,76 @@ const FRANCHISE_ALIASES = [
     [/\b(chi chikyuu no undou ni tsuite|orb on the movements of the earth)\b/g, "orb movements of earth"],
     [/\b(kimi no koto ga daidaidaidaidaisuki na 100 nin no kanojo|100 girlfriends|hyakkano)\b/g, "100 girlfriends"],
     [/\b(genjitsu shugi yuusha no oukoku saikenki|how a realist hero rebuilt the kingdom)\b/g, "realist hero"],
-    [/\b(you and i are complete opposites|you and i are polar opposites)\b/g, "you and i are polar opposites"]
+    [/\b(you and i are complete opposites|you and i are polar opposites)\b/g, "you and i are polar opposites"],
+    // Ajouts Romaji <-> Anglais présents dans ton JSON
+    [/\b(is it wrong to try to pick up girls in a dungeon|danmachi)\b/g, "danmachi"],
+    [/\b(ore dake level up na ken|solo leveling)\b/g, "solo leveling"],
+    [/\b(karakai jouzu no takagi san|teasing master takagi san)\b/g, "takagi san"],
+    [/\b(jibaku shounen hanako kun|toilet bound hanako kun)\b/g, "hanako kun"],
+    [/\b(sakamichi no apollon|kids on the slope)\b/g, "sakamichi no apollon"],
+    [/\b(kuzu no honkai|scum s wish)\b/g, "kuzu no honkai"],
+    [/\b(sukitte ii na yo|say i love you)\b/g, "sukitte ii na yo"],
+    [/\b(zetsuen no tempest|blast of tempest)\b/g, "zetsuen no tempest"],
+    [/\b(donten ni warau|laughing under the clouds)\b/g, "donten ni warau"],
+    [/\b(shoukoku no altair|altair a record of battles)\b/g, "shoukoku no altair"],
+    [/\b(baraou no souretsu|requiem of the rose king)\b/g, "baraou no souretsu"],
+    [/\b(shoujo shuumatsu ryokou|girls last tour)\b/g, "shoujo shuumatsu ryokou"],
+    [/\b(ballroom e youkoso|welcome to the ballroom)\b/g, "ballroom e youkoso"],
+    [/\b(natsume yuujinchou|natsume s book of friends)\b/g, "natsume yuujinchou"],
+    [/\b(sousei no onmyouji|twin star exorcists)\b/g, "twin star exorcists"],
+    [/\b(shingeki no bahamut|rage of bahamut)\b/g, "shingeki no bahamut"],
+    [/\b(diamond no ace|ace of diamond)\b/g, "diamond no ace"],
+    [/\b(tsue to tsurugi no wistoria|wistoria wand and sword|wistoria)\b/g, "wistoria"],
+    [/\b(chiyu mahou no machigatta tsukaikata|the wrong way to use healing magic)\b/g, "wrong way to use healing magic"],
+    [/\b(kaoru hana wa rin to saku|the fragrant flower blooms with dignity)\b/g, "fragrant flower"],
+    [/\b(hikaru ga shinda natsu|the summer hikaru died)\b/g, "summer hikaru died"],
+    [/\b(maou 2099|demon lord 2099)\b/g, "demon lord 2099"],
+    [/\b(kuroshitsuji|black butler)\b/g, "black butler"],
+    [/\b(ao no hako|blue box)\b/g, "blue box"],
+    [/\b(giji harem|pseudo harem)\b/g, "giji harem"],
+    [/\b(eizouken ni wa te wo dasu na|keep your hands off eizouken)\b/g, "eizouken"],
+    [/\b(rikei ga koi ni ochita|science fell in love so i tried to prove it)\b/g, "science fell in love"],
+    [/\b(kyokou suiri|in spectre)\b/g, "in spectre"],
+    [/\b(koisuru asteroid|asteroid in love)\b/g, "asteroid in love"],
+    [/\b(runway de waratte|smile down the runway)\b/g, "runway de waratte"],
+    [/\b(tensai ouji no akaji kokka saisei jutsu|the genius prince s guide)\b/g, "tensai ouji"],
+    [/\b(kenja no deshi wo nanoru kenja|she professed herself pupil of the wise man)\b/g, "kenja no deshi"],
+    [/\b(youkai apartment no yuuga na nichijou|elegant yokai apartment life)\b/g, "youkai apartment"],
+    [/\b(joshikousei no mudazukai|wasteful days of high school girls)\b/g, "joshikousei no mudazukai"],
+    [/\b(araburu kisetsu no otome domo yo|o maidens in your savage season)\b/g, "araburu kisetsu"],
+    [/\b(katainaka no ossan kensei ni naru|from old country bumpkin to master swordsman)\b/g, "katainaka no ossan"],
+    [/\b(super no ura de yani suu futari|smoking behind the supermarket with you)\b/g, "super no ura"],
+    [/\b(takopi s original sin|takopii no genzai)\b/g, "takopi"],
+    [/\b(yomi no tsugai|daemons of the shadow realm)\b/g, "yomi no tsugai"],
+    [/\b(jojo s bizarre adventure|jojo)\b/g, "jojo"],
+    [/\b(neon genesis evangelion|shinseiki evangelion)\b/g, "neon genesis evangelion"],
+    [/\b(tengen toppa gurren lagann|gurren lagann)\b/g, "gurren lagann"]
 ];
+
+function preprocessJapanese(str) {
+    if (!str) return "";
+    let out = str.normalize('NFKC');
+
+    // Marqueurs japonais de saisons, cours, OP/ED
+    out = out
+        .replace(/第\s*(\d+)\s*期/g, " season $1 ")
+        .replace(/(\d+)\s*期/g, " season $1 ")
+        .replace(/第\s*(\d+)\s*クール/g, " cour $1 ")
+        .replace(/(\d+)\s*クール/g, " cour $1 ")
+        .replace(/オープニングテーマ|オープニング主題歌|オープニング/g, " opening ")
+        .replace(/エンディングテーマ|エンディング主題歌|エンディング/g, " ending ")
+        .replace(/ノンクレジット|ノンテロップ/g, " creditless ")
+        .replace(/主題歌/g, " theme ");
+
+    for (const [rx, canonical] of JAPANESE_FRANCHISE_MAP) {
+        out = out.replace(rx, canonical);
+    }
+    return out;
+}
 
 function cleanBaseText(str) {
     if (!str) return "";
-    return str
-        .normalize('NFKC')
+    return preprocessJapanese(str)
         .toLowerCase()
         .replace(/[’'`]/g, "'")
         .replace(/×/g, "x")
@@ -713,12 +899,13 @@ function extractMeta(entry) {
     const combinedRaw = [entry.title, entry.ytTitle].filter(Boolean).join(" | ");
     const ytOrJsonRaw = entry.ytTitle || entry.title;
 
+    // Extrait titres de chansons entre 「...」 / 『...』 / "..." (même courts à partir de 2 caractères en japonais)
     const quotedSongs = [];
-    const quoteRegex = /[「『"“]([^」』"”]{3,45})[」』"”]/g;
+    const quoteRegex = /[「『"“]([^」』"”]{2,45})[」』"”]/g;
     let qm;
     while ((qm = quoteRegex.exec(ytOrJsonRaw)) !== null) {
-        const cleanedQ = cleanBaseText(qm[1]);
-        if (cleanedQ && !/^(op|ed|opening|ending|hd|4k|60fps|creditless|official|tv size)$/.test(cleanedQ)) {
+        const cleanedQ = qm[1].normalize('NFKC').toLowerCase().trim();
+        if (cleanedQ && !/^(op|ed|opening|ending|hd|4k|60fps|creditless|official|tv size|ノンクレジット)$/.test(cleanedQ)) {
             quotedSongs.push(cleanedQ);
         }
     }
@@ -770,6 +957,7 @@ function extractMeta(entry) {
         if (ym) themeNum = parseInt(ym[1], 10);
     }
 
+    // Détection de franchise à la fois sur entry.title ET entry.ytTitle
     let animeClean = romanToArabicInText(cleanBaseText(entry.title))
         .replace(/\b(opening|ending|op|ed)\s*\d*\b/g, " ")
         .replace(/\b(season|saison|part|cour|ep|episode)\s*\d*\b/g, " ")
@@ -781,13 +969,33 @@ function extractMeta(entry) {
     for (const [rx, canonical] of FRANCHISE_ALIASES) {
         animeClean = animeClean.replace(rx, canonical);
     }
+
+    let matchedCanonical = null;
+    const combinedForFranchise = romanToArabicInText(cleanBaseText(combinedRaw));
     for (const [, canonical] of FRANCHISE_ALIASES) {
-        if (animeClean.startsWith(canonical + " ") || animeClean.includes(" " + canonical + " ")) {
-            animeClean = canonical;
+        if (
+            animeClean === canonical ||
+            animeClean.startsWith(canonical + " ") ||
+            animeClean.includes(" " + canonical + " ")
+        ) {
+            matchedCanonical = canonical;
             break;
         }
     }
-    const franchise = animeClean
+    if (!matchedCanonical && entry.ytTitle) {
+        let ytForFranchise = combinedForFranchise;
+        for (const [rx, canonical] of FRANCHISE_ALIASES) {
+            ytForFranchise = ytForFranchise.replace(rx, canonical);
+        }
+        for (const [, canonical] of FRANCHISE_ALIASES) {
+            if (ytForFranchise.includes(canonical)) {
+                matchedCanonical = canonical;
+                break;
+            }
+        }
+    }
+
+    const franchise = (matchedCanonical || animeClean)
         .replace(/\b(yuukaku hen|entertainment district|thousand year blood war|war of underworld|to the top|science future|new world|final season|the final|2|3|4|5)\b/g, "")
         .replace(/\s+/g, " ")
         .trim();
@@ -842,6 +1050,14 @@ function runComparison() {
             }
             if (a.as && b.as && a.as === b.as) {
                 detectedPairs.push({ level: 'exact', score: 100, reason: `🔴 Même lien AS (${a.as})`, a, b });
+                continue;
+            }
+            // Règle : deux vidéos YT différentes de la même chaîne = pas un doublon
+            if (
+                a.yt && b.yt && a.yt !== b.yt &&
+                a.ytAuthor && b.ytAuthor &&
+                a.ytAuthor.trim().toLowerCase() === b.ytAuthor.trim().toLowerCase()
+            ) {
                 continue;
             }
 
@@ -996,7 +1212,9 @@ function renderResults() {
 function renderEntryBox(e, side, isDel) {
     const mediaTag = e.yt ? `<span class="tag">YT: ${escapeHtml(e.yt)}</span>` : `<span class="tag">AS</span>`;
     const ytText = e.yt
-        ? (e.ytTitle ? `<div class="yt-real">📺 YT : ${escapeHtml(e.ytTitle)}</div>` : `<div class="muted">📺 Titre YT non encore scanné</div>`)
+        ? (e.ytTitle
+            ? `<div class="yt-real">📺 YT : ${escapeHtml(e.ytTitle)}</div>${e.ytAuthor ? `<div class="muted" style="font-size:0.78rem;">👤 Chaîne : ${escapeHtml(e.ytAuthor)}</div>` : ''}`
+            : `<div class="muted">📺 Titre YT non encore scanné</div>`)
         : `<div class="muted" style="word-break:break-all;">🎞️ ${escapeHtml(e.as)}</div>`;
 
     return `
