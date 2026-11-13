@@ -388,6 +388,7 @@
             presetSeasons.filter(s => !s.id.startsWith('male_vs_female')).forEach(season => {
                 select.add(new Option(season.name, season.id));
             });
+            select.add(new Option("Uploader votre fichier JSON", "custom"));
         } 
         else if (mode === 'YEARS') {
             singleGroup.style.display = 'none';
