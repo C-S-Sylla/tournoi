@@ -1425,6 +1425,9 @@ ytTimeout = null;
             clearInterval(timerInterval);
             clearInterval(crossfadeInterval);
 
+            // Nettoie le redémarrage en boucle avant de passer au suivant (ou de laisser le Top 1 finir)
+            if (activeVid) activeVid.onended = null;
+
             // 🔥 SI ON VIENT DE FINIR LE DERNIER MORCEAU (LE TOP 1) :
             // ON NE COUPE PAS LA MUSIQUE ! On la laisse jouer jusqu'à sa fin naturelle !
             if (playIndex >= currentList.length - 1) {
@@ -1435,7 +1438,6 @@ ytTimeout = null;
 
             // Pour tous les autres rangs (10, 9, 8...), on coupe normalement
             if (isDirect) {
-
                 activeVid.pause();
                 activeVid.ontimeupdate = null;
             } else if (activePlayer && typeof activePlayer.pauseVideo === 'function') {
@@ -1452,11 +1454,11 @@ ytTimeout = null;
         // =====================================================================
         if (isDirect) {
             console.log(`🎬 [RUNCLIP #${playIndex}] "${currentSong.title}" -> Source utilisée : ${currentSong.blobUrl ? '⚡ BLOB EN RAM (instantané)' : '🌐 URL INTERNET (pas encore préchargé)'}`);
-             if (!currentSong.blobUrl && preloadAbortMap.has(currentSong)) {
+            if (!currentSong.blobUrl && preloadAbortMap.has(currentSong)) {
                 console.log(`⚡ [Bande passante] Annule le fetch de "${currentSong.title}" pour laisser 100% du débit au lecteur !`);
                 preloadAbortMap.get(currentSong).abort();
             }
-            // Cache la platine YouTube précédente mais laisse la platine de secours prête
+
             if (activeContainer) activeContainer.style.display = 'none';
             if (standbyContainer) {
                 standbyContainer.style.display = 'block';
@@ -1503,11 +1505,9 @@ ytTimeout = null;
             activeVid.play().catch(() => {});
 
             // Préchargement du suivant
-            // --- PRÉCHARGEMENT UNIVERSEL DU SUIVANT SOUS LE FICHIER AS ---
             if (nextSong) {
                 const nextDirect = nextSong.blobUrl || (nextSong.as && nextSong.as.trim()) || (nextSong.url && nextSong.url.trim()) || (nextSong.link && nextSong.link.trim());
                 
-                // Si le suivant est un AS : on prépare la platine vidéo directe
                 if (nextDirect) {
                     console.log(`⏭️ [STANDBY #${playIndex + 1}] Prépare "${nextSong.title}" via : ${nextSong.blobUrl ? '⚡ BLOB EN RAM' : '🌐 URL INTERNET'}`);
                     standbyVid.dataset.songIndex = String(playIndex + 1);
@@ -1519,9 +1519,7 @@ ytTimeout = null;
                         console.log(`🎯 [STANDBY #${playIndex + 1}] Calé à ${START_OFFSET}s : "${nextSong.title}"`);
                     };
                     standbyVid.load();
-                }
-                // 🔥 SI LE SUIVANT EST UN YOUTUBE : On le précharge en sous-marin sous le WebM !
-                else if (nextSong.yt && standbyPlayer && typeof standbyPlayer.loadVideoById === 'function') {
+                } else if (nextSong.yt && standbyPlayer && typeof standbyPlayer.loadVideoById === 'function') {
                     standbyPlayer.mute();
                     standbyPlayer.loadVideoById({ videoId: nextSong.yt, startSeconds: 48 });
                     clearInterval(ytPreloadInterval);
@@ -1539,6 +1537,17 @@ ytTimeout = null;
 
             let clipStart = null;
             let phase = 1;
+
+            // 🔥 SÉCURITÉ : Si le fichier WebM finit (ex: 1min17), on le redémarre instantanément à 0s !
+            activeVid.onended = () => {
+                if (hasSwitched) return;
+                console.log(`🔄 [REBOOT AS] Fin du fichier atteinte pour "${currentSong.title}" -> Redémarrage instant à 0s !`);
+                if (phase === 1 && clipStart !== null) {
+                    clipStart = -(activeVid.duration - clipStart);
+                }
+                activeVid.currentTime = 0;
+                activeVid.play().catch(() => {});
+            };
 
             activeVid.ontimeupdate = () => {
                 if (phase === "loading" || activeVid.paused || activeVid.seeking) return;
@@ -1569,13 +1578,11 @@ ytTimeout = null;
                                 if (p2Elapsed >= 7.0) clearInterval(p2Interval);
                             }, 50);
 
-                            // 🔥 FONDU 1.5s AVANT LA FIN (GÈRE LE PASSAGE VERS AS OU VERS YOUTUBE !)
+                            // 🔥 FONDU 1.5s AVANT LA FIN
                             fadeTimeout = setTimeout(() => {
                                 if (hasSwitched || !nextSong) return;
-                                if (!nextSong) return;
                                 const nextDirect = nextSong.blobUrl || (nextSong.as && nextSong.as.trim()) || (nextSong.url && nextSong.url.trim()) || (nextSong.link && nextSong.link.trim());
 
-                                // A. Si le suivant est un AS : fondu WebM ➔ WebM
                                 if (nextDirect && standbyVid.src) {
                                     standbyVid.play().catch(() => {});
                                     standbyVid.style.zIndex = '3';
@@ -1588,9 +1595,7 @@ ytTimeout = null;
                                         standbyVid.volume = Math.min(1.0, p);
                                         if (step >= 15) clearInterval(crossfadeInterval);
                                     }, 100);
-                                }
-                                // B. 🔥 Si le suivant est un YOUTUBE : fondu WebM ➔ YouTube !
-                                else if (nextSong.yt && standbyPlayer) {
+                                } else if (nextSong.yt && standbyPlayer) {
                                     standbyPlayer.seekTo(48, true);
                                     standbyPlayer.playVideo();
                                     clearInterval(ytConfirmInterval);
@@ -1608,8 +1613,8 @@ ytTimeout = null;
                                             crossfadeInterval = setInterval(() => {
                                                 step++;
                                                 let p = step / 15;
-                                                activeVid.volume = Math.max(0.25, 1.0 - (p * 0.75)); // Baisse le WebM
-                                                standbyPlayer.setVolume(Math.floor(p * 100));        // Monte YouTube
+                                                activeVid.volume = Math.max(0.25, 1.0 - (p * 0.75));
+                                                standbyPlayer.setVolume(Math.floor(p * 100));
                                                 if (step >= 15) clearInterval(crossfadeInterval);
                                             }, 100);
                                         }
@@ -1617,7 +1622,6 @@ ytTimeout = null;
                                 }
                             }, 5500);
 
-                            // Fin exacte à 7 secondes de refrain (10s + 7s = 17s)
                             clipTimeout = setTimeout(() => {
                                 nextTrack();
                             }, 7000);
@@ -1629,7 +1633,7 @@ ytTimeout = null;
         }
 
         // =====================================================================
-        // CAS 2 : YOUTUBE (AVEC RELANCE DE LECTURE RÉTABLIE !)
+        // CAS 2 : YOUTUBE (AVEC REDÉMARRAGE INSTANTANÉ À LA FIN DE LA VIDÉO)
         // =====================================================================
         if (activeVid) { activeVid.style.display = 'none'; activeVid.pause(); }
         if (standbyVid) { standbyVid.style.display = 'none'; standbyVid.pause(); }
@@ -1672,9 +1676,23 @@ ytTimeout = null;
         let totalElapsed = 0;
         let hasJumpedRefrain = false;
         let transitionStarted = false;
+        let lastYtRestart = 0;
 
         timerInterval = setInterval(() => {
-            if (!activePlayer || typeof activePlayer.getPlayerState !== 'function' || activePlayer.getPlayerState() !== YT.PlayerState.PLAYING) {
+            if (!activePlayer || typeof activePlayer.getPlayerState !== 'function') return;
+
+            const state = activePlayer.getPlayerState();
+
+            // 🔥 SI LA VIDÉO FINIT (ex: 1min17 -> ENDED) : ON LA REDÉMARRE INSTANTANÉMENT À 0s !
+            if (state === YT.PlayerState.ENDED && (Date.now() - lastYtRestart > 1000)) {
+                lastYtRestart = Date.now();
+                console.log(`🔄 [REBOOT YT] Fin atteinte pour "${currentSong.title}" -> Redémarrage instant à 0s !`);
+                activePlayer.seekTo(0, true);
+                activePlayer.playVideo();
+            }
+
+            // Pendant le fondu (transitionStarted = true), la barre ne doit JAMAIS s'arrêter même si la vidéo finissante redémarre !
+            if (state !== YT.PlayerState.PLAYING && !transitionStarted) {
                 return;
             }
 
@@ -1690,14 +1708,13 @@ ytTimeout = null;
                 activePlayer.seekTo(71, true);
             }
 
-            // B. 🔥 LE SECRET CORRIGÉ : DÉMARRAGE EFFECTIF DE LA VIDÉO À 15.5s (-1.5s avant la fin)
+            // B. Fondu à 15.5s (-1.5s avant la fin)
             if (totalElapsed >= 15.5 && !transitionStarted && nextSong && nextSong.yt && !nextSong.as) {
                 transitionStarted = true;
                 console.log("🔥 [FONDU 1.5s] Démarrage effectif du lecteur B en superposition !");
 
-                // 👉 C'ÉTAIT CES LIGNES QUI MANQUAIENT :
                 standbyPlayer.seekTo(48, true);
-                standbyPlayer.playVideo(); // On relance la lecture !
+                standbyPlayer.playVideo();
 
                 clearInterval(ytConfirmInterval);
                 ytConfirmInterval = setInterval(() => {
@@ -1709,13 +1726,12 @@ ytTimeout = null;
                         standbyContainer.style.zIndex = '3';
                         standbyContainer.style.opacity = '1';
 
-                        // Fondu sur 1.5s (15 étapes de 100ms)
                         let step = 0;
                         crossfadeInterval = setInterval(() => {
                             step++;
                             let progress = step / 15;
-                            activePlayer.setVolume(Math.floor(100 - (progress * 75))); // descend à 25%
-                            standbyPlayer.setVolume(Math.floor(progress * 100)); // monte à 100%
+                            activePlayer.setVolume(Math.floor(100 - (progress * 75)));
+                            standbyPlayer.setVolume(Math.floor(progress * 100));
                             if (step >= 15) clearInterval(crossfadeInterval);
                         }, 100);
                     }
