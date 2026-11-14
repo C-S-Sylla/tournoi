@@ -1376,6 +1376,13 @@ ytTimeout = null;
     // =========================================================================
     // MOTEUR COORDONNÉ 17s : 12s D'EXTRAIT + 5s DE REFRAIN + 2s DE FONDU
     // =========================================================================
+    function getSafeRefrainTime(dur) {
+        if (!dur || isNaN(dur) || dur <= 0) return 71.0;
+        if (dur >= 79.0) return 71.0;
+        if (dur >= 66.0) return Math.max(58.0, dur - 8.5);
+        return 0.0;
+    }
+
     function runClip(playlist) {
         const currentList = playlist || activePlaylist;
         if (!currentList || playIndex >= currentList.length) {
@@ -1416,6 +1423,11 @@ ytTimeout = null;
         const activePlayer = isDeckAActive ? ytPlayerA : ytPlayerB;
         const standbyPlayer = isDeckAActive ? ytPlayerB : ytPlayerA;
 
+        if (activeVid) { activeVid.onended = null; activeVid.onseeked = null; activeVid.ontimeupdate = null; activeVid.style.transition = 'none'; }
+        if (standbyVid) { standbyVid.onended = null; standbyVid.onseeked = null; standbyVid.ontimeupdate = null; standbyVid.style.transition = 'none'; }
+        if (activeContainer) activeContainer.style.transition = 'none';
+        if (standbyContainer) standbyContainer.style.transition = 'none';
+
         let hasSwitched = false;
         const nextTrack = () => {
             if (hasSwitched) return;
@@ -1425,21 +1437,20 @@ ytTimeout = null;
             clearInterval(timerInterval);
             clearInterval(crossfadeInterval);
 
-            // Nettoie le redémarrage en boucle avant de passer au suivant (ou de laisser le Top 1 finir)
-            if (activeVid) activeVid.onended = null;
+            if (activeVid) {
+                activeVid.onended = null;
+                activeVid.onseeked = null;
+                activeVid.ontimeupdate = null;
+            }
 
-            // 🔥 SI ON VIENT DE FINIR LE DERNIER MORCEAU (LE TOP 1) :
-            // ON NE COUPE PAS LA MUSIQUE ! On la laisse jouer jusqu'à sa fin naturelle !
             if (playIndex >= currentList.length - 1) {
                 playIndex++;
                 endFinalVideo();
                 return;
             }
 
-            // Pour tous les autres rangs (10, 9, 8...), on coupe normalement
             if (isDirect) {
                 activeVid.pause();
-                activeVid.ontimeupdate = null;
             } else if (activePlayer && typeof activePlayer.pauseVideo === 'function') {
                 activePlayer.pauseVideo();
             }
@@ -1453,9 +1464,8 @@ ytTimeout = null;
         // CAS 1 : ANISONGDB (FICHIER DIRECT MP4 / WEBM)
         // =====================================================================
         if (isDirect) {
-            console.log(`🎬 [RUNCLIP #${playIndex}] "${currentSong.title}" -> Source utilisée : ${currentSong.blobUrl ? '⚡ BLOB EN RAM (instantané)' : '🌐 URL INTERNET (pas encore préchargé)'}`);
+            console.log(`🎬 [RUNCLIP #${playIndex}] "${currentSong.title}" -> Source : ${currentSong.blobUrl ? '⚡ BLOB RAM' : '🌐 URL'}`);
             if (!currentSong.blobUrl && preloadAbortMap.has(currentSong)) {
-                console.log(`⚡ [Bande passante] Annule le fetch de "${currentSong.title}" pour laisser 100% du débit au lecteur !`);
                 preloadAbortMap.get(currentSong).abort();
             }
 
@@ -1482,41 +1492,34 @@ ytTimeout = null;
             const alreadyPlayingThisTrack =
                 activeVid.dataset.songIndex === String(playIndex) && !activeVid.paused;
 
-            if (!alreadyPlayingThisTrack && activeVid.src !== directUrl) {
-                activeVid.src = directUrl;
-                activeVid.load();
+            // 🔥 NE RECALE À 48s QUE SI CE MORCEAU N'ÉTAIT PAS DÉJÀ LANCÉ PAR LE FONDU !
+            if (!alreadyPlayingThisTrack) {
+                if (activeVid.src !== directUrl) {
+                    activeVid.src = directUrl;
+                    activeVid.load();
+                }
+                if (activeVid.readyState >= 1) {
+                    activeVid.currentTime = START_OFFSET;
+                } else {
+                    activeVid.onloadedmetadata = () => {
+                        activeVid.onloadedmetadata = null;
+                        activeVid.currentTime = START_OFFSET;
+                    };
+                }
+                activeVid.play().catch(() => {});
             }
             activeVid.dataset.songIndex = String(playIndex);
-
-            if (activeVid.readyState >= 1) {
-                activeVid.currentTime = START_OFFSET;
-            } else {
-                activeVid.onloadedmetadata = () => {
-                    activeVid.onloadedmetadata = null;
-                    activeVid.currentTime = START_OFFSET;
-                };
-            }
-
-            const playWaitStart = performance.now();
-            activeVid.onplaying = () => {
-                activeVid.onplaying = null;
-                console.log(`▶️ [PLAY #${playIndex}] Démarré en ${((performance.now() - playWaitStart)/1000).toFixed(2)}s : "${currentSong.title}"`);
-            };
-            activeVid.play().catch(() => {});
 
             // Préchargement du suivant
             if (nextSong) {
                 const nextDirect = nextSong.blobUrl || (nextSong.as && nextSong.as.trim()) || (nextSong.url && nextSong.url.trim()) || (nextSong.link && nextSong.link.trim());
-                
                 if (nextDirect) {
-                    console.log(`⏭️ [STANDBY #${playIndex + 1}] Prépare "${nextSong.title}" via : ${nextSong.blobUrl ? '⚡ BLOB EN RAM' : '🌐 URL INTERNET'}`);
                     standbyVid.dataset.songIndex = String(playIndex + 1);
                     standbyVid.src = nextDirect;
                     standbyVid.volume = 0;
                     standbyVid.onloadedmetadata = () => {
                         standbyVid.onloadedmetadata = null;
                         standbyVid.currentTime = START_OFFSET;
-                        console.log(`🎯 [STANDBY #${playIndex + 1}] Calé à ${START_OFFSET}s : "${nextSong.title}"`);
                     };
                     standbyVid.load();
                 } else if (nextSong.yt && standbyPlayer && typeof standbyPlayer.loadVideoById === 'function') {
@@ -1529,7 +1532,6 @@ ytTimeout = null;
                             clearInterval(ytPreloadInterval);
                             standbyPlayer.pauseVideo();
                             standbyPlayer.seekTo(48, true);
-                            console.log("🔒 [AS ➔ YT] YouTube préchargé sous le WebM sans écran noir !");
                         }
                     }, 50);
                 }
@@ -1538,10 +1540,74 @@ ytTimeout = null;
             let clipStart = null;
             let phase = 1;
 
-            // 🔥 SÉCURITÉ : Si le fichier WebM finit (ex: 1min17), on le redémarre instantanément à 0s !
+            const startPhase2AS = () => {
+                activeVid.onseeked = null;
+                phase = 2;
+                activeVid.play().catch(() => {});
+
+                let p2Start = Date.now();
+                clearInterval(p2Interval);
+                p2Interval = setInterval(() => {
+                    const p2Elapsed = (Date.now() - p2Start) / 1000;
+                    timerBar.style.width = Math.min(((10.0 + p2Elapsed) / 17.0) * 100, 100) + '%';
+                    if (p2Elapsed >= 7.0) clearInterval(p2Interval);
+                }, 50);
+
+                // FONDU TRANSPARENT 1.5s AVANT LA FIN
+                fadeTimeout = setTimeout(() => {
+                    if (hasSwitched || !nextSong) return;
+                    const nextDirect = nextSong.blobUrl || (nextSong.as && nextSong.as.trim()) || (nextSong.url && nextSong.url.trim()) || (nextSong.link && nextSong.link.trim());
+
+                    if (nextDirect && standbyVid.src) {
+                        standbyVid.style.transition = 'opacity 0.1s linear';
+                        standbyVid.style.opacity = '0';
+                        standbyVid.style.zIndex = '3';
+                        standbyVid.play().catch(() => {});
+                        let step = 0;
+                        crossfadeInterval = setInterval(() => {
+                            step++;
+                            let p = step / 15;
+                            standbyVid.style.opacity = String(p); // 🔥 VRAIE TRANSPARENCE PROGRESSIVE 0 ➔ 1
+                            activeVid.volume = Math.max(0.25, 1.0 - (p * 0.75));
+                            standbyVid.volume = Math.min(1.0, p);
+                            if (step >= 15) clearInterval(crossfadeInterval);
+                        }, 100);
+                    } else if (nextSong.yt && standbyPlayer) {
+                        standbyPlayer.seekTo(48, true);
+                        standbyPlayer.playVideo();
+                        clearInterval(ytConfirmInterval);
+                        ytConfirmInterval = setInterval(() => {
+                            if (hasSwitched) { clearInterval(ytConfirmInterval); return; }
+                            if (standbyPlayer.getPlayerState() === YT.PlayerState.PLAYING) {
+                                clearInterval(ytConfirmInterval);
+                                standbyPlayer.unMute();
+                                standbyPlayer.setVolume(0);
+                                standbyContainer.style.transition = 'opacity 0.1s linear';
+                                standbyContainer.style.opacity = '0';
+                                standbyContainer.style.display = 'block';
+                                standbyContainer.style.zIndex = '3';
+
+                                let step = 0;
+                                crossfadeInterval = setInterval(() => {
+                                    step++;
+                                    let p = step / 15;
+                                    standbyContainer.style.opacity = String(p); // 🔥 TRANSPARENCE PROGRESSIVE
+                                    activeVid.volume = Math.max(0.25, 1.0 - (p * 0.75));
+                                    standbyPlayer.setVolume(Math.floor(p * 100));
+                                    if (step >= 15) clearInterval(crossfadeInterval);
+                                }, 100);
+                            }
+                        }, 50);
+                    }
+                }, 5500);
+
+                clipTimeout = setTimeout(() => {
+                    nextTrack();
+                }, 7000);
+            };
+
             activeVid.onended = () => {
                 if (hasSwitched) return;
-                console.log(`🔄 [REBOOT AS] Fin du fichier atteinte pour "${currentSong.title}" -> Redémarrage instant à 0s !`);
                 if (phase === 1 && clipStart !== null) {
                     clipStart = -(activeVid.duration - clipStart);
                 }
@@ -1556,76 +1622,20 @@ ytTimeout = null;
 
                 const elapsed = activeVid.currentTime - clipStart;
 
-                // PHASE 1 : Extrait de 10 secondes (atteint 58.8% à 10s)
                 if (phase === 1) {
                     timerBar.style.width = Math.min((elapsed / 17.0) * 100, 58.8) + '%';
 
                     if (elapsed >= 10.0) {
                         phase = "loading";
                         timerBar.style.width = '58.8%';
-                        activeVid.currentTime = 71.0; // Saut au refrain (1:11)
+                        const targetJump = getSafeRefrainTime(activeVid.duration);
 
-                        activeVid.onseeked = () => {
-                            activeVid.onseeked = null;
-                            phase = 2;
-                            activeVid.play().catch(() => {});
-
-                            let p2Start = Date.now();
-                            clearInterval(p2Interval);
-                            p2Interval = setInterval(() => {
-                                const p2Elapsed = (Date.now() - p2Start) / 1000;
-                                timerBar.style.width = Math.min(((10.0 + p2Elapsed) / 17.0) * 100, 100) + '%';
-                                if (p2Elapsed >= 7.0) clearInterval(p2Interval);
-                            }, 50);
-
-                            // 🔥 FONDU 1.5s AVANT LA FIN
-                            fadeTimeout = setTimeout(() => {
-                                if (hasSwitched || !nextSong) return;
-                                const nextDirect = nextSong.blobUrl || (nextSong.as && nextSong.as.trim()) || (nextSong.url && nextSong.url.trim()) || (nextSong.link && nextSong.link.trim());
-
-                                if (nextDirect && standbyVid.src) {
-                                    standbyVid.play().catch(() => {});
-                                    standbyVid.style.zIndex = '3';
-                                    standbyVid.style.opacity = '1';
-                                    let step = 0;
-                                    crossfadeInterval = setInterval(() => {
-                                        step++;
-                                        let p = step / 15;
-                                        activeVid.volume = Math.max(0.25, 1.0 - (p * 0.75));
-                                        standbyVid.volume = Math.min(1.0, p);
-                                        if (step >= 15) clearInterval(crossfadeInterval);
-                                    }, 100);
-                                } else if (nextSong.yt && standbyPlayer) {
-                                    standbyPlayer.seekTo(48, true);
-                                    standbyPlayer.playVideo();
-                                    clearInterval(ytConfirmInterval);
-                                    ytConfirmInterval = setInterval(() => {
-                                        if (hasSwitched) { clearInterval(ytConfirmInterval); return; }
-                                        if (standbyPlayer.getPlayerState() === YT.PlayerState.PLAYING) {
-                                            clearInterval(ytConfirmInterval);
-                                            standbyPlayer.unMute();
-                                            standbyPlayer.setVolume(0);
-                                            standbyContainer.style.display = 'block';
-                                            standbyContainer.style.zIndex = '3';
-                                            standbyContainer.style.opacity = '1';
-
-                                            let step = 0;
-                                            crossfadeInterval = setInterval(() => {
-                                                step++;
-                                                let p = step / 15;
-                                                activeVid.volume = Math.max(0.25, 1.0 - (p * 0.75));
-                                                standbyPlayer.setVolume(Math.floor(p * 100));
-                                                if (step >= 15) clearInterval(crossfadeInterval);
-                                            }, 100);
-                                        }
-                                    }, 50);
-                                }
-                            }, 5500);
-
-                            clipTimeout = setTimeout(() => {
-                                nextTrack();
-                            }, 7000);
-                        };
+                        if (Math.abs(targetJump - activeVid.currentTime) < 1.0) {
+                            startPhase2AS();
+                        } else {
+                            activeVid.currentTime = targetJump;
+                            activeVid.onseeked = startPhase2AS;
+                        }
                     }
                 }
             };
@@ -1633,7 +1643,7 @@ ytTimeout = null;
         }
 
         // =====================================================================
-        // CAS 2 : YOUTUBE (AVEC REDÉMARRAGE INSTANTANÉ À LA FIN DE LA VIDÉO)
+        // CAS 2 : YOUTUBE
         // =====================================================================
         if (activeVid) { activeVid.style.display = 'none'; activeVid.pause(); }
         if (standbyVid) { standbyVid.style.display = 'none'; standbyVid.pause(); }
@@ -1655,90 +1665,119 @@ ytTimeout = null;
             }
         }
 
-        // Préchargement en sourdine du suivant
-        if (nextSong && nextSong.yt && !nextSong.as && standbyPlayer && typeof standbyPlayer.loadVideoById === 'function') {
-            standbyPlayer.mute();
-            standbyPlayer.loadVideoById({ videoId: nextSong.yt, startSeconds: 48 });
-
-            clearInterval(ytPreloadInterval);
-            ytPreloadInterval = setInterval(() => {
+        if (nextSong) {
+            const nextDirect = nextSong.blobUrl || (nextSong.as && nextSong.as.trim()) || (nextSong.url && nextSong.url.trim()) || (nextSong.link && nextSong.link.trim());
+            if (nextDirect) {
+                standbyVid.dataset.songIndex = String(playIndex + 1);
+                standbyVid.src = nextDirect;
+                standbyVid.volume = 0;
+                standbyVid.onloadedmetadata = () => {
+                    standbyVid.onloadedmetadata = null;
+                    standbyVid.currentTime = START_OFFSET;
+                };
+                standbyVid.load();
+            } else if (nextSong.yt && standbyPlayer && typeof standbyPlayer.loadVideoById === 'function') {
                 standbyPlayer.mute();
-                if (standbyPlayer.getPlayerState() === YT.PlayerState.PLAYING) {
-                    clearInterval(ytPreloadInterval);
-                    standbyPlayer.pauseVideo();
-                    standbyPlayer.seekTo(48, true);
-                    console.log("✅ [STANDBY] Clip suivant calé à 48s !");
-                }
-            }, 50);
+                standbyPlayer.loadVideoById({ videoId: nextSong.yt, startSeconds: 48 });
+
+                clearInterval(ytPreloadInterval);
+                ytPreloadInterval = setInterval(() => {
+                    standbyPlayer.mute();
+                    if (standbyPlayer.getPlayerState() === YT.PlayerState.PLAYING) {
+                        clearInterval(ytPreloadInterval);
+                        standbyPlayer.pauseVideo();
+                        standbyPlayer.seekTo(48, true);
+                    }
+                }, 50);
+            }
         }
 
-        // CHRONOMÈTRE MAÎTRE (10s + 7s = 17s)
         let totalElapsed = 0;
         let hasJumpedRefrain = false;
         let transitionStarted = false;
-        let lastYtRestart = 0;
+        let ytRestartLock = false;
 
         timerInterval = setInterval(() => {
             if (!activePlayer || typeof activePlayer.getPlayerState !== 'function') return;
 
             const state = activePlayer.getPlayerState();
 
-            // 🔥 SI LA VIDÉO FINIT (ex: 1min17 -> ENDED) : ON LA REDÉMARRE INSTANTANÉMENT À 0s !
-            if (state === YT.PlayerState.ENDED && (Date.now() - lastYtRestart > 1000)) {
-                lastYtRestart = Date.now();
-                console.log(`🔄 [REBOOT YT] Fin atteinte pour "${currentSong.title}" -> Redémarrage instant à 0s !`);
+            if (state === YT.PlayerState.PLAYING) {
+                ytRestartLock = false;
+            }
+
+            if (state === YT.PlayerState.ENDED && !ytRestartLock) {
+                ytRestartLock = true;
                 activePlayer.seekTo(0, true);
                 activePlayer.playVideo();
             }
 
-            // Pendant le fondu (transitionStarted = true), la barre ne doit JAMAIS s'arrêter même si la vidéo finissante redémarre !
             if (state !== YT.PlayerState.PLAYING && !transitionStarted) {
                 return;
             }
 
             totalElapsed += 0.05;
 
-            // Barre de progression fluide de 0 à 17s
             let pct = Math.min((totalElapsed / 17.0) * 100, 100);
             timerBar.style.width = pct + '%';
 
-            // A. Saut au refrain à 10.0s
             if (totalElapsed >= 10.0 && !hasJumpedRefrain) {
                 hasJumpedRefrain = true;
-                activePlayer.seekTo(71, true);
+                const dur = activePlayer.getDuration ? activePlayer.getDuration() : 999;
+                const targetJump = getSafeRefrainTime(dur);
+                if (targetJump === 0.0 || targetJump >= 66.0) {
+                    activePlayer.seekTo(targetJump, true);
+                }
             }
 
-            // B. Fondu à 15.5s (-1.5s avant la fin)
-            if (totalElapsed >= 15.5 && !transitionStarted && nextSong && nextSong.yt && !nextSong.as) {
+            if (totalElapsed >= 15.5 && !transitionStarted && nextSong) {
                 transitionStarted = true;
-                console.log("🔥 [FONDU 1.5s] Démarrage effectif du lecteur B en superposition !");
+                const nextDirect = nextSong.blobUrl || (nextSong.as && nextSong.as.trim()) || (nextSong.url && nextSong.url.trim()) || (nextSong.link && nextSong.link.trim());
 
-                standbyPlayer.seekTo(48, true);
-                standbyPlayer.playVideo();
+                if (nextDirect && standbyVid.src) {
+                    standbyVid.style.transition = 'opacity 0.1s linear';
+                    standbyVid.style.opacity = '0';
+                    standbyVid.style.display = 'block';
+                    standbyVid.style.zIndex = '3';
+                    standbyVid.play().catch(() => {});
+                    let step = 0;
+                    crossfadeInterval = setInterval(() => {
+                        step++;
+                        let p = step / 15;
+                        standbyVid.style.opacity = String(p); // 🔥 TRANSPARENCE PROGRESSIVE
+                        activePlayer.setVolume(Math.floor(100 - (p * 75)));
+                        standbyVid.volume = Math.min(1.0, p);
+                        if (step >= 15) clearInterval(crossfadeInterval);
+                    }, 100);
+                } else if (nextSong.yt && standbyPlayer) {
+                    standbyPlayer.seekTo(48, true);
+                    standbyPlayer.playVideo();
 
-                clearInterval(ytConfirmInterval);
-                ytConfirmInterval = setInterval(() => {
-                    if (hasSwitched) { clearInterval(ytConfirmInterval); return; }
-                    if (standbyPlayer.getPlayerState() === YT.PlayerState.PLAYING) {
-                        clearInterval(ytConfirmInterval);
-                        standbyPlayer.unMute();
-                        standbyPlayer.setVolume(0);
-                        standbyContainer.style.zIndex = '3';
-                        standbyContainer.style.opacity = '1';
+                    clearInterval(ytConfirmInterval);
+                    ytConfirmInterval = setInterval(() => {
+                        if (hasSwitched) { clearInterval(ytConfirmInterval); return; }
+                        if (standbyPlayer.getPlayerState() === YT.PlayerState.PLAYING) {
+                            clearInterval(ytConfirmInterval);
+                            standbyPlayer.unMute();
+                            standbyPlayer.setVolume(0);
+                            standbyContainer.style.transition = 'opacity 0.1s linear';
+                            standbyContainer.style.opacity = '0';
+                            standbyContainer.style.zIndex = '3';
 
-                        let step = 0;
-                        crossfadeInterval = setInterval(() => {
-                            step++;
-                            let progress = step / 15;
-                            activePlayer.setVolume(Math.floor(100 - (progress * 75)));
-                            standbyPlayer.setVolume(Math.floor(progress * 100));
-                            if (step >= 15) clearInterval(crossfadeInterval);
-                        }, 100);
-                    }
-                }, 50);
+                            let step = 0;
+                            crossfadeInterval = setInterval(() => {
+                                step++;
+                                let progress = step / 15;
+                                standbyContainer.style.opacity = String(progress); // 🔥 TRANSPARENCE PROGRESSIVE
+                                activePlayer.setVolume(Math.floor(100 - (progress * 75)));
+                                standbyPlayer.setVolume(Math.floor(progress * 100));
+                                if (step >= 15) clearInterval(crossfadeInterval);
+                            }, 100);
+                        }
+                    }, 50);
+                }
             }
 
-            // C. Fin des 17.0s
             if (totalElapsed >= 17.0) {
                 clearInterval(timerInterval);
                 clearInterval(crossfadeInterval);
