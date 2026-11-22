@@ -526,6 +526,27 @@
         </div>
 
     </div> <!-- Fin de player-view -->
+    <!-- FENÊTRE DE CHARGEMENT CUMULÉ DES "as" -->
+    <div id="preload-modal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(9, 13, 22, 0.92); backdrop-filter:blur(8px); z-index:9999; align-items:center; justify-content:center; padding:20px; box-sizing:border-box;">
+        <div style="background:#1e293b; border:2px solid #38bdf8; border-radius:16px; padding:30px; max-width:480px; width:100%; text-align:center; box-shadow:0 0 40px rgba(56, 189, 248, 0.25);">
+            <h2 style="margin:0 0 10px 0; color:#38bdf8; font-size:1.4rem;">⏳ Préparation du TOP</h2>
+            <p style="color:#e2e8f0; margin:0 0 22px 0; line-height:1.5; font-size:1rem;">
+                Pour une expérience optimale, attendez le chargement de tous les sons.
+            </p>
+
+            <!-- Barre de progression cumulée -->
+            <div style="width:100%; height:14px; background:#0f172a; border-radius:10px; overflow:hidden; border:1px solid #334155; margin-bottom:10px;">
+                <div id="preload-progress-bar" style="width:0%; height:100%; background:linear-gradient(90deg, #6366f1, #38bdf8, #10b981); transition:width 0.15s ease;"></div>
+            </div>
+            <div id="preload-progress-text" style="color:#94a3b8; font-size:0.9rem; font-weight:bold; margin-bottom:25px;">
+                0% (0 / 0 vidéos chargées)
+            </div>
+
+            <button onclick="skipPreloadAndLaunch()" style="background:#475569; color:white; padding:10px 24px; border-radius:8px; font-weight:bold; cursor:pointer; border:none; font-size:0.95rem;">
+                Ignorer ⏭️
+            </button>
+        </div>
+    </div>
 
 <script>
     // Récupère les données préparées par le menu
@@ -1146,47 +1167,169 @@ function prepareDeck(song, isA) {
     // ==========================================
     // 1. LANCEMENT DU MODE VIDÉO (AVEC DÉMARRAGE FORCÉ)
     // ==========================================
-    function launchVideoMode() {
-        // 1. Récupère la liste des morceaux placés sur l'axe
-        activePlaylist = timelineSlots.filter(s => s !== null);
+    let preloadModalInterval = null;
+    let preloadSkipped = false;
 
-        if (activePlaylist.length === 0) {
+    // Télécharge un "as" en mesurant son avancement en direct (0.0 à 1.0)
+    function downloadSongWithProgress(item) {
+        if (item.blobUrl) {
+            item._progress = 1;
+            return Promise.resolve(item.blobUrl);
+        }
+        if (item._downloadPromise) {
+            return item._downloadPromise;
+        }
+
+        const videoUrl = (item.as && item.as.trim()) || (item.url && item.url.trim()) || (item.link && item.link.trim());
+        if (!videoUrl) {
+            item._progress = 1;
+            return Promise.resolve(null);
+        }
+
+        item.isDownloading = true;
+        item._progress = 0;
+
+        const controller = new AbortController();
+        if (typeof preloadAbortMap !== 'undefined') {
+            preloadAbortMap.set(item, controller);
+        }
+
+        item._downloadPromise = (async () => {
+            try {
+                const resp = await fetch(videoUrl, { signal: controller.signal });
+                if (!resp.ok) throw new Error("HTTP " + resp.status);
+
+                const contentLength = parseInt(resp.headers.get('Content-Length') || '0', 10);
+
+                if (resp.body && resp.body.getReader) {
+                    const reader = resp.body.getReader();
+                    const chunks = [];
+                    let received = 0;
+
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+                        chunks.push(value);
+                        received += value.length;
+
+                        if (contentLength > 0) {
+                            item._progress = Math.min(received / contentLength, 0.99);
+                        } else {
+                            // Estimation si le serveur ne donne pas la taille exacte
+                            item._progress = Math.min(received / (8 * 1024 * 1024), 0.95);
+                        }
+                    }
+
+                    const blob = new Blob(chunks, { type: resp.headers.get('Content-Type') || 'video/webm' });
+                    item.blobUrl = URL.createObjectURL(blob);
+                } else {
+                    const blob = await resp.blob();
+                    item.blobUrl = URL.createObjectURL(blob);
+                }
+
+                item.isDownloaded = true;
+                item._progress = 1;
+                return item.blobUrl;
+            } catch (e) {
+                if (e.name !== 'AbortError') {
+                    console.warn(`⚠️ Préchargement échoué pour "${item.title}", lecture directe utilisée.`, e);
+                    item._downloadFailed = true;
+                    item._progress = 1; // Débloque la barre en cas d'erreur sur un lien
+                }
+                return null;
+            } finally {
+                item.isDownloading = false;
+                if (typeof preloadAbortMap !== 'undefined') {
+                    preloadAbortMap.delete(item);
+                }
+            }
+        })();
+
+        return item._downloadPromise;
+    }
+
+    function launchVideoMode() {
+        const finalPlaylist = timelineSlots.filter(s => s !== null);
+        if (finalPlaylist.length === 0) {
             return alert("⚠️ Ton TOP est vide ! Glisse au moins un morceau sur l'axe avant de lancer la vidéo.");
         }
 
+        activePlaylist = finalPlaylist;
+        checkPreloadAndStart(activePlaylist);
+    }
 
-        // 2. Coupe immédiatement le lecteur d'écoute (Preview) du studio
-        const previewBox = document.getElementById('preview-player-box');
-        if (previewBox) {
-            previewBox.innerHTML = `<div style="height:100%; display:flex; align-items:center; justify-content:center; color:#64748b;">Clique sur "🎧 Écouter" pour tester</div>`;
+    function checkPreloadAndStart(playlist) {
+        // Récupère uniquement les morceaux "as" présents dans ce TOP
+        const asItems = playlist.filter(s => Boolean((s.as && s.as.trim()) || (s.url && s.url.trim()) || (s.link && s.link.trim())));
+        const pendingItems = asItems.filter(s => !s.blobUrl && !s._downloadFailed);
+
+        // 1. SI TOUT EST DÉJÀ CHARGÉ (OU PAS DE "as") : ON LANCE DIRECTEMENT SANS MESSAGE !
+        if (pendingItems.length === 0) {
+            actuallyStartVideoPlayer(playlist);
+            return;
         }
 
-        // 3. Bascule l'affichage du Studio vers le Lecteur (la barre en bas apparaît toute seule)
+        // 2. SINON : ON AFFICHE LA FENÊTRE AU MILIEU AVEC LA BARRE CUMULÉE
+        preloadSkipped = false;
+        const modal = document.getElementById('preload-modal');
+        const bar = document.getElementById('preload-progress-bar');
+        const text = document.getElementById('preload-progress-text');
+
+        modal.style.display = 'flex';
+
+        // Lance le téléchargement prioritaire de tous les "as" manquants du TOP
+        pendingItems.forEach(item => downloadSongWithProgress(item));
+
+        // Met à jour la barre cumulée toutes les 100ms
+        clearInterval(preloadModalInterval);
+        preloadModalInterval = setInterval(() => {
+            if (preloadSkipped) {
+                clearInterval(preloadModalInterval);
+                return;
+            }
+
+            let totalProgress = 0;
+            let readyCount = 0;
+
+            asItems.forEach(item => {
+                if (item.blobUrl || item._downloadFailed) {
+                    totalProgress += 1;
+                    readyCount++;
+                } else {
+                    totalProgress += (item._progress || 0);
+                }
+            });
+
+            const pct = Math.round((totalProgress / asItems.length) * 100);
+            bar.style.width = pct + '%';
+            text.innerText = `${pct}% (${readyCount} / ${asItems.length} vidéos chargées)`;
+
+            // Quand TOUS les "as" ont fini de charger -> Fermeture et lancement auto !
+            if (readyCount >= asItems.length) {
+                clearInterval(preloadModalInterval);
+                bar.style.width = '100%';
+                setTimeout(() => {
+                    if (!preloadSkipped) {
+                        modal.style.display = 'none';
+                        actuallyStartVideoPlayer(playlist);
+                    }
+                }, 250);
+            }
+        }, 100);
+    }
+
+    function skipPreloadAndLaunch() {
+        preloadSkipped = true;
+        clearInterval(preloadModalInterval);
+        document.getElementById('preload-modal').style.display = 'none';
+        actuallyStartVideoPlayer(activePlaylist);
+    }
+
+    function actuallyStartVideoPlayer(playlist) {
+        document.getElementById('preview-player-box').innerHTML = "";
         document.getElementById('editor-view').style.display = 'none';
         document.getElementById('player-view').style.display = 'flex';
-
-        // 4. Réinitialisation des index
-        playIndex = 0;
-        isDeckAActive = true;
-
-        // Arrêt propre de toute lecture antérieure
-        resetAllDecks();
-        startTopPreloadAllBlob(activePlaylist);
-
-        // 5. Déverrouillage audio du navigateur et lancement immédiat
-        const dummyAudio = document.getElementById('deck-a');
-        if (dummyAudio) {
-            dummyAudio.muted = true;
-            dummyAudio.play().then(() => {
-                dummyAudio.pause();
-                dummyAudio.muted = false;
-                runClip(activePlaylist);
-            }).catch(() => {
-                runClip(activePlaylist);
-            });
-        } else {
-            runClip(activePlaylist);
-        }
+        startFinalCountdown(playlist);
     }
 
     // Réinitialisation complète de toutes les platines
