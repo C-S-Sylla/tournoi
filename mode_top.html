@@ -1526,6 +1526,26 @@ ytTimeout = null;
         return 0.0;
     }
 
+    function getSafeRefrainTime(dur) {
+        if (!dur || isNaN(dur) || dur <= 0) return 71.0;
+        if (dur >= 79.0) return 71.0;
+        if (dur >= 66.0) return Math.max(58.0, dur - 8.5);
+        return 0.0;
+    }
+
+    // Déclenche un fondu visuel 100% fluide sur Carte Graphique (0 ralentissement sur la barre)
+    function startGpuFadeIn(element) {
+        if (!element) return;
+        element.style.transition = 'none';
+        element.style.opacity = '0';
+        element.style.display = 'block';
+        element.style.zIndex = '3';
+        element.style.willChange = 'opacity';
+        void element.offsetWidth; // Force le point de départ à 0% d'opacité
+        element.style.transition = 'opacity 1.5s linear';
+        element.style.opacity = '1'; // Le GPU gère tout le fondu de 0 à 1 en 1.5s !
+    }
+
     function runClip(playlist) {
         const currentList = playlist || activePlaylist;
         if (!currentList || playIndex >= currentList.length) {
@@ -1556,20 +1576,18 @@ ytTimeout = null;
         const directUrl = currentSong.blobUrl || (currentSong.as && currentSong.as.trim()) || (currentSong.url && currentSong.url.trim());
         const isDirect = Boolean(directUrl);
 
-        // Platines Vidéo Directe
         const activeVid = isDeckAActive ? document.getElementById('deck-a') : document.getElementById('deck-b');
         const standbyVid = isDeckAActive ? document.getElementById('deck-b') : document.getElementById('deck-a');
 
-        // Platines YouTube
         const activeContainer = isDeckAActive ? document.getElementById('yt-deck-a') : document.getElementById('yt-deck-b');
         const standbyContainer = isDeckAActive ? document.getElementById('yt-deck-b') : document.getElementById('yt-deck-a');
         const activePlayer = isDeckAActive ? ytPlayerA : ytPlayerB;
         const standbyPlayer = isDeckAActive ? ytPlayerB : ytPlayerA;
 
-        if (activeVid) { activeVid.onended = null; activeVid.onseeked = null; activeVid.ontimeupdate = null; activeVid.style.transition = 'none'; }
-        if (standbyVid) { standbyVid.onended = null; standbyVid.onseeked = null; standbyVid.ontimeupdate = null; standbyVid.style.transition = 'none'; }
-        if (activeContainer) activeContainer.style.transition = 'none';
-        if (standbyContainer) standbyContainer.style.transition = 'none';
+        if (activeVid) { activeVid.onended = null; activeVid.onseeked = null; activeVid.ontimeupdate = null; activeVid.style.transition = 'none'; activeVid.style.willChange = 'auto'; }
+        if (standbyVid) { standbyVid.onended = null; standbyVid.onseeked = null; standbyVid.ontimeupdate = null; standbyVid.style.transition = 'none'; standbyVid.style.willChange = 'auto'; }
+        if (activeContainer) { activeContainer.style.transition = 'none'; activeContainer.style.willChange = 'auto'; }
+        if (standbyContainer) { standbyContainer.style.transition = 'none'; standbyContainer.style.willChange = 'auto'; }
 
         let hasSwitched = false;
         const nextTrack = () => {
@@ -1607,7 +1625,6 @@ ytTimeout = null;
         // CAS 1 : ANISONGDB (FICHIER DIRECT MP4 / WEBM)
         // =====================================================================
         if (isDirect) {
-            console.log(`🎬 [RUNCLIP #${playIndex}] "${currentSong.title}" -> Source : ${currentSong.blobUrl ? '⚡ BLOB RAM' : '🌐 URL'}`);
             if (!currentSong.blobUrl && preloadAbortMap.has(currentSong)) {
                 preloadAbortMap.get(currentSong).abort();
             }
@@ -1635,7 +1652,6 @@ ytTimeout = null;
             const alreadyPlayingThisTrack =
                 activeVid.dataset.songIndex === String(playIndex) && !activeVid.paused;
 
-            // 🔥 NE RECALE À 48s QUE SI CE MORCEAU N'ÉTAIT PAS DÉJÀ LANCÉ PAR LE FONDU !
             if (!alreadyPlayingThisTrack) {
                 if (activeVid.src !== directUrl) {
                     activeVid.src = directUrl;
@@ -1696,21 +1712,18 @@ ytTimeout = null;
                     if (p2Elapsed >= 7.0) clearInterval(p2Interval);
                 }, 50);
 
-                // FONDU TRANSPARENT 1.5s AVANT LA FIN
+                // FONDU GPU 1.5s AVANT LA FIN
                 fadeTimeout = setTimeout(() => {
                     if (hasSwitched || !nextSong) return;
                     const nextDirect = nextSong.blobUrl || (nextSong.as && nextSong.as.trim()) || (nextSong.url && nextSong.url.trim()) || (nextSong.link && nextSong.link.trim());
 
                     if (nextDirect && standbyVid.src) {
-                        standbyVid.style.transition = 'opacity 0.1s linear';
-                        standbyVid.style.opacity = '0';
-                        standbyVid.style.zIndex = '3';
+                        startGpuFadeIn(standbyVid); // <-- FONDU VISUEL 100% GPU
                         standbyVid.play().catch(() => {});
                         let step = 0;
                         crossfadeInterval = setInterval(() => {
                             step++;
                             let p = step / 15;
-                            standbyVid.style.opacity = String(p); // 🔥 VRAIE TRANSPARENCE PROGRESSIVE 0 ➔ 1
                             activeVid.volume = Math.max(0.25, 1.0 - (p * 0.75));
                             standbyVid.volume = Math.min(1.0, p);
                             if (step >= 15) clearInterval(crossfadeInterval);
@@ -1725,16 +1738,12 @@ ytTimeout = null;
                                 clearInterval(ytConfirmInterval);
                                 standbyPlayer.unMute();
                                 standbyPlayer.setVolume(0);
-                                standbyContainer.style.transition = 'opacity 0.1s linear';
-                                standbyContainer.style.opacity = '0';
-                                standbyContainer.style.display = 'block';
-                                standbyContainer.style.zIndex = '3';
+                                startGpuFadeIn(standbyContainer); // <-- FONDU VISUEL 100% GPU
 
                                 let step = 0;
                                 crossfadeInterval = setInterval(() => {
                                     step++;
                                     let p = step / 15;
-                                    standbyContainer.style.opacity = String(p); // 🔥 TRANSPARENCE PROGRESSIVE
                                     activeVid.volume = Math.max(0.25, 1.0 - (p * 0.75));
                                     standbyPlayer.setVolume(Math.floor(p * 100));
                                     if (step >= 15) clearInterval(crossfadeInterval);
@@ -1786,7 +1795,7 @@ ytTimeout = null;
         }
 
         // =====================================================================
-        // CAS 2 : YOUTUBE
+        // CAS 2 : YOUTUBE (CHRONO TEMPS RÉEL + FONDU GPU)
         // =====================================================================
         if (activeVid) { activeVid.style.display = 'none'; activeVid.pause(); }
         if (standbyVid) { standbyVid.style.display = 'none'; standbyVid.pause(); }
@@ -1836,11 +1845,16 @@ ytTimeout = null;
         }
 
         let totalElapsed = 0;
+        let lastTickTime = Date.now();
         let hasJumpedRefrain = false;
         let transitionStarted = false;
         let ytRestartLock = false;
 
         timerInterval = setInterval(() => {
+            const now = Date.now();
+            const dt = (now - lastTickTime) / 1000; // VRAI temps réel écoulé depuis la dernière boucle !
+            lastTickTime = now;
+
             if (!activePlayer || typeof activePlayer.getPlayerState !== 'function') return;
 
             const state = activePlayer.getPlayerState();
@@ -1859,7 +1873,7 @@ ytTimeout = null;
                 return;
             }
 
-            totalElapsed += 0.05;
+            totalElapsed += dt; // <-- PLUS DE RALENTISSEMENT ! Suit le vrai temps réel à la ms près !
 
             let pct = Math.min((totalElapsed / 17.0) * 100, 100);
             timerBar.style.width = pct + '%';
@@ -1878,16 +1892,12 @@ ytTimeout = null;
                 const nextDirect = nextSong.blobUrl || (nextSong.as && nextSong.as.trim()) || (nextSong.url && nextSong.url.trim()) || (nextSong.link && nextSong.link.trim());
 
                 if (nextDirect && standbyVid.src) {
-                    standbyVid.style.transition = 'opacity 0.1s linear';
-                    standbyVid.style.opacity = '0';
-                    standbyVid.style.display = 'block';
-                    standbyVid.style.zIndex = '3';
+                    startGpuFadeIn(standbyVid); // <-- FONDU VISUEL 100% GPU
                     standbyVid.play().catch(() => {});
                     let step = 0;
                     crossfadeInterval = setInterval(() => {
                         step++;
                         let p = step / 15;
-                        standbyVid.style.opacity = String(p); // 🔥 TRANSPARENCE PROGRESSIVE
                         activePlayer.setVolume(Math.floor(100 - (p * 75)));
                         standbyVid.volume = Math.min(1.0, p);
                         if (step >= 15) clearInterval(crossfadeInterval);
@@ -1903,15 +1913,12 @@ ytTimeout = null;
                             clearInterval(ytConfirmInterval);
                             standbyPlayer.unMute();
                             standbyPlayer.setVolume(0);
-                            standbyContainer.style.transition = 'opacity 0.1s linear';
-                            standbyContainer.style.opacity = '0';
-                            standbyContainer.style.zIndex = '3';
+                            startGpuFadeIn(standbyContainer); // <-- FONDU VISUEL 100% GPU
 
                             let step = 0;
                             crossfadeInterval = setInterval(() => {
                                 step++;
                                 let progress = step / 15;
-                                standbyContainer.style.opacity = String(progress); // 🔥 TRANSPARENCE PROGRESSIVE
                                 activePlayer.setVolume(Math.floor(100 - (progress * 75)));
                                 standbyPlayer.setVolume(Math.floor(progress * 100));
                                 if (step >= 15) clearInterval(crossfadeInterval);
