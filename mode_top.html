@@ -1704,58 +1704,76 @@ ytTimeout = null;
                 phase = 2;
                 activeVid.play().catch(() => {});
 
-                let p2Start = Date.now();
+                let p2Elapsed = 0;
+                let p2LastTick = Date.now();
+                let p2FadeStarted = false;
+
                 clearInterval(p2Interval);
                 p2Interval = setInterval(() => {
-                    const p2Elapsed = (Date.now() - p2Start) / 1000;
-                    timerBar.style.width = Math.min(((10.0 + p2Elapsed) / 17.0) * 100, 100) + '%';
-                    if (p2Elapsed >= 7.0) clearInterval(p2Interval);
-                }, 50);
+                    const now = Date.now();
+                    const dt = (now - p2LastTick) / 1000;
+                    p2LastTick = now;
 
-                // FONDU GPU 1.5s AVANT LA FIN
-                fadeTimeout = setTimeout(() => {
-                    if (hasSwitched || !nextSong) return;
-                    const nextDirect = nextSong.blobUrl || (nextSong.as && nextSong.as.trim()) || (nextSong.url && nextSong.url.trim()) || (nextSong.link && nextSong.link.trim());
-
-                    if (nextDirect && standbyVid.src) {
-                        startGpuFadeIn(standbyVid); // <-- FONDU VISUEL 100% GPU
-                        standbyVid.play().catch(() => {});
-                        let step = 0;
-                        crossfadeInterval = setInterval(() => {
-                            step++;
-                            let p = step / 15;
-                            activeVid.volume = Math.max(0.25, 1.0 - (p * 0.75));
-                            standbyVid.volume = Math.min(1.0, p);
-                            if (step >= 15) clearInterval(crossfadeInterval);
-                        }, 100);
-                    } else if (nextSong.yt && standbyPlayer) {
-                        standbyPlayer.seekTo(48, true);
-                        standbyPlayer.playVideo();
-                        clearInterval(ytConfirmInterval);
-                        ytConfirmInterval = setInterval(() => {
-                            if (hasSwitched) { clearInterval(ytConfirmInterval); return; }
-                            if (standbyPlayer.getPlayerState() === YT.PlayerState.PLAYING) {
-                                clearInterval(ytConfirmInterval);
-                                standbyPlayer.unMute();
-                                standbyPlayer.setVolume(0);
-                                startGpuFadeIn(standbyContainer); // <-- FONDU VISUEL 100% GPU
-
-                                let step = 0;
-                                crossfadeInterval = setInterval(() => {
-                                    step++;
-                                    let p = step / 15;
-                                    activeVid.volume = Math.max(0.25, 1.0 - (p * 0.75));
-                                    standbyPlayer.setVolume(Math.floor(p * 100));
-                                    if (step >= 15) clearInterval(crossfadeInterval);
-                                }, 100);
-                            }
-                        }, 50);
+                    // ⏸️ SI TU METS PAUSE (bouton ou clic sur vidéo) : ON GÈLE LA BARRE ET LES TIMERS !
+                    const userPaused = (typeof isPaused !== 'undefined' && isPaused) || (activeVid.paused && !activeVid.ended);
+                    if (userPaused) {
+                        return;
                     }
-                }, 5500);
 
-                clipTimeout = setTimeout(() => {
-                    nextTrack();
-                }, 7000);
+                    p2Elapsed += dt;
+                    timerBar.style.width = Math.min(((10.0 + p2Elapsed) / 17.0) * 100, 100) + '%';
+
+                    // 🔥 À 5.5s : Déclenche le fondu transparent GPU
+                    if (p2Elapsed >= 5.5 && !p2FadeStarted) {
+                        p2FadeStarted = true;
+                        if (hasSwitched || !nextSong) return;
+
+                        const nextDirect = nextSong.blobUrl || (nextSong.as && nextSong.as.trim()) || (nextSong.url && nextSong.url.trim()) || (nextSong.link && nextSong.link.trim());
+
+                        if (nextDirect && standbyVid.src) {
+                            startGpuFadeIn(standbyVid);
+                            standbyVid.play().catch(() => {});
+                            let step = 0;
+                            crossfadeInterval = setInterval(() => {
+                                if ((typeof isPaused !== 'undefined' && isPaused)) return;
+                                step++;
+                                let p = step / 15;
+                                activeVid.volume = Math.max(0.25, 1.0 - (p * 0.75));
+                                standbyVid.volume = Math.min(1.0, p);
+                                if (step >= 15) clearInterval(crossfadeInterval);
+                            }, 100);
+                        } else if (nextSong.yt && standbyPlayer) {
+                            standbyPlayer.seekTo(48, true);
+                            standbyPlayer.playVideo();
+                            clearInterval(ytConfirmInterval);
+                            ytConfirmInterval = setInterval(() => {
+                                if (hasSwitched) { clearInterval(ytConfirmInterval); return; }
+                                if (standbyPlayer.getPlayerState() === YT.PlayerState.PLAYING) {
+                                    clearInterval(ytConfirmInterval);
+                                    standbyPlayer.unMute();
+                                    standbyPlayer.setVolume(0);
+                                    startGpuFadeIn(standbyContainer);
+
+                                    let step = 0;
+                                    crossfadeInterval = setInterval(() => {
+                                        if ((typeof isPaused !== 'undefined' && isPaused)) return;
+                                        step++;
+                                        let p = step / 15;
+                                        activeVid.volume = Math.max(0.25, 1.0 - (p * 0.75));
+                                        standbyPlayer.setVolume(Math.floor(p * 100));
+                                        if (step >= 15) clearInterval(crossfadeInterval);
+                                    }, 100);
+                                }
+                            }, 50);
+                        }
+                    }
+
+                    // ⏹️ À 7.0s : Fin exacte de la Phase 2 -> Morceau suivant
+                    if (p2Elapsed >= 7.0) {
+                        clearInterval(p2Interval);
+                        nextTrack();
+                    }
+                }, 50);
             };
 
             activeVid.onended = () => {
@@ -1869,7 +1887,8 @@ ytTimeout = null;
                 activePlayer.playVideo();
             }
 
-            if (state !== YT.PlayerState.PLAYING && !transitionStarted) {
+            const userPausedYT = (typeof isPaused !== 'undefined' && isPaused) || state === YT.PlayerState.PAUSED;
+            if (userPausedYT || (state !== YT.PlayerState.PLAYING && !transitionStarted)) {
                 return;
             }
 
