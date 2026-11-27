@@ -1754,6 +1754,7 @@ ytTimeout = null;
                             standbyPlayer.playVideo();
                             clearInterval(ytConfirmInterval);
                             ytConfirmInterval = setInterval(() => {
+                                if (isPaused) return;
                                 if (hasSwitched) { clearInterval(ytConfirmInterval); return; }
                                 if (standbyPlayer.getPlayerState() === YT.PlayerState.PLAYING) {
                                     clearInterval(ytConfirmInterval);
@@ -1763,6 +1764,7 @@ ytTimeout = null;
 
                                     let step = 0;
                                     crossfadeInterval = setInterval(() => {
+                                        if (isPaused) return;
                                         if ((typeof isPaused !== 'undefined' && isPaused)) return;
                                         step++;
                                         let p = step / 15;
@@ -1923,6 +1925,7 @@ ytTimeout = null;
                     standbyVid.play().catch(() => {});
                     let step = 0;
                     crossfadeInterval = setInterval(() => {
+                        if (isPaused) return;
                         step++;
                         let p = step / 15;
                         activePlayer.setVolume(Math.floor(100 - (p * 75)));
@@ -1935,6 +1938,7 @@ ytTimeout = null;
 
                     clearInterval(ytConfirmInterval);
                     ytConfirmInterval = setInterval(() => {
+                        if (isPaused) return;
                         if (hasSwitched) { clearInterval(ytConfirmInterval); return; }
                         if (standbyPlayer.getPlayerState() === YT.PlayerState.PLAYING) {
                             clearInterval(ytConfirmInterval);
