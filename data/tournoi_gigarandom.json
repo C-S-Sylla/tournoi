@@ -2935,9 +2935,12 @@
     { "title": "Black Butler", "yt": "WmLqVVnLl80", "type": "OP" },
     { "title": "Black Butler", "yt": "mA0pL5Juotc", "type": "ED" },
     { "title": "Black Butler", "as": "https://naedist.animemusicquiz.com/teh235.webm", "type": "ED", "thumb": "https://i.ytimg.com/vi/dleSnaZOU58/hq720.jpg?sqp=-oaymwEnCNAFEJQDSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLDIGFUgb22ORlkhfP73MTC00fiC4Q" },
-        {"title":"That Time I Got Reincarnated as a Slime","yt":"3363xwJrp0U","type":"OP" },
-        {"title":"That Time I Got Reincarnated as a Slime","as":"https://naedist.animemusicquiz.com/m9qh3x.webm","type":"ED", "thumb": "https://th.bing.com/th/id/OIP.7ZYm8E086FRuwhpkf8CnpgHaEK?w=316&h=180&c=7&r=0&o=7&dpr=1.5&pid=1.7&rm=3" },
-        { "title": "Shangri-la Frontier", "yt": "hyiO1JXu8AY", "type": "ED" },
+    {"title":"That Time I Got Reincarnated as a Slime","yt":"3363xwJrp0U","type":"OP" },
+    {"title":"That Time I Got Reincarnated as a Slime","as":"https://naedist.animemusicquiz.com/m9qh3x.webm","type":"ED", "thumb": "https://th.bing.com/th/id/OIP.7ZYm8E086FRuwhpkf8CnpgHaEK?w=316&h=180&c=7&r=0&o=7&dpr=1.5&pid=1.7&rm=3" },
+    { "title": "Shangri-la Frontier", "yt": "hyiO1JXu8AY", "type": "ED" },
+    { "title": "Rurouni Kenshin", "yt": "ZEsyXCanlIA", "type": "OP" },
+    { "title": "Rurouni Kenshin", "yt": "eyybuqWT7qg", "type": "ED" }
+
 
 
   ]
