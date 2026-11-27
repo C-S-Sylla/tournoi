@@ -1562,6 +1562,12 @@ ytTimeout = null;
 
         timerBar.style.width = '0%';
 
+        isPaused = false;
+        isCrossfadeActive = false;
+        pausedDecks = { a: false, b: false, ytA: false, ytB: false };
+        const pauseBtn = document.getElementById('pause-btn');
+        if (pauseBtn) pauseBtn.innerText = "⏸️ Pause";
+
         const currentSong = currentList[playIndex];
         const nextSong = currentList[playIndex + 1];
 
@@ -1704,58 +1710,77 @@ ytTimeout = null;
                 phase = 2;
                 activeVid.play().catch(() => {});
 
-                let p2Start = Date.now();
+                let p2Elapsed = 0;
+                let p2LastTick = Date.now();
+                let p2FadeStarted = false;
+
                 clearInterval(p2Interval);
                 p2Interval = setInterval(() => {
-                    const p2Elapsed = (Date.now() - p2Start) / 1000;
-                    timerBar.style.width = Math.min(((10.0 + p2Elapsed) / 17.0) * 100, 100) + '%';
-                    if (p2Elapsed >= 7.0) clearInterval(p2Interval);
-                }, 50);
+                    const now = Date.now();
+                    const dt = (now - p2LastTick) / 1000;
+                    p2LastTick = now;
 
-                // FONDU GPU 1.5s AVANT LA FIN
-                fadeTimeout = setTimeout(() => {
-                    if (hasSwitched || !nextSong) return;
-                    const nextDirect = nextSong.blobUrl || (nextSong.as && nextSong.as.trim()) || (nextSong.url && nextSong.url.trim()) || (nextSong.link && nextSong.link.trim());
-
-                    if (nextDirect && standbyVid.src) {
-                        startGpuFadeIn(standbyVid); // <-- FONDU VISUEL 100% GPU
-                        standbyVid.play().catch(() => {});
-                        let step = 0;
-                        crossfadeInterval = setInterval(() => {
-                            step++;
-                            let p = step / 15;
-                            activeVid.volume = Math.max(0.25, 1.0 - (p * 0.75));
-                            standbyVid.volume = Math.min(1.0, p);
-                            if (step >= 15) clearInterval(crossfadeInterval);
-                        }, 100);
-                    } else if (nextSong.yt && standbyPlayer) {
-                        standbyPlayer.seekTo(48, true);
-                        standbyPlayer.playVideo();
-                        clearInterval(ytConfirmInterval);
-                        ytConfirmInterval = setInterval(() => {
-                            if (hasSwitched) { clearInterval(ytConfirmInterval); return; }
-                            if (standbyPlayer.getPlayerState() === YT.PlayerState.PLAYING) {
-                                clearInterval(ytConfirmInterval);
-                                standbyPlayer.unMute();
-                                standbyPlayer.setVolume(0);
-                                startGpuFadeIn(standbyContainer); // <-- FONDU VISUEL 100% GPU
-
-                                let step = 0;
-                                crossfadeInterval = setInterval(() => {
-                                    step++;
-                                    let p = step / 15;
-                                    activeVid.volume = Math.max(0.25, 1.0 - (p * 0.75));
-                                    standbyPlayer.setVolume(Math.floor(p * 100));
-                                    if (step >= 15) clearInterval(crossfadeInterval);
-                                }, 100);
-                            }
-                        }, 50);
+                    // ⏸️ SI TU METS PAUSE (bouton ou clic sur vidéo) : ON GÈLE LA BARRE ET LES TIMERS !
+                    const userPaused = (typeof isPaused !== 'undefined' && isPaused) || (activeVid.paused && !activeVid.ended);
+                    if (userPaused) {
+                        return;
                     }
-                }, 5500);
 
-                clipTimeout = setTimeout(() => {
-                    nextTrack();
-                }, 7000);
+                    p2Elapsed += dt;
+                    timerBar.style.width = Math.min(((10.0 + p2Elapsed) / 17.0) * 100, 100) + '%';
+
+                    // 🔥 À 5.5s : Déclenche le fondu transparent GPU
+                    if (p2Elapsed >= 5.5 && !p2FadeStarted) {
+                        p2FadeStarted = true;
+                        isCrossfadeActive = true;
+                        if (hasSwitched || !nextSong) return;
+
+                        const nextDirect = nextSong.blobUrl || (nextSong.as && nextSong.as.trim()) || (nextSong.url && nextSong.url.trim()) || (nextSong.link && nextSong.link.trim());
+
+                        if (nextDirect && standbyVid.src) {
+                            startGpuFadeIn(standbyVid);
+                            standbyVid.play().catch(() => {});
+                            let step = 0;
+                            crossfadeInterval = setInterval(() => {
+                                if ((typeof isPaused !== 'undefined' && isPaused)) return;
+                                step++;
+                                let p = step / 15;
+                                activeVid.volume = Math.max(0.25, 1.0 - (p * 0.75));
+                                standbyVid.volume = Math.min(1.0, p);
+                                if (step >= 15) clearInterval(crossfadeInterval);
+                            }, 100);
+                        } else if (nextSong.yt && standbyPlayer) {
+                            standbyPlayer.seekTo(48, true);
+                            standbyPlayer.playVideo();
+                            clearInterval(ytConfirmInterval);
+                            ytConfirmInterval = setInterval(() => {
+                                if (hasSwitched) { clearInterval(ytConfirmInterval); return; }
+                                if (standbyPlayer.getPlayerState() === YT.PlayerState.PLAYING) {
+                                    clearInterval(ytConfirmInterval);
+                                    standbyPlayer.unMute();
+                                    standbyPlayer.setVolume(0);
+                                    startGpuFadeIn(standbyContainer);
+
+                                    let step = 0;
+                                    crossfadeInterval = setInterval(() => {
+                                        if ((typeof isPaused !== 'undefined' && isPaused)) return;
+                                        step++;
+                                        let p = step / 15;
+                                        activeVid.volume = Math.max(0.25, 1.0 - (p * 0.75));
+                                        standbyPlayer.setVolume(Math.floor(p * 100));
+                                        if (step >= 15) clearInterval(crossfadeInterval);
+                                    }, 100);
+                                }
+                            }, 50);
+                        }
+                    }
+
+                    // ⏹️ À 7.0s : Fin exacte de la Phase 2 -> Morceau suivant
+                    if (p2Elapsed >= 7.0) {
+                        clearInterval(p2Interval);
+                        nextTrack();
+                    }
+                }, 50);
             };
 
             activeVid.onended = () => {
@@ -1869,7 +1894,8 @@ ytTimeout = null;
                 activePlayer.playVideo();
             }
 
-            if (state !== YT.PlayerState.PLAYING && !transitionStarted) {
+            const userPausedYT = (typeof isPaused !== 'undefined' && isPaused) || state === YT.PlayerState.PAUSED;
+            if (userPausedYT || (state !== YT.PlayerState.PLAYING && !transitionStarted)) {
                 return;
             }
 
@@ -1889,6 +1915,7 @@ ytTimeout = null;
 
             if (totalElapsed >= 15.5 && !transitionStarted && nextSong) {
                 transitionStarted = true;
+                isCrossfadeActive = true;
                 const nextDirect = nextSong.blobUrl || (nextSong.as && nextSong.as.trim()) || (nextSong.url && nextSong.url.trim()) || (nextSong.link && nextSong.link.trim());
 
                 if (nextDirect && standbyVid.src) {
@@ -1940,32 +1967,81 @@ ytTimeout = null;
     // 4. BOUTON PAUSE / REPRISE
     // ==========================================
     // BOUTON PAUSE / REPRISE (MODIFIÉ)
+    let isPaused = false;
+    let isCrossfadeActive = false;
+    let pausedDecks = { a: false, b: false, ytA: false, ytB: false };
+
     function togglePlayPause() {
+        const deckA = document.getElementById('deck-a');
+        const deckB = document.getElementById('deck-b');
+        const ytDivA = document.getElementById('yt-deck-a');
+        const ytDivB = document.getElementById('yt-deck-b');
         const btn = document.getElementById('pause-btn');
-        
-        // Si c'est une vidéo locale (WebM/MP4)
-        if (currentDeck && currentDeck.tagName === "VIDEO") {
-            if (currentDeck.paused) {
-                currentDeck.play();
-                btn.innerText = "⏸️ Pause";
-            } else {
-                currentDeck.pause();
-                btn.innerText = "▶️ Reprendre";
+
+        if (!isPaused) {
+            // === MISE EN PAUSE ===
+            isPaused = true;
+            pausedDecks = { a: false, b: false, ytA: false, ytB: false };
+
+            // 1. Met en pause les lecteurs WebM actifs (ou en cours de fondu)
+            if (deckA && !deckA.paused && !deckA.ended) {
+                pausedDecks.a = true;
+                deckA.pause();
             }
-        } 
-        // Si c'est le lecteur YouTube
-        else {
-            const activeYtPlayer = isDeckAActive ? ytPlayerA : ytPlayerB;
-            if (activeYtPlayer && typeof activeYtPlayer.getPlayerState === 'function') {
-                const state = activeYtPlayer.getPlayerState();
-                if (state === YT.PlayerState.PLAYING) {
-                    activeYtPlayer.pauseVideo();
-                    btn.innerText = "▶️ Reprendre";
-                } else {
-                    activeYtPlayer.playVideo();
-                    btn.innerText = "⏸️ Pause";
+            if (deckB && !deckB.paused && !deckB.ended) {
+                pausedDecks.b = true;
+                deckB.pause();
+            }
+
+            // 2. Met en pause les lecteurs YouTube visibles ou en cours de fondu
+            if (typeof ytPlayerA !== 'undefined' && ytPlayerA && typeof ytPlayerA.getPlayerState === 'function') {
+                const stA = ytPlayerA.getPlayerState();
+                const visA = ytDivA && (ytDivA.style.zIndex === '2' || ytDivA.style.zIndex === '3');
+                if ((stA === 1 || stA === 3) && (visA || isCrossfadeActive)) {
+                    pausedDecks.ytA = true;
+                    ytPlayerA.pauseVideo();
                 }
             }
+            if (typeof ytPlayerB !== 'undefined' && ytPlayerB && typeof ytPlayerB.getPlayerState === 'function') {
+                const stB = ytPlayerB.getPlayerState();
+                const visB = ytDivB && (ytDivB.style.zIndex === '2' || ytDivB.style.zIndex === '3');
+                if ((stB === 1 || stB === 3) && (visB || isCrossfadeActive)) {
+                    pausedDecks.ytB = true;
+                    ytPlayerB.pauseVideo();
+                }
+            }
+
+            // 3. Gèle la transparence visuelle si on est en plein fondu
+            [deckA, deckB, ytDivA, ytDivB].forEach(el => {
+                if (el && el.style.zIndex === '3') {
+                    const currOp = getComputedStyle(el).opacity;
+                    el.style.transition = 'none';
+                    el.style.opacity = currOp;
+                }
+            });
+
+            if (btn) btn.innerText = "▶️ Reprendre";
+
+        } else {
+            // === REPRISE DE LA LECTURE ===
+            isPaused = false;
+
+            // Relance uniquement les platines qui étaient vraiment en lecture
+            if (pausedDecks.a && deckA) deckA.play().catch(() => {});
+            if (pausedDecks.b && deckB) deckB.play().catch(() => {});
+            if (pausedDecks.ytA && ytPlayerA) ytPlayerA.playVideo();
+            if (pausedDecks.ytB && ytPlayerB) ytPlayerB.playVideo();
+
+            // Termine le fondu visuel s'il était en cours
+            [deckA, deckB, ytDivA, ytDivB].forEach(el => {
+                if (el && el.style.zIndex === '3' && parseFloat(el.style.opacity) < 1) {
+                    el.style.transition = 'opacity 1s linear';
+                    el.style.opacity = '1';
+                }
+            });
+
+            pausedDecks = { a: false, b: false, ytA: false, ytB: false };
+            if (btn) btn.innerText = "⏸️ Pause";
         }
     }
 
